@@ -1,0 +1,13 @@
+{
+  "title": "Soults",
+  "tapToWatch": "Toca para ver",
+  "noAutoplay": "Sin reproducción automática",
+  "mindfulVideo": "Video consciente",
+  "watchNow": "Ver",
+  "save": "Guardar",
+  "likes": "{{count}} me gusta",
+  "empty": "Aún no hay Soults.",
+  "emptyHint": "Vuelve más tarde para videos cortos y conscientes.",
+  "playingNow": "Reproduciendo",
+  "pauseHint": "Toca para pausar"
+}

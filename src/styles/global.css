@@ -1,0 +1,192 @@
+@import url('https://fonts.googleapis.com/css2?family=Open+Sans:wght@300;400;500;600;700&display=swap');
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  body {
+    @apply bg-background text-textPrimary antialiased overflow-x-hidden;
+    selection-background-color: rgba(129, 140, 248, 0.25);
+  }
+
+  ::selection { background: rgba(129, 140, 248, 0.25); }
+
+  .no-scrollbar::-webkit-scrollbar { display: none; }
+  .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+
+  select option {
+    background-color: #0c0c10;
+    color: #ffffff;
+  }
+}
+
+@layer components {
+  /* Glass Card - Borda totalmente removida para eliminar o contorno branco */
+  .glass-card {
+    background: rgba(255, 255, 255, 0.035);
+    backdrop-filter: blur(24px);
+    -webkit-backdrop-filter: blur(24px);
+    border: none !important;
+    box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.4);
+  }
+
+  /* Glass Pill */
+  .glass-pill {
+    background: linear-gradient(
+      160deg,
+      rgba(255, 255, 255, 0.07) 0%,
+      rgba(255, 255, 255, 0.025) 100%
+    );
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    border-top-color: rgba(255, 255, 255, 0.12);
+    box-shadow:
+      0 2px 8px rgba(0, 0, 0, 0.3),
+      inset 0 1px 0 rgba(255, 255, 255, 0.06);
+    transition: all 0.25s ease;
+  }
+
+  .glass-pill:hover {
+    background: linear-gradient(
+      160deg,
+      rgba(255, 255, 255, 0.10) 0%,
+      rgba(255, 255, 255, 0.04) 100%
+    );
+    border-color: rgba(255, 255, 255, 0.14);
+  }
+
+  .glass-pill-active {
+    background: linear-gradient(
+      160deg,
+      rgba(255, 255, 255, 0.14) 0%,
+      rgba(255, 255, 255, 0.06) 100%
+    );
+    border: 1px solid rgba(255, 255, 255, 0.18);
+    border-top-color: rgba(255, 255, 255, 0.25);
+    box-shadow:
+      0 4px 16px rgba(0, 0, 0, 0.4),
+      0 0 0 1px rgba(255, 255, 255, 0.06),
+      inset 0 1px 0 rgba(255, 255, 255, 0.15);
+    position: relative;
+    overflow: hidden;
+  }
+
+  .glass-pill-active::after {
+    content: '';
+    position: absolute;
+    bottom: 0;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 55%;
+    height: 1.5px;
+    background: radial-gradient(
+      ellipse at center,
+      rgba(255, 255, 255, 0.75) 0%,
+      transparent 70%
+    );
+    border-radius: 9999px;
+  }
+
+  .glass-pill-active.glow-emerald::after {
+    background: radial-gradient(
+      ellipse at center,
+      rgba(52, 211, 153, 0.85) 0%,
+      transparent 70%
+    );
+  }
+
+  .glass-pill-active.glow-violet::after {
+    background: radial-gradient(
+      ellipse at center,
+      rgba(167, 139, 250, 0.85) 0%,
+      transparent 70%
+    );
+  }
+
+  .glass-nav {
+    background: rgba(14, 14, 14, 0.85);
+    backdrop-filter: blur(32px) saturate(1.6);
+    -webkit-backdrop-filter: blur(32px) saturate(1.6);
+    border-top: 1px solid rgba(255, 255, 255, 0.07);
+  }
+
+  .glass-header {
+    background: rgba(12, 12, 12, 0.80);
+    backdrop-filter: blur(32px) saturate(1.6);
+    -webkit-backdrop-filter: blur(32px) saturate(1.6);
+    border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+  }
+
+  .glass-input {
+    background: rgba(255, 255, 255, 0.04);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    border-top-color: rgba(255, 255, 255, 0.05);
+    box-shadow: inset 0 2px 6px rgba(0, 0, 0, 0.3);
+    transition: border-color 0.2s ease, box-shadow 0.2s ease;
+  }
+
+  .glass-input:focus {
+    border-color: rgba(255, 255, 255, 0.2);
+    box-shadow:
+      inset 0 2px 6px rgba(0, 0, 0, 0.3),
+      0 0 0 3px rgba(255, 255, 255, 0.04);
+    outline: none;
+  }
+
+  .btn-primary-glass {
+    background: #ffffff;
+    color: #0c0c0c;
+    box-shadow:
+      0 1px 0 rgba(255, 255, 255, 0.4) inset,
+      0 6px 20px rgba(0, 0, 0, 0.35);
+    transition: all 0.2s ease;
+  }
+
+  .btn-primary-glass:hover {
+    background: #f0f0f0;
+    box-shadow:
+      0 1px 0 rgba(255, 255, 255, 0.4) inset,
+      0 8px 28px rgba(0, 0, 0, 0.45);
+  }
+
+  .btn-primary-glass:active { transform: scale(0.975); }
+
+  .ambient-orb {
+    position: fixed;
+    border-radius: 9999px;
+    filter: blur(80px);
+    pointer-events: none;
+    z-index: 0;
+    animation: glow-pulse 6s ease-in-out infinite;
+  }
+}
+
+/* =========================================================
+   REMOÇÃO DEFINITIVA DE OUTLINES E RINGS DE FOCO EM TODO O APP
+   ========================================================= */
+
+*,
+*::before,
+*::after {
+  -webkit-tap-highlight-color: transparent !important;
+  outline: none !important;
+}
+
+*:focus,
+*:focus-visible,
+*:focus-within,
+button:focus,
+button:focus-visible,
+input:focus,
+input:focus-visible,
+a:focus,
+a:focus-visible {
+  outline: 0 !important;
+  outline-offset: 0 !important;
+  box-shadow: none !important;
+  
+  --tw-ring-color: transparent !important;
+  --tw-ring-shadow: none !important;
+  --tw-ring-offset-shadow: none !important;
+  --tw-ring-offset-width: 0px !important;
+}

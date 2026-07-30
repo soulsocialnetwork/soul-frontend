@@ -1,0 +1,23 @@
+{
+  "tabs": {
+    "friends": "Friends",
+    "articles": "Articles",
+    "screentime": "Screen time",
+    "doGood": "Do good"
+  },
+  "post": {
+    "likes": "{{count}}+ Likes",
+    "likesExact": "{{count}} Likes",
+    "comments": "{{count}} Comments",
+    "share": "Share",
+    "ago": {
+      "seconds": "{{count}}s ago",
+      "minutes": "{{count}} minute ago",
+      "minutes_other": "{{count}} minutes ago",
+      "hours": "{{count}}h ago",
+      "days": "{{count}}d ago"
+    }
+  },
+  "empty": "Nothing here yet.",
+  "emptyHint": "Be the first to share something!"
+}

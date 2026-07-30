@@ -1,0 +1,13 @@
+{
+  "title": "Soults",
+  "tapToWatch": "Tap to watch",
+  "noAutoplay": "No autoplay",
+  "mindfulVideo": "Mindful video",
+  "watchNow": "Watch",
+  "save": "Save",
+  "likes": "{{count}} likes",
+  "empty": "No Soults yet.",
+  "emptyHint": "Check back later for mindful short videos.",
+  "playingNow": "Playing",
+  "pauseHint": "Tap to pause"
+}

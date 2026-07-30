@@ -1,0 +1,20 @@
+{
+  "appName": "soul.",
+  "slogan": "Menos algoritmo. Mais humano. Isso é Soul.",
+  "loading": "Carregando...",
+  "back": "Voltar",
+  "save": "Salvar",
+  "cancel": "Cancelar",
+  "confirm": "Confirmar",
+  "error": "Ocorreu um erro. Tente novamente.",
+  "notifications": "Notificações",
+  "profile": "Perfil",
+  "nav": {
+    "feed": "Feed",
+    "soults": "Soults",
+    "create": "Criar",
+    "messages": "Mensagens",
+    "screentime": "Tempo de Tela",
+    "profile": "Perfil"
+  }
+}

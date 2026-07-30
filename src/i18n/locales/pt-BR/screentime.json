@@ -1,0 +1,33 @@
+{
+  "title": "Tempo de Tela",
+  "today": "Hoje",
+  "todayUsage": "Uso de hoje",
+  "dailyGoal": "Meta diária",
+  "goalReached": "Meta atingida!",
+  "takeBreak": "Dar uma pausa",
+  "breakActive": "Pausa ativa",
+  "breakDone": "Pausa encerrada!",
+  "breakCustom": "Pausa consciente",
+  "minutes": "{{count}} min",
+  "hours": "{{count}}h {{min}}min",
+  "videosWatched": "Vídeos assistidos",
+  "sessions": "sessões hoje",
+  "goals": {
+    "title": "Metas por seção",
+    "add": "Definir meta",
+    "perDay": "por dia",
+    "of": "de"
+  },
+  "wellnessMsg": "Você está indo bem. Uso consciente é uso saudável.",
+  "overLimitMsg": "Você ultrapassou sua meta. Que tal uma pausa?",
+  "alternatives": {
+    "title": "O que fazer agora?",
+    "subtitle": "Ideias para o seu tempo livre"
+  },
+  "breakOptions": {
+    "5": "5 min",
+    "10": "10 min",
+    "15": "15 min",
+    "30": "30 min"
+  }
+}

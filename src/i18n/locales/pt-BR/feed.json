@@ -1,0 +1,23 @@
+{
+  "tabs": {
+    "friends": "Amigos",
+    "articles": "Artigos",
+    "screentime": "Tempo de tela",
+    "doGood": "Fazer o bem"
+  },
+  "post": {
+    "likes": "{{count}}+ Curtidas",
+    "likesExact": "{{count}} Curtidas",
+    "comments": "{{count}} Comentários",
+    "share": "Compartilhar",
+    "ago": {
+      "seconds": "há {{count}}s",
+      "minutes": "há {{count}} minuto",
+      "minutes_other": "há {{count}} minutos",
+      "hours": "há {{count}}h",
+      "days": "há {{count}}d"
+    }
+  },
+  "empty": "Nada por aqui ainda.",
+  "emptyHint": "Seja o primeiro a compartilhar algo!"
+}

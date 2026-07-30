@@ -1,0 +1,32 @@
+{
+  "title": "Screen Time",
+  "today": "Today",
+  "todayUsage": "Today's usage",
+  "dailyGoal": "Daily goal",
+  "goalReached": "Goal reached!",
+  "takeBreak": "TAKE A BREAK",
+  "breakActive": "Break active",
+  "breakDone": "Break is over!",
+  "breakCustom": "Set break duration",
+  "minutes": "{{count}} min",
+  "hours": "{{count}}h {{min}}min",
+  "goals": {
+    "title": "Usage goals",
+    "add": "Set goal",
+    "perDay": "per day",
+    "of": "of"
+  },
+  "sessions": {
+    "title": "Sessions today",
+    "count": "{{count}} session",
+    "count_other": "{{count}} sessions"
+  },
+  "wellnessMsg": "You're doing great. Mindful use is healthy use.",
+  "overLimitMsg": "You've exceeded your goal. Take a break?",
+  "breakOptions": {
+    "5": "5 min",
+    "10": "10 min",
+    "15": "15 min",
+    "30": "30 min"
+  }
+}

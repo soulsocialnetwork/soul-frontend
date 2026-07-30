@@ -1,0 +1,32 @@
+{
+  "title": "Tiempo de Pantalla",
+  "today": "Hoy",
+  "todayUsage": "Uso de hoy",
+  "dailyGoal": "Meta diaria",
+  "goalReached": "¡Meta alcanzada!",
+  "takeBreak": "TOMAR UN DESCANSO",
+  "breakActive": "Descanso activo",
+  "breakDone": "¡Descanso terminado!",
+  "breakCustom": "Establecer duración del descanso",
+  "minutes": "{{count}} min",
+  "hours": "{{count}}h {{min}}min",
+  "goals": {
+    "title": "Metas de uso",
+    "add": "Establecer meta",
+    "perDay": "por día",
+    "of": "de"
+  },
+  "sessions": {
+    "title": "Sesiones hoy",
+    "count": "{{count}} sesión",
+    "count_other": "{{count}} sesiones"
+  },
+  "wellnessMsg": "Lo estás haciendo bien. El uso consciente es uso saludable.",
+  "overLimitMsg": "Has superado tu meta. ¿Un descanso?",
+  "breakOptions": {
+    "5": "5 min",
+    "10": "10 min",
+    "15": "15 min",
+    "30": "30 min"
+  }
+}

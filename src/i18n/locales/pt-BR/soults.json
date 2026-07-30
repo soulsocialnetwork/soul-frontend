@@ -1,0 +1,13 @@
+{
+  "title": "Soults",
+  "tapToWatch": "Toque para assistir",
+  "noAutoplay": "Sem reprodução automática",
+  "mindfulVideo": "Vídeo consciente",
+  "watchNow": "Assistir",
+  "save": "Salvar",
+  "likes": "{{count}} curtidas",
+  "empty": "Nenhum Soult ainda.",
+  "emptyHint": "Volte mais tarde para vídeos curtos e conscientes.",
+  "playingNow": "Reproduzindo",
+  "pauseHint": "Toque para pausar"
+}
