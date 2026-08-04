@@ -69,16 +69,15 @@ const NOTIFICATIONS = [
 
 export function NotificationsPanel({ isOpen, onClose }: NotificationsPanelProps) {
   const navigate = useNavigate();
-  const [notifications, setNotifications] = useState(NOTIFICATIONS);
+  const [notifications, setNotifications] = useState<typeof NOTIFICATIONS>(NOTIFICATIONS);
   const [filter, setFilter] = useState<'all' | 'follows' | 'comments'>('all');
 
-  // Redireciona para as Configurações
   const handleOpenSettings = () => {
     onClose();
     navigate('/settings');
   };
 
-  // Alterna o estado de seguir/seguindo de um usuário
+
   const handleToggleFollow = (id: number, e: React.MouseEvent) => {
     e.stopPropagation();
     setNotifications((prev) =>
@@ -88,7 +87,6 @@ export function NotificationsPanel({ isOpen, onClose }: NotificationsPanelProps)
     );
   };
 
-  // Redireciona para o perfil do usuário
   const handleOpenProfile = (username: string) => {
     onClose();
     navigate(`/profile/${username}`);
@@ -102,7 +100,7 @@ export function NotificationsPanel({ isOpen, onClose }: NotificationsPanelProps)
 
   return (
     <>
-      {/* Overlay com Blur */}
+      {}
       <div 
         className={cn(
           'fixed inset-0 z-50 bg-black/60 backdrop-blur-sm transition-opacity duration-300',
@@ -111,14 +109,14 @@ export function NotificationsPanel({ isOpen, onClose }: NotificationsPanelProps)
         onClick={onClose} 
       />
 
-      {/* Painel Lateral */}
+      {}
       <div
         className={cn(
           'fixed top-0 left-0 h-[100dvh] bg-background z-[60] w-full sm:w-[400px] md:w-[440px] border-r border-white/[0.06] flex flex-col transition-transform duration-300 ease-out shadow-2xl',
           isOpen ? 'translate-x-0' : '-translate-x-full'
         )}
       >
-        {/* Cabeçalho */}
+        {}
         <div className="p-4 sm:p-6 pb-2 shrink-0">
           <div className="flex items-center justify-between gap-3 mb-5">
             <div className="flex items-center gap-3">
@@ -155,7 +153,7 @@ export function NotificationsPanel({ isOpen, onClose }: NotificationsPanelProps)
                 filter === 'follows' ? 'px-4 sm:px-5' : 'bg-white/5 hover:bg-white/10'
               )}
             >
-              Seguidores
+              Conexões
             </Button>
             <Button
               size="sm"
@@ -204,7 +202,7 @@ export function NotificationsPanel({ isOpen, onClose }: NotificationsPanelProps)
                     <p className="text-[11px] sm:text-xs text-textSecondary/70 mt-0.5">{notif.time}</p>
                   </div>
 
-                  {/* Botão de Seguir/Seguindo */}
+                  {/* Botão de Conectar */}
                   {notif.type === 'follow' && (
                     <button
                       onClick={(e) => handleToggleFollow(notif.id, e)}
@@ -218,12 +216,12 @@ export function NotificationsPanel({ isOpen, onClose }: NotificationsPanelProps)
                       {notif.following ? (
                         <>
                           <UserCheck className="w-3.5 h-3.5 text-emerald-400" />
-                          <span>Seguindo</span>
+                          <span>Conectado</span>
                         </>
                       ) : (
                         <>
                           <UserPlus className="w-3.5 h-3.5" />
-                          <span>Seguir</span>
+                          <span>Conectar</span>
                         </>
                       )}
                     </button>

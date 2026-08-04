@@ -16,7 +16,7 @@ export function BottomNav() {
 
   return (
     <>
-      {/* More Sheet Overlay */}
+      {}
       {moreOpen && (
         <>
           <div

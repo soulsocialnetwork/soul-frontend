@@ -11,7 +11,7 @@ interface SoultListProps {
 function SoultSkeleton() {
   return (
     <div className="w-full h-full bg-neutral-900 overflow-hidden snap-start snap-always shrink-0 flex flex-col justify-between p-6 animate-pulse">
-      {/* Skeleton igual ao seu... omitido para brevidade mas apenas garantindo as classes "w-full h-full" no wrapper principal */}
+      {}
       <div className="flex justify-end pt-2">
         <div className="h-6 w-16 bg-white/10 rounded-full" />
       </div>
@@ -57,7 +57,7 @@ export function SoultList({ soults, loading = false }: SoultListProps) {
   return (
     <div className="w-full h-full overflow-y-scroll snap-y snap-mandatory no-scrollbar scroll-smooth">
       {soults.map((soult, index) => (
-        /* Envolvendo o card em um container que exige 100% da altura e ativa o snap perfeitamente */
+  
         <div key={soult.id} className="w-full h-full snap-start snap-always shrink-0 relative">
           <SoultCard soult={soult} index={index} />
         </div>

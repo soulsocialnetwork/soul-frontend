@@ -6,78 +6,9 @@ import { BottomNav } from '../../components/layout/BottomNav';
 import { Button } from '../../components/ui/Button';
 import { PostCard } from '../../components/feed/PostCard';
 import type { Post } from '../../services/postService';
-import { Grid, Bookmark, Plus, X, ChevronLeft, ChevronRight, Camera, Check } from 'lucide-react';
+import { Grid, Bookmark, Plus, X, ChevronLeft, ChevronRight, Camera, Check, QrCode, Heart } from 'lucide-react';
 import { cn } from '../../utils/cn';
 import { ScreenLoader } from '../../components/ui/ScreenLoader';
-
-// Fotos para o grid do perfil
-const PROFILE_IMAGES = [
-  'https://images.unsplash.com/photo-1507525428034-b723cf961d3e?auto=format&fit=crop&q=80&w=800', 
-  'https://images.unsplash.com/photo-1519681393784-d120267933ba?auto=format&fit=crop&q=80&w=800', 
-  'https://images.unsplash.com/photo-1470071459604-3b5ec3a7fe05?auto=format&fit=crop&q=80&w=800', 
-  'https://images.unsplash.com/photo-1447752875215-b2761acb3c5d?auto=format&fit=crop&q=80&w=800', 
-  'https://images.unsplash.com/photo-1506744038136-46273834b3fb?auto=format&fit=crop&q=80&w=800', 
-  'https://images.unsplash.com/photo-1534447677768-be436bb09401?auto=format&fit=crop&q=80&w=800', 
-  'https://images.unsplash.com/photo-1464822759023-fed622ff2c3b?auto=format&fit=crop&q=80&w=800', 
-  'https://images.unsplash.com/photo-1501785888041-af3ef285b470?auto=format&fit=crop&q=80&w=800', 
-  'https://images.unsplash.com/photo-1514888286974-6c03e2ca1dba?auto=format&fit=crop&q=80&w=800', 
-];
-
-const INITIAL_PROFILE_POSTS: Post[] = PROFILE_IMAGES.map((img, i) => ({
-  id: `profile-post-${i}`,
-  author: {
-    id: 'user-1',
-    name: 'Helena Martins',
-    username: 'helenamartins',
-    avatarUrl: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&q=80&w=300&h=300',
-    verified: true,
-  },
-  content: [
-    'Conectando com a imensidão da natureza. Cada paisagem traz uma nova perspectiva. 🌿✨',
-    'A beleza sutil de um amanhecer tranquilo no horizonte.',
-    'Explorando recantos onde o silêncio é a nossa melhor companhia.',
-    'Pensamento solto: a simplicidade das pequenas coisas é o que realmente sustenta os nossos dias. ☕️📖',
-    'Pausa para contemplar a harmonia perfeita entre o céu e la terra.',
-    'Refletindo sobre a grandiosidade do mundo ao nosso redor.',
-    'Reflexão do dia: às vezes, parar para respirar é o movimento mais produtivo que podemos fazer. 💭✨',
-    'Gratidão por cada amanhecer que nos convida a recomeçar.',
-    'Aproveitando a companhia mais aconchegante da casa. 🐾💛',
-  ][i],
-  imageUrl: img,
-  likesCount: 150 + i * 55,
-  commentsCount: 14 + i * 4,
-  createdAt: new Date(Date.now() - (i + 1) * 3600000 * 4).toISOString(),
-}));
-
-// Mocks de Posts Salvos
-const SAVED_IMAGES = [
-  'https://images.unsplash.com/photo-1454496522488-7a8e488e8606?auto=format&fit=crop&q=80&w=800',
-  'https://images.unsplash.com/photo-1519501025264-65ba15a82390?auto=format&fit=crop&q=80&w=800',
-  'https://images.unsplash.com/photo-1500530855697-b586d89ba3ee?auto=format&fit=crop&q=80&w=800',
-  'https://images.unsplash.com/photo-1473448912268-2022ce9509d8?auto=format&fit=crop&q=80&w=800',
-  'https://images.unsplash.com/photo-1508739773434-c26b3d09e071?auto=format&fit=crop&q=80&w=800',
-  'https://images.unsplash.com/photo-1507652313519-d4e9174996dd?auto=format&fit=crop&q=80&w=800',
-];
-
-const SAVED_POSTS: Post[] = Array.from({ length: 6 }).map((_, i) => ({
-  id: `saved-post-${i}`,
-  author: {
-    id: `author-saved-${i}`,
-    name: ['Marina Costa', 'Ana Clara', 'Camila Souza'][i % 3],
-    username: ['marinacosta', 'anaclara', 'camilasouza'][i % 3],
-    avatarUrl: `https://images.unsplash.com/photo-${i % 2 === 0 ? '1494790108377-be9c29b29330' : '1535713875002-d1d0cf377fde'}?auto=format&fit=crop&q=80&w=150&h=150`,
-    verified: i % 2 === 0,
-  },
-  content: [
-    'esse ângulo eu não esqueço não 😭 salvo pra quando eu precisar',
-    'as cores aqui são de outro mundo, não tem edição que supera',
-    'essa foto me lembra que tem tanta coisa linda ainda lá fora esperando',
-  ][i % 3],
-  imageUrl: SAVED_IMAGES[i],
-  likesCount: 340 + i * 75,
-  commentsCount: 28 + i * 6,
-  createdAt: new Date(Date.now() - (i + 1) * 86400000).toISOString(),
-}));
 
 export interface HighlightItem {
   id: string;
@@ -88,40 +19,158 @@ export interface HighlightItem {
   isNew?: boolean;
 }
 
-const INITIAL_HIGHLIGHTS: HighlightItem[] = [
+// QR code: token único do usuário logado (virá da API futuramente)
+const MY_QR_TOKEN = 'soul-user-1-qr-token';
+
+const INITIAL_PROFILE = {
+  username: 'luiza.campos',
+  fullName: 'Luiza Campos',
+  bio: 'Redescobrindo o valor do tempo livre e das pausas intencionais. Aspirante a jardineira.',
+  avatarUrl: 'https://images.unsplash.com/photo-1438761681033-6461ffad8d80?auto=format&fit=crop&q=80&w=250',
+};
+
+const PROFILE_POSTS: Post[] = [
   {
-    id: '1',
-    name: 'Viagens',
-    cover: 'https://images.unsplash.com/photo-1488646953014-85cb44e25828?auto=format&fit=crop&q=80&w=200&h=200',
-    image: 'https://images.unsplash.com/photo-1488646953014-85cb44e25828?auto=format&fit=crop&q=80&w=800&h=1200',
+    id: 'my-1',
+    author: {
+      id: 'me',
+      name: 'Luiza Campos',
+      username: 'luiza.campos',
+      avatarUrl: 'https://images.unsplash.com/photo-1438761681033-6461ffad8d80?auto=format&fit=crop&q=80&w=250',
+    },
+    content: 'Tentando aplicar o conceito de slow living no fim de semana. Nada de celular nas primeiras horas do dia.',
+    imageUrl: 'https://picsum.photos/seed/slow/800/600',
+    likesCount: 128,
+    commentsCount: 14,
+    createdAt: new Date().toISOString(),
+    initialComments: [
+      { id: 'c1', author: 'renatoval', text: 'Eu preciso muito fazer isso, sério.', time: 'há 2h' }
+    ]
+  },
+  {
+    id: 'my-2',
+    author: {
+      id: 'me',
+      name: 'Luiza Campos',
+      username: 'luiza.campos',
+      avatarUrl: 'https://images.unsplash.com/photo-1438761681033-6461ffad8d80?auto=format&fit=crop&q=80&w=250',
+    },
+    content: 'O simples de hoje.',
+    imageUrl: 'https://picsum.photos/seed/plants2/800/600',
+    likesCount: 89,
+    commentsCount: 2,
+    createdAt: new Date(Date.now() - 86400000).toISOString(),
+    initialComments: []
+  },
+  {
+    id: 'my-3',
+    author: {
+      id: 'me',
+      name: 'Luiza Campos',
+      username: 'luiza.campos',
+      avatarUrl: 'https://images.unsplash.com/photo-1438761681033-6461ffad8d80?auto=format&fit=crop&q=80&w=250',
+    },
+    content: 'Descobri que fazer pão em casa é mais sobre o processo do que sobre o resultado.',
+    imageUrl: 'https://picsum.photos/seed/bread3/800/600',
+    likesCount: 201,
+    commentsCount: 9,
+    createdAt: new Date(Date.now() - 172800000).toISOString(),
+    initialComments: []
+  },
+  {
+    id: 'my-4',
+    author: {
+      id: 'me',
+      name: 'Luiza Campos',
+      username: 'luiza.campos',
+      avatarUrl: 'https://images.unsplash.com/photo-1438761681033-6461ffad8d80?auto=format&fit=crop&q=80&w=250',
+    },
+    content: 'Jardim de inverno em andamento.',
+    imageUrl: 'https://picsum.photos/seed/garden4/800/600',
+    likesCount: 74,
+    commentsCount: 3,
+    createdAt: new Date(Date.now() - 259200000).toISOString(),
+    initialComments: []
+  },
+];
+
+const SAVED_POSTS: Post[] = [
+  {
+    id: 'saved-1',
+    author: { id: 'u1', name: 'Renato Valença', username: 'renatoval', avatarUrl: 'https://i.pravatar.cc/150?u=renatoval' },
+    content: 'Terminei O Nome do Vento pela segunda vez. Ainda impressionante.',
+    imageUrl: 'https://picsum.photos/seed/renato1/800/600',
+    likesCount: 312,
+    commentsCount: 18,
+    createdAt: new Date(Date.now() - 86400000 * 3).toISOString(),
+    initialComments: [{ id: 'sc1', author: 'Você', text: 'Preciso ler ainda.', time: 'há 1 dia' }],
+  },
+  {
+    id: 'saved-2',
+    author: { id: 'u2', name: 'Mariana Silveira', username: 'ma.silveira', avatarUrl: 'https://i.pravatar.cc/150?u=ma.silveira' },
+    content: 'Nova paleta aprovada pelo cliente. Gratidão por projetos que respiram.',
+    imageUrl: 'https://picsum.photos/seed/mari1/800/600',
+    likesCount: 445,
+    commentsCount: 22,
+    createdAt: new Date(Date.now() - 86400000 * 5).toISOString(),
+    initialComments: [],
+  },
+  {
+    id: 'saved-3',
+    author: { id: 'u3', name: 'Felipe Nogueira', username: 'felipe.nog', avatarUrl: 'https://i.pravatar.cc/150?u=felipe.nog' },
+    content: 'Pôr do sol na ponte. Essa cidade tem seus momentos.',
+    imageUrl: 'https://picsum.photos/seed/felipe1/800/600',
+    likesCount: 189,
+    commentsCount: 7,
+    createdAt: new Date(Date.now() - 86400000 * 7).toISOString(),
+    initialComments: [],
+  },
+  {
+    id: 'saved-4',
+    author: { id: 'u4', name: 'Julia Borges', username: 'julia.borges', avatarUrl: 'https://i.pravatar.cc/150?u=julia.borges' },
+    content: 'Risoto de domingo. O processo é metade do prazer.',
+    imageUrl: 'https://picsum.photos/seed/julia2/800/600',
+    likesCount: 276,
+    commentsCount: 11,
+    createdAt: new Date(Date.now() - 86400000 * 10).toISOString(),
+    initialComments: [],
+  },
+];
+
+const MOCK_HIGHLIGHTS: HighlightItem[] = [
+  {
+    id: 'h1',
+    name: 'Jardim',
+    cover: 'https://picsum.photos/seed/garden4/300/300',
+    image: 'https://picsum.photos/seed/garden4/600/800',
     type: 'image',
   },
   {
-    id: '2',
-    name: 'Natureza',
-    cover: 'https://images.unsplash.com/photo-1470071459604-3b5ec3a7fe05?auto=format&fit=crop&q=80&w=200&h=200',
-    image: 'https://images.unsplash.com/photo-1470071459604-3b5ec3a7fe05?auto=format&fit=crop&q=80&w=800&h=1200',
-    type: 'image',
-  },
-  {
-    id: '3',
-    name: 'Refúgio',
-    cover: 'https://images.unsplash.com/photo-1506744038136-46273834b3fb?auto=format&fit=crop&q=80&w=200&h=200',
-    image: 'https://images.unsplash.com/photo-1506744038136-46273834b3fb?auto=format&fit=crop&q=80&w=800&h=1200',
-    type: 'image',
-  },
-  {
-    id: '4',
-    name: 'Café',
-    cover: 'https://images.unsplash.com/photo-1501339847302-ac426a4a7cbb?auto=format&fit=crop&q=80&w=200&h=200',
-    image: 'https://images.unsplash.com/photo-1501339847302-ac426a4a7cbb?auto=format&fit=crop&q=80&w=800&h=1200',
-    type: 'image',
-  },
-  {
-    id: '5',
+    id: 'h2',
     name: 'Leituras',
-    cover: 'https://images.unsplash.com/photo-1495640388908-05fa85288e61?auto=format&fit=crop&q=80&w=200&h=200',
-    image: 'https://images.unsplash.com/photo-1495640388908-05fa85288e61?auto=format&fit=crop&q=80&w=800&h=1200',
+    cover: 'https://picsum.photos/seed/books2/300/300',
+    image: 'https://picsum.photos/seed/books2/600/800',
+    type: 'image',
+  },
+  {
+    id: 'h3',
+    name: 'Cozinha',
+    cover: 'https://picsum.photos/seed/bread3/300/300',
+    image: 'https://picsum.photos/seed/bread3/600/800',
+    type: 'image',
+  },
+  {
+    id: 'h4',
+    name: 'Caminhadas',
+    cover: 'https://picsum.photos/seed/trail7/300/300',
+    image: 'https://picsum.photos/seed/trail7/600/800',
+    type: 'image',
+  },
+  {
+    id: 'h5',
+    name: 'Sem tela',
+    cover: 'https://picsum.photos/seed/slow/300/300',
+    image: 'https://picsum.photos/seed/slow/600/800',
     type: 'image',
   },
 ];
@@ -134,20 +183,19 @@ export default function ProfilePage() {
 
   const [highlightsList, setHighlightsList] = useState<HighlightItem[]>([]);
 
-  const [profileData, setProfileData] = useState({
-    username: 'helenamartins',
-    fullName: 'Helena Martins',
-    bio: 'Colecionadora de horizontes e momentos de paz.\nExplorando a beleza do mundo através de lentes e passos. 🌿✨',
-    avatarUrl: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&q=80&w=600&h=600',
-  });
+  const [profileData, setProfileData] = useState(INITIAL_PROFILE);
 
   const [editForm, setEditForm] = useState(profileData);
   const [showEditModal, setShowEditModal] = useState(false);
   const [feedModal, setFeedModal] = useState<{ list: Post[]; startIndex: number } | null>(null);
   const [showAvatarModal, setShowAvatarModal] = useState(false);
   const [activeHighlightIndex, setActiveHighlightIndex] = useState<number | null>(null);
+  const [showQrModal, setShowQrModal] = useState(false);
+  // Contadores vindos do serviço (por enquanto placeholders)
+  const [connectionsCount] = useState(14);
+  const [realFriendsCount] = useState(4);
 
-  const displayPosts = activeTab === 'posts' ? INITIAL_PROFILE_POSTS : SAVED_POSTS;
+  const [displayPosts, setDisplayPosts] = useState<Post[]>(PROFILE_POSTS);
 
   useEffect(() => {
     // Carrega destaques criados pelo usuário armazenados no localStorage
@@ -155,12 +203,12 @@ export default function ProfilePage() {
     if (saved) {
       try {
         const parsed: HighlightItem[] = JSON.parse(saved);
-        setHighlightsList([...parsed, ...INITIAL_HIGHLIGHTS]);
+        setHighlightsList(parsed.length > 0 ? parsed : MOCK_HIGHLIGHTS);
       } catch (e) {
-        setHighlightsList(INITIAL_HIGHLIGHTS);
+        setHighlightsList(MOCK_HIGHLIGHTS);
       }
     } else {
-      setHighlightsList(INITIAL_HIGHLIGHTS);
+      setHighlightsList(MOCK_HIGHLIGHTS);
     }
 
     const timer = setTimeout(() => setLoading(false), 500);
@@ -256,21 +304,31 @@ export default function ProfilePage() {
                           <Button variant="secondary" className="flex-1 md:flex-none px-5 h-9 text-[13px] rounded-xl font-semibold active:scale-95 transition-transform">
                             Itens Arquivados
                           </Button>
+                          <Button 
+                            onClick={() => setShowQrModal(true)}
+                            variant="secondary" 
+                            className="flex-none px-3 h-9 text-[13px] rounded-xl font-semibold active:scale-95 transition-transform"
+                          >
+                            <QrCode className="w-4 h-4" />
+                          </Button>
                         </div>
                       </div>
 
                       <div className="flex gap-6 mb-5 text-sm">
                         <div className="flex flex-col items-center md:items-start">
-                          <span className="font-bold text-lg leading-none">{INITIAL_PROFILE_POSTS.length}</span>
+                          <span className="font-bold text-lg leading-none">{displayPosts.length}</span>
                           <span className="text-textSecondary text-xs">posts</span>
                         </div>
                         <div className="flex flex-col items-center md:items-start">
-                          <span className="font-bold text-lg leading-none">1.420</span>
-                          <span className="text-textSecondary text-xs">seguidores</span>
+                          <span className="font-bold text-lg leading-none">{connectionsCount}</span>
+                          <span className="text-textSecondary text-xs">Conexões</span>
                         </div>
                         <div className="flex flex-col items-center md:items-start">
-                          <span className="font-bold text-lg leading-none">385</span>
-                          <span className="text-textSecondary text-xs">seguindo</span>
+                          <span className="font-bold text-lg leading-none">{realFriendsCount}</span>
+                          <span className="text-textSecondary text-xs flex items-center gap-1">
+                            Amigos Reais
+                            <Heart className="w-3 h-3 text-red-500" fill="currentColor" />
+                          </span>
                         </div>
                       </div>
 
@@ -361,21 +419,36 @@ export default function ProfilePage() {
                 </div>
 
                 {/* ── Grade de Fotos (Posts ou Salvos) ── */}
-                <div className="grid grid-cols-3 gap-1 md:gap-4">
-                  {displayPosts.map((post, index) => (
-                    <div
-                      key={post.id}
-                      onClick={() => setFeedModal({ list: displayPosts, startIndex: index })}
-                      className="aspect-square bg-white/5 md:rounded-2xl overflow-hidden cursor-pointer active:scale-95 transition-transform flex items-center justify-center relative group"
-                    >
-                      <img
-                        src={post.imageUrl}
-                        alt={`Post ${index}`}
-                        className="w-full h-full object-cover"
-                      />
+                {(() => {
+                  const list = activeTab === 'saved' ? SAVED_POSTS : displayPosts;
+                  return (
+                    <div className="grid grid-cols-3 gap-1 md:gap-4">
+                      {list.map((post, index) => (
+                        <div
+                          key={post.id}
+                          onClick={() => setFeedModal({ list, startIndex: index })}
+                          className="aspect-square bg-white/5 md:rounded-2xl overflow-hidden cursor-pointer active:scale-95 transition-transform flex items-center justify-center relative group"
+                        >
+                          <img
+                            src={post.imageUrl}
+                            alt={`Post ${index}`}
+                            className="w-full h-full object-cover"
+                          />
+                          {activeTab === 'saved' && (
+                            <div className="absolute top-2 right-2 w-6 h-6 bg-black/50 rounded-full flex items-center justify-center">
+                              <Bookmark className="w-3 h-3 text-white fill-white" />
+                            </div>
+                          )}
+                        </div>
+                      ))}
+                      {list.length === 0 && (
+                        <div className="col-span-3 py-20 text-center text-textSecondary text-sm">
+                          {activeTab === 'saved' ? 'Nenhum post salvo ainda.' : 'Nenhum post ainda.'}
+                        </div>
+                      )}
                     </div>
-                  ))}
-                </div>
+                  );
+                })()}
 
               </div>
             </div>
@@ -575,6 +648,59 @@ export default function ProfilePage() {
             onClick={(e) => e.stopPropagation()}
             className="w-full max-w-[320px] md:max-w-[400px] aspect-square rounded-[2rem] md:rounded-[3rem] object-cover shadow-2xl border border-white/10 animate-scale-up"
           />
+        </div>
+      )}
+
+      {/* ── MODAL: QR CODE AMIGO REAL ── */}
+      {showQrModal && (
+        <div
+          className="fixed inset-0 z-[100] bg-black/90 backdrop-blur-md flex items-center justify-center p-4 animate-fade-in"
+          onClick={() => setShowQrModal(false)}
+        >
+          <div
+            className="bg-neutral-900 border border-white/10 rounded-3xl p-6 max-w-xs w-full shadow-2xl text-center space-y-5 animate-scale-up"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <button
+              onClick={() => setShowQrModal(false)}
+              className="absolute top-4 right-4 p-1.5 rounded-full bg-white/10 hover:bg-white/20 text-white transition-colors"
+            >
+              <X className="w-4 h-4" />
+            </button>
+
+            <div className="space-y-1">
+              <h3 className="text-base font-bold text-white">Amigo Real</h3>
+              <p className="text-xs text-textSecondary leading-relaxed">
+                Mostre este QR Code para outra pessoa.<br/>
+                Ela também precisa escanear o seu para virar Amigo Real.
+              </p>
+            </div>
+
+            {/* QR Code visual gerado via API pública */}
+            <div className="flex items-center justify-center">
+              <div className="w-44 h-44 bg-white rounded-2xl flex items-center justify-center p-3 shadow-inner">
+                <img
+                  src={`https://api.qrserver.com/v1/create-qr-code/?size=176x176&data=${MY_QR_TOKEN}&bgcolor=ffffff&color=000000&margin=0`}
+                  alt="Seu QR Code de Amigo Real"
+                  className="w-full h-full object-contain"
+                />
+              </div>
+            </div>
+
+            <div className="bg-white/5 border border-white/10 rounded-2xl px-4 py-3">
+              <p className="text-[11px] text-textSecondary mb-1">Amizade Real exige presença física</p>
+              <p className="text-xs font-semibold text-white">
+                Escaneie o QR Code um do outro para se tornarem Amigos Reais no Soul.
+              </p>
+            </div>
+
+            <div className="flex items-center gap-2 bg-primary/10 border border-primary/20 rounded-2xl px-4 py-2.5">
+              <Heart className="w-4 h-4 text-primary shrink-0" />
+              <p className="text-[11px] text-primary font-medium text-left">
+                Amigos Reais é o nível mais íntimo de conexão do Soul. Só quem esteve presente.
+              </p>
+            </div>
+          </div>
         </div>
       )}
 

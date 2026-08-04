@@ -5,6 +5,13 @@ export interface SoultAuthor {
   verified?: boolean;
 }
 
+export interface SoultComment {
+  id: string;
+  author: string;
+  text: string;
+  time: string;
+}
+
 export interface Soult {
   id: string;
   title: string;
@@ -16,89 +23,125 @@ export interface Soult {
   commentsCount: number;
   author: SoultAuthor;
   createdAt: string;
+  initialComments?: SoultComment[];
 }
 
-// guarda os dados fakes dos vídeos (:`
-const MOCK_SOULTS: Soult[] = [
+const mockSoults: Soult[] = [
   {
-    id: '1',
-    title: 'acordei cedo e valeu',
-    description: 'literalmente sozinha no mundo às 6h vendo o sol nascer kkk. tô aprendendo a curtir o silêncio',
-    thumbnailUrl: 'https://images.pexels.com/photos/2559941/pexels-photo-2559941.jpeg',
-    videoUrl: 'https://videos.pexels.com/video-files/4019405/4019405-uhd_1440_2560_25fps.mp4',
-    duration: 45,
-    likesCount: 1420,
-    commentsCount: 38,
-    author: {
-      id: 'a1',
-      name: 'Luísa Mendes',
-      avatarUrl: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?q=80&w=200&auto=format&fit=crop',
-      verified: true,
-    },
+    id: 's1',
+    title: 'A calma da natureza',
+    description: 'Um momento de pausa no meio da rotina agitada. Respirar fundo faz toda a diferença.',
+    videoUrl: 'https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ForBiggerBlazes.mp4',
+    thumbnailUrl: 'https://picsum.photos/seed/nature1/400/800',
+    duration: 15,
+    likesCount: 342,
+    commentsCount: 2,
     createdAt: new Date().toISOString(),
+    author: {
+      id: 'us1',
+      name: 'Mariana Silva',
+      avatarUrl: 'https://images.unsplash.com/photo-1438761681033-6461ffad8d80?auto=format&fit=crop&w=200&h=200',
+      verified: false
+    },
+    initialComments: [
+      { id: 'c1', author: 'Roberto Dias', text: 'Eu precisava muito ver isso hoje, minha cabeça tava a mil.', time: 'há 2h' },
+      { id: 'c2', author: 'Ana Clara', text: 'Que lugar incrível, onde fica?', time: 'há 1h' }
+    ]
   },
   {
-    id: '2',
-    title: 'chuva + fone no ouvido',
-    description: 'coloca o som da chuva, fecha os olhos por 5 min e me fala se não tá melhor depois 🙏',
-    thumbnailUrl: 'https://images.pexels.com/photos/2387873/pexels-photo-2387873.jpeg',
-    videoUrl: 'https://videos.pexels.com/video-files/5896379/5896379-uhd_1440_2560_24fps.mp4',
-    duration: 60,
-    likesCount: 2890,
-    commentsCount: 94,
-    author: {
-      id: 'a2',
-      name: 'Pedro Henrique',
-      avatarUrl: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?q=80&w=200&auto=format&fit=crop',
-      verified: false,
-    },
-    createdAt: new Date().toISOString(),
-  },
-  {
-    id: '3',
-    title: 'pausa obrigatória',
-    description: 'larga o cel e vai respirar. não tô brincando não 😭 eu precisava ouvir isso também',
-    thumbnailUrl: 'https://images.pexels.com/photos/15286/pexels-photo.jpg',
-    videoUrl: 'https://videos.pexels.com/video-files/5192077/5192077-uhd_1440_2560_25fps.mp4',
+    id: 's2',
+    title: 'Rotina matinal minimalista',
+    description: 'Menos tela, mais foco. Começando o dia com intencionalidade.',
+    videoUrl: 'https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ForBiggerEscapes.mp4',
+    thumbnailUrl: 'https://picsum.photos/seed/morning/400/800',
     duration: 30,
-    likesCount: 5120,
-    commentsCount: 182,
-    author: {
-      id: 'a3',
-      name: 'Marina Costa',
-      avatarUrl: 'https://images.unsplash.com/photo-1494790108377-be9c29b29330?q=80&w=200&auto=format&fit=crop',
-      verified: true,
-    },
+    likesCount: 1205,
+    commentsCount: 3,
     createdAt: new Date().toISOString(),
+    author: {
+      id: 'us2',
+      name: 'Tiago Barros',
+      avatarUrl: 'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?auto=format&fit=crop&w=200&h=200',
+      verified: true
+    },
+    initialComments: [
+      { id: 'c3', author: 'Juliana Freitas', text: 'Tenho tentado fazer isso, mas a vontade de pegar o celular assim que acordo é absurda.', time: 'há 5h' },
+      { id: 'c4', author: 'Lucas Martins', text: 'O café sem pressa muda tudo.', time: 'há 4h' },
+      { id: 'c5', author: 'Bia Vieira', text: 'Vou tentar amanhã, juro.', time: 'há 30m' }
+    ]
   },
   {
-    id: '4',
-    title: 'esse fim de tarde 😩',
-    description: 'mds q cor é essa. eu tava aqui achando que tava ruim o dia kk obrigado natureza',
-    thumbnailUrl: 'https://images.pexels.com/photos/33109/fall-autumn-red-season.jpg',
-    videoUrl: 'https://videos.pexels.com/video-files/6122605/6122605-uhd_1440_2560_25fps.mp4',
-    duration: 50,
-    likesCount: 980,
-    commentsCount: 21,
-    author: {
-      id: 'a4',
-      name: 'Tiago Souza',
-      avatarUrl: 'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?q=80&w=200&auto=format&fit=crop',
-      verified: false,
-    },
+    id: 's3',
+    title: 'Arte e processo',
+    description: 'O processo é sempre mais bagunçado do que o resultado final.',
+    videoUrl: 'https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ForBiggerJoyrides.mp4',
+    thumbnailUrl: 'https://picsum.photos/seed/art/400/800',
+    duration: 45,
+    likesCount: 890,
+    commentsCount: 1,
     createdAt: new Date().toISOString(),
+    author: {
+      id: 'us3',
+      name: 'Camila Rocha',
+      avatarUrl: 'https://images.unsplash.com/photo-1544005313-94ddf0286df2?auto=format&fit=crop&w=200&h=200',
+      verified: false
+    },
+    initialComments: [
+      { id: 'c6', author: 'Fernanda Lima', text: 'A textura ficou perfeita! Qual material você usou na base?', time: 'há 10h' }
+    ]
+  },
+  {
+    id: 's4',
+    title: 'Foco nos estudos',
+    description: 'Quando a técnica pomodoro finalmente começa a dar resultado.',
+    videoUrl: 'https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ElephantsDream.mp4',
+    thumbnailUrl: 'https://picsum.photos/seed/study/400/800',
+    duration: 20,
+    likesCount: 567,
+    commentsCount: 2,
+    createdAt: new Date().toISOString(),
+    author: {
+      id: 'us4',
+      name: 'João Pedro',
+      avatarUrl: 'https://images.unsplash.com/photo-1506794778202-cad84cf45f1d?auto=format&fit=crop&w=200&h=200',
+      verified: false
+    },
+    initialComments: [
+      { id: 'c7', author: 'Matheus Costa', text: 'Eu só consigo focar se tiver música clássica tocando de fundo rs.', time: 'há 12h' },
+      { id: 'c8', author: 'Laura', text: 'Bora que o semestre não perdoa!', time: 'há 8h' }
+    ]
+  },
+  {
+    id: 's5',
+    title: 'Tecnologia consciente',
+    description: 'Reflexões sobre como usamos as ferramentas do nosso tempo.',
+    videoUrl: 'https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/TearsOfSteel.mp4',
+    thumbnailUrl: 'https://picsum.photos/seed/tech/400/800',
+    duration: 60,
+    likesCount: 2100,
+    commentsCount: 3,
+    createdAt: new Date().toISOString(),
+    author: {
+      id: 'us5',
+      name: 'Prof. Carlos',
+      avatarUrl: 'https://images.unsplash.com/photo-1492562080023-ab3db95bfbce?auto=format&fit=crop&w=200&h=200',
+      verified: true
+    },
+    initialComments: [
+      { id: 'c9', author: 'Daniela', text: 'Incrível essa perspectiva. A ferramenta não é ruim, o uso que fazemos dela que dita o resultado.', time: 'há 1 dia' },
+      { id: 'c10', author: 'Pedro H.', text: 'Fiquei pensando nisso o fim de semana todo.', time: 'há 20h' },
+      { id: 'c11', author: 'Sofia', text: 'Ótima reflexão professor!', time: 'há 10h' }
+    ]
   }
 ];
 
 export const soultService = {
   async getSoults(): Promise<Soult[]> {
-    await new Promise((resolve) => setTimeout(resolve, 500));
-    return MOCK_SOULTS;
+    return mockSoults;
   },
 
-  async likeSoult(id: string): Promise<void> {
-    await new Promise((resolve) => setTimeout(resolve, 200));
-    console.log(`Soult ${id} curtido!`);
+  async likeSoult(_id: string): Promise<void> {
+    // Integrar com: POST /soults/:id/like
   },
 
   formatDuration(seconds: number): string {

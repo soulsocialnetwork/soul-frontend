@@ -3,6 +3,7 @@ import { Input } from '../ui/Input';
 import { Button } from '../ui/Button';
 import { DateOfBirthPicker } from './DateOfBirthPicker';
 import { useTranslation } from '../../i18n';
+import { Info, ShieldCheck } from 'lucide-react';
 
 interface LoginFormData {
   email: string;
@@ -44,14 +45,15 @@ export function AuthForm({ mode, onSubmit }: AuthFormProps) {
   return (
     <form onSubmit={handleSubmit} className="flex flex-col gap-4">
       <Input label={t('email')} type="email" value={email} onChange={(e) => setEmail(e.target.value)} required />
+
       <Input label={t('password')} type="password" value={password} onChange={(e) => setPassword(e.target.value)} required />
 
       {mode === 'register' && (
         <>
           <DateOfBirthPicker
-            day={dobDay} month={dobMonth} year={dobYear}
-            onDayChange={setDobDay} onMonthChange={setDobMonth} onYearChange={setDobYear}
-          />
+              day={dobDay} month={dobMonth} year={dobYear}
+              onDayChange={setDobDay} onMonthChange={setDobMonth} onYearChange={setDobYear}
+            />
           <Input label={t('fullName')} type="text" value={fullName} onChange={(e) => setFullName(e.target.value)} required />
           <Input label={t('username')} type="text" value={username} onChange={(e) => setUsername(e.target.value)} required />
         </>

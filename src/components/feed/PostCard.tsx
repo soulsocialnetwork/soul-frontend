@@ -32,23 +32,26 @@ export function PostCard({ post, index = 0 }: PostCardProps) {
   const { t } = useTranslation('feed');
   const navigate = useNavigate();
   const [liked, setLiked] = useState(false);
+  const [likes, setLikes] = useState(post.likesCount || 0);
   const [saved, setSaved] = useState(false);
   const [isFollowing, setIsFollowing] = useState(false);
-  const [likes, setLikes] = useState(post.likesCount);
   const [likeAnim, setLikeAnim] = useState(false);
 
   // estados dos modais de comentario e share (:\n
   const [commentsOpen, setCommentsOpen] = useState(false);
   const [newComment, setNewComment] = useState('');
-  const [commentsList, setCommentsList] = useState<Comment[]>([]);
+  const [commentsList, setCommentsList] = useState<Comment[]>(post.initialComments || []);
 
   const [shareOpen, setShareOpen] = useState(false);
   const [copied, setCopied] = useState(false);
 
+  const [showConnectModal, setShowConnectModal] = useState(false);
+  const [connectIntent, setConnectIntent] = useState('');
+
   const handleLike = async () => {
     const next = !liked;
     setLiked(next);
-    setLikes((n) => n + (next ? 1 : -1));
+    setLikes((n: number) => n + (next ? 1 : -1));
     if (next) { setLikeAnim(true); setTimeout(() => setLikeAnim(false), 400); }
     try { await postService.interactWithPost(post.id, 'LIKE'); } catch { /* silêncio (: */ }
   };
@@ -60,7 +63,17 @@ export function PostCard({ post, index = 0 }: PostCardProps) {
   };
 
   const handleFollowToggle = async () => {
-    setIsFollowing((prev) => !prev);
+    if (!isFollowing) {
+      setShowConnectModal(true);
+    } else {
+      setIsFollowing(false);
+    }
+  };
+
+  const handleConfirmConnect = () => {
+    setIsFollowing(true);
+    setShowConnectModal(false);
+    setConnectIntent('');
   };
 
   const handleAddComment = (e: React.FormEvent) => {
@@ -99,9 +112,8 @@ export function PostCard({ post, index = 0 }: PostCardProps) {
     }
   };
 
-  const likesLabel = likes >= 100
-    ? t('post.likes', { count: Math.floor(likes / 100) * 100 })
-    : t('post.likesExact', { count: likes });
+  
+  const likesLabel = liked ? 'Curtido' : 'Curtir';
 
   return (
     <>
@@ -144,28 +156,28 @@ export function PostCard({ post, index = 0 }: PostCardProps) {
             {isFollowing ? (
               <>
                 <UserCheck className="w-3.5 h-3.5" />
-                <span>Seguindo</span>
+                <span>Conectado</span>
               </>
             ) : (
               <>
                 <UserPlus className="w-3.5 h-3.5" />
-                <span>Seguir</span>
+                <span>Conectar</span>
               </>
             )}
           </button>
         </div>
 
-        {/* 👇 Modificado: onClick agora navega para o post */}
+        {}
         <div onClick={() => navigate(`/post/${post.id}`)} className="cursor-pointer active:opacity-70 transition-opacity">
           <p className="px-4 pb-3 text-textPrimary/90 text-sm leading-relaxed">{post.content}</p>
         </div>
 
-        {/* 👇 Modificado: onClick agora navega para o post */}
+        {}
         <div onClick={() => navigate(`/post/${post.id}`)} className="mx-3 mb-3 rounded-2xl overflow-hidden cursor-pointer active:scale-[0.98] transition-transform">
           {post.imageUrl ? (
-            <img src={post.imageUrl} alt="Post media" className="w-full aspect-video object-cover object-top" />
+            <img src={post.imageUrl} alt="Post media" className="w-full aspect-[3/4] lg:aspect-video object-cover object-top" />
           ) : (
-            <div className="w-full aspect-video bg-gradient-to-br from-surfaceHighlight to-background" />
+            <div className="w-full aspect-[3/4] lg:aspect-video bg-gradient-to-br from-surfaceHighlight to-background" />
           )}
         </div>
 
@@ -186,13 +198,12 @@ export function PostCard({ post, index = 0 }: PostCardProps) {
               <span>{likesLabel}</span>
             </button>
 
-            {/* O botão de comentários continua abrindo o modal normalmente */}
             <button
               onClick={() => setCommentsOpen(true)}
               className="flex items-center gap-1.5 text-xs font-medium text-textSecondary hover:text-textPrimary transition-colors"
             >
               <MessageSquare className="w-[18px] h-[18px]" strokeWidth={1.75} />
-              <span>{commentsList.length}</span>
+              <span>Comentar</span>
             </button>
 
             <button
@@ -221,7 +232,7 @@ export function PostCard({ post, index = 0 }: PostCardProps) {
         </div>
       </article>
 
-      {/* O resto dos modais continuam iguais */}
+      {}
       {commentsOpen && (
         <div
           className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex flex-col justify-end animate-fade-in"
@@ -338,6 +349,60 @@ export function PostCard({ post, index = 0 }: PostCardProps) {
           </div>
         </div>
       )}
+
+      {}
+      {showConnectModal && (
+        <div 
+          className="fixed inset-0 z-[100] bg-black/80 backdrop-blur-md flex items-center justify-center p-4 sm:p-6 animate-fade-in"
+          onClick={(e) => { e.stopPropagation(); setShowConnectModal(false); }}
+        >
+          <div 
+            className="w-full max-w-sm bg-background border border-white/10 rounded-3xl p-6 sm:p-8 shadow-2xl animate-scale-up"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="flex items-center justify-between mb-6">
+              <h3 className="text-lg font-bold text-white">Conexão com Propósito</h3>
+              <button 
+                onClick={() => setShowConnectModal(false)}
+                className="p-2 rounded-full hover:bg-white/10 text-zinc-400 hover:text-white transition-colors"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+            
+            <p className="text-sm text-zinc-400 mb-6 leading-relaxed">
+              No Soul, nós cultivamos conexões reais. Por que você deseja acompanhar as publicações de <strong className="text-white">{post.author.name}</strong>?
+            </p>
+
+            <div className="space-y-3 mb-8">
+              {['Me inspira', 'Amigo(a) real', 'Conteúdo útil', 'Compartilha mesmos valores'].map((label) => (
+                <button
+                  key={label}
+                  onClick={() => setConnectIntent(label)}
+                  className={cn(
+                    "w-full text-left px-4 py-3.5 rounded-xl text-[15px] font-medium transition-all active:scale-[0.98] border",
+                    connectIntent === label 
+                      ? "bg-white text-black border-white" 
+                      : "bg-white/[0.03] text-zinc-300 border-white/5 hover:bg-white/[0.06] hover:border-white/10"
+                  )}
+                >
+                  {label}
+                </button>
+              ))}
+            </div>
+
+            <button
+              disabled={!connectIntent}
+              onClick={handleConfirmConnect}
+              className="w-full py-4 bg-white text-black font-bold rounded-xl transition-all disabled:opacity-40 disabled:cursor-not-allowed hover:bg-zinc-100 active:scale-[0.98]"
+            >
+              Estabelecer Conexão
+            </button>
+          </div>
+        </div>
+      )}
+
+
     </>
   );
 }

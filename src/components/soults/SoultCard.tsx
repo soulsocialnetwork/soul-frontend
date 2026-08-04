@@ -54,7 +54,26 @@ export function SoultCard({ soult, index = 0 }: SoultCardProps) {
   const [copied, setCopied] = useState(false);
 
   const [newComment, setNewComment] = useState('');
-  const [commentsList, setCommentsList] = useState<Comment[]>([]);
+  const [commentsList, setCommentsList] = useState<Comment[]>(soult.initialComments || []);
+
+  const [showConnectModal, setShowConnectModal] = useState(false);
+  const [connectIntent, setConnectIntent] = useState('');
+
+  const [progress, setProgress] = useState(0);
+
+  const handleTimeUpdate = () => {
+    if (videoRef.current) {
+      const current = videoRef.current.currentTime;
+      const total = videoRef.current.duration;
+      if (total > 0) {
+        setProgress((current / total) * 100);
+      }
+    }
+  };
+
+  const handleEnded = () => {
+    setPlaying(false);
+  };
 
   // dar play ou pausar no clique (:
   const togglePlay = () => {
@@ -62,6 +81,9 @@ export function SoultCard({ soult, index = 0 }: SoultCardProps) {
       if (playing) {
         videoRef.current.pause();
       } else {
+        if (videoRef.current.ended) {
+          videoRef.current.currentTime = 0;
+        }
         videoRef.current.play().catch(() => {});
       }
       setPlaying(!playing);
@@ -102,7 +124,27 @@ export function SoultCard({ soult, index = 0 }: SoultCardProps) {
 
   const handleFollowToggle = (e: React.MouseEvent) => {
     e.stopPropagation();
-    setIsFollowing((prev) => !prev);
+    if (!isFollowing) {
+      setShowConnectModal(true);
+    } else {
+      setIsFollowing(false);
+    }
+  };
+
+  const handleProgressClick = (e: React.MouseEvent<HTMLDivElement>) => {
+    e.stopPropagation();
+    if (!videoRef.current) return;
+    const bar = e.currentTarget;
+    const rect = bar.getBoundingClientRect();
+    const clickX = e.clientX - rect.left;
+    const percent = clickX / rect.width;
+    videoRef.current.currentTime = percent * videoRef.current.duration;
+  };
+
+  const handleConfirmConnect = () => {
+    setIsFollowing(true);
+    setShowConnectModal(false);
+    setConnectIntent('');
   };
 
   const handleAddComment = (e: React.FormEvent) => {
@@ -145,31 +187,76 @@ export function SoultCard({ soult, index = 0 }: SoultCardProps) {
 
   return (
     <article
-      className="relative w-full h-full bg-black group animate-fade-up select-none overflow-hidden rounded-none md:rounded-lg lg:rounded-md"
+      className="relative w-full h-full bg-black group animate-fade-up select-none overflow-hidden rounded-none md:rounded-lg lg:rounded-md flex"
       style={{ animationDelay: `${index * 80}ms` }}
     >
+      {/* Painel de Comentários (Sidebar no Desktop) - Renderizado ANTES do vídeo para ficar na ESQUERDA */}
+      {commentsOpen && (
+        <div className="hidden lg:flex w-[320px] bg-neutral-900 border-r border-white/10 flex-col h-full shrink-0 z-30 animate-fade-in relative">
+          <div className="flex items-center justify-between pb-3 border-b border-white/10 p-4">
+            <span className="text-sm font-semibold text-white tracking-wide">
+              Comentários ({commentsList.length})
+            </span>
+            <button
+              onClick={() => setCommentsOpen(false)}
+              className="p-1 rounded-full text-white/70 hover:text-white hover:bg-white/10 transition-colors"
+            >
+              <X className="w-5 h-5" />
+            </button>
+          </div>
+
+          <div className="flex-1 overflow-y-auto py-3 space-y-4 no-scrollbar px-4">
+            {commentsList.map((item) => (
+              <div key={item.id} className="flex gap-3 items-start">
+                <div className="w-8 h-8 rounded-full bg-white/10 border border-white/20 flex items-center justify-center shrink-0">
+                  <span className="text-white font-bold text-xs">{item.author.charAt(0)}</span>
+                </div>
+                <div className="flex-1">
+                  <div className="flex items-center gap-2">
+                    <span className="text-white font-semibold text-xs">{item.author}</span>
+                    <span className="text-white/40 text-[10px]">{item.time}</span>
+                  </div>
+                  <p className="text-white/80 text-xs mt-0.5 leading-relaxed">{item.text}</p>
+                </div>
+              </div>
+            ))}
+          </div>
+
+          <form onSubmit={handleAddComment} className="pt-2 border-t border-white/10 flex items-center gap-2 p-4">
+            <input
+              type="text"
+              placeholder="Comentário consciente..."
+              value={newComment}
+              onChange={(e) => setNewComment(e.target.value)}
+              className="flex-1 bg-white/5 border border-white/10 rounded-xl px-4 py-2.5 text-xs text-white placeholder-white/40 focus:outline-none focus:border-white/40 transition-colors"
+            />
+            <button
+              type="submit"
+              disabled={!newComment.trim()}
+              className="w-9 h-9 rounded-xl bg-white text-black flex items-center justify-center disabled:opacity-30 disabled:cursor-not-allowed hover:bg-white/90 transition-colors shrink-0 font-bold"
+            >
+              <Send className="w-4 h-4 text-black" />
+            </button>
+          </form>
+        </div>
+      )}
+
       <div
-        className="relative w-full h-full cursor-pointer overflow-hidden group/player"
+        className="relative flex-1 h-full cursor-pointer overflow-hidden group/player"
         onClick={handleVideoClick}
       >
         <div className="absolute inset-0 bg-neutral-900 -z-10" />
 
-        {soult.videoUrl ? (
-          <video
-            ref={videoRef}
-            src={soult.videoUrl}
-            poster={soult.thumbnailUrl}
-            className="absolute inset-0 w-full h-full object-cover"
-            loop
-            playsInline
-          />
-        ) : soult.thumbnailUrl ? (
-          <img
-            src={soult.thumbnailUrl}
-            alt={soult.title}
-            className="absolute inset-0 w-full h-full object-cover object-center"
-          />
-        ) : null}
+        <video
+          ref={videoRef}
+          src={soult.videoUrl}
+          poster={soult.thumbnailUrl}
+          className="absolute inset-0 w-full h-full object-cover"
+          playsInline
+          loop
+          onTimeUpdate={handleTimeUpdate}
+          onEnded={handleEnded}
+        />
 
         {showHeartAnim && (
           <div className="absolute inset-0 z-30 flex items-center justify-center pointer-events-none animate-ping">
@@ -192,8 +279,20 @@ export function SoultCard({ soult, index = 0 }: SoultCardProps) {
           )}
         >
           <div className="w-16 h-16 rounded-full bg-white/15 backdrop-blur-xl border border-white/25 flex items-center justify-center shadow-2xl group-hover/player:scale-110 transition-transform duration-300">
-            <Play className="w-6 h-6 text-white ml-1 fill-white stroke-none" />
+            {videoRef.current?.ended ? (
+              <Play className="w-6 h-6 text-white ml-1 fill-white stroke-none" /> 
+            ) : (
+              <Play className="w-6 h-6 text-white ml-1 fill-white stroke-none" />
+            )}
           </div>
+        </div>
+
+        {/* Barra de Progresso do Vídeo */}
+        <div className="absolute bottom-0 left-0 right-0 h-1 bg-white/20 z-30 cursor-pointer" onClick={handleProgressClick}>
+          <div 
+            className="h-full bg-white transition-all duration-75 ease-linear"
+            style={{ width: `${progress}%` }}
+          />
         </div>
 
         {/* --- AQUI ESTÁ A CORREÇÃO: Adicionado pr-20 para não sobrepor os botões laterais --- */}
@@ -233,12 +332,12 @@ export function SoultCard({ soult, index = 0 }: SoultCardProps) {
               {isFollowing ? (
                 <>
                   <UserCheck className="w-3 h-3" />
-                  <span>Seguindo</span>
+                  <span>Conectado</span>
                 </>
               ) : (
                 <>
                   <UserPlus className="w-3 h-3" />
-                  <span>Seguir</span>
+                  <span>Conectar</span>
                 </>
               )}
             </button>
@@ -264,7 +363,7 @@ export function SoultCard({ soult, index = 0 }: SoultCardProps) {
               />
             </div>
             <span className="text-white font-bold text-[11px] drop-shadow-md">
-              {likes >= 1000 ? `${(likes / 1000).toFixed(1)}k` : likes}
+              {liked ? 'Curtido' : 'Curtir'}
             </span>
           </button>
 
@@ -276,7 +375,7 @@ export function SoultCard({ soult, index = 0 }: SoultCardProps) {
             <div className="w-11 h-11 rounded-xl lg:rounded-lg bg-black/40 backdrop-blur-md flex items-center justify-center border border-white/10 transition-transform active:scale-90 hover:bg-black/60">
               <MessageCircle className="w-5 h-5 text-white" strokeWidth={2} />
             </div>
-            <span className="text-white font-bold text-[11px] drop-shadow-md">{commentsList.length}</span>
+            <span className="text-white font-bold text-[11px] drop-shadow-md">Comentar</span>
           </button>
 
           {/* Salvar */}
@@ -306,13 +405,14 @@ export function SoultCard({ soult, index = 0 }: SoultCardProps) {
         </div>
       </div>
 
+      {/* Modal de Comentários (Mobile) */}
       {commentsOpen && (
         <div
-          className="absolute inset-0 z-30 bg-black/60 backdrop-blur-sm flex flex-col justify-end lg:items-center lg:justify-center transition-opacity duration-300"
+          className="absolute inset-0 z-30 lg:hidden bg-black/60 backdrop-blur-sm flex flex-col justify-end transition-opacity duration-300"
           onClick={() => setCommentsOpen(false)}
         >
           <div
-            className="w-full lg:w-[400px] h-[65%] lg:h-[80%] bg-neutral-900/95 backdrop-blur-xl border-t lg:border border-white/10 rounded-t-2xl lg:rounded-xl p-4 flex flex-col justify-between shadow-2xl animate-slide-up"
+            className="w-full h-[65%] bg-neutral-900/95 backdrop-blur-xl border-t border-white/10 rounded-t-2xl p-4 flex flex-col justify-between shadow-2xl animate-slide-up"
             onClick={(e) => e.stopPropagation()}
           >
             <div className="flex items-center justify-between pb-3 border-b border-white/10">
@@ -350,12 +450,12 @@ export function SoultCard({ soult, index = 0 }: SoultCardProps) {
                 placeholder="Escreva um comentário consciente..."
                 value={newComment}
                 onChange={(e) => setNewComment(e.target.value)}
-                className="flex-1 bg-white/5 border border-white/10 rounded-xl lg:rounded-lg px-4 py-2.5 text-xs text-white placeholder-white/40 focus:outline-none focus:border-white/40 transition-colors"
+                className="flex-1 bg-white/5 border border-white/10 rounded-xl px-4 py-2.5 text-xs text-white placeholder-white/40 focus:outline-none focus:border-white/40 transition-colors"
               />
               <button
                 type="submit"
                 disabled={!newComment.trim()}
-                className="w-9 h-9 rounded-xl lg:rounded-lg bg-white text-black flex items-center justify-center disabled:opacity-30 disabled:cursor-not-allowed hover:bg-white/90 transition-colors shrink-0 font-bold"
+                className="w-9 h-9 rounded-xl bg-white text-black flex items-center justify-center disabled:opacity-30 disabled:cursor-not-allowed hover:bg-white/90 transition-colors shrink-0 font-bold"
               >
                 <Send className="w-4 h-4 text-black" />
               </button>
@@ -409,6 +509,59 @@ export function SoultCard({ soult, index = 0 }: SoultCardProps) {
           </div>
         </div>
       )}
+
+      {/* Modal de Conexão com Propósito */}
+      {showConnectModal && (
+        <div 
+          className="absolute inset-0 z-[100] bg-black/80 backdrop-blur-md flex items-center justify-center p-4 sm:p-6 animate-fade-in"
+          onClick={(e) => { e.stopPropagation(); setShowConnectModal(false); }}
+        >
+          <div 
+            className="w-full max-w-sm bg-background border border-white/10 rounded-3xl p-6 sm:p-8 shadow-2xl animate-scale-up"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="flex items-center justify-between mb-6">
+              <h3 className="text-lg font-bold text-white">Conexão com Propósito</h3>
+              <button 
+                onClick={() => setShowConnectModal(false)}
+                className="p-2 rounded-full hover:bg-white/10 text-zinc-400 hover:text-white transition-colors"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+            
+            <p className="text-sm text-zinc-400 mb-6 leading-relaxed">
+              No Soul, nós cultivamos conexões reais. Por que você deseja acompanhar as publicações de <strong className="text-white">{soult.author.name}</strong>?
+            </p>
+
+            <div className="space-y-3 mb-8">
+              {['Me inspira', 'Amigo(a) real', 'Conteúdo útil', 'Compartilha mesmos valores'].map((label) => (
+                <button
+                  key={label}
+                  onClick={() => setConnectIntent(label)}
+                  className={cn(
+                    "w-full text-left px-4 py-3.5 rounded-xl text-[15px] font-medium transition-all active:scale-[0.98] border",
+                    connectIntent === label 
+                      ? "bg-white text-black border-white" 
+                      : "bg-white/[0.03] text-zinc-300 border-white/5 hover:bg-white/[0.06] hover:border-white/10"
+                  )}
+                >
+                  {label}
+                </button>
+              ))}
+            </div>
+
+            <button
+              disabled={!connectIntent}
+              onClick={handleConfirmConnect}
+              className="w-full py-4 bg-white text-black font-bold rounded-xl transition-all disabled:opacity-40 disabled:cursor-not-allowed hover:bg-zinc-100 active:scale-[0.98]"
+            >
+              Estabelecer Conexão
+            </button>
+          </div>
+        </div>
+      )}
+
     </article>
   );
 }

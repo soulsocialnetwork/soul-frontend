@@ -50,7 +50,7 @@ export function FocusMode() {
               placeholder="Ex: 45"
             />
           </div>
-          {/* Activity input */}
+          {}
           <div>
             <input
               type="text"
@@ -76,7 +76,7 @@ export function FocusMode() {
           </button>
         </>
       ) : (
-        /* Active state */
+       
         <div className="flex flex-col items-center gap-4 py-2 animate-fade-in">
           {activity && (
             <p className="text-xs text-textSecondary">
@@ -84,7 +84,7 @@ export function FocusMode() {
             </p>
           )}
 
-          {/* Ring */}
+          {}
           <div className="relative">
             <svg viewBox="0 0 96 96" className="w-28 h-28 -rotate-90">
               <circle cx="48" cy="48" r="38" fill="none" stroke="rgba(255,255,255,0.06)" strokeWidth="6" />

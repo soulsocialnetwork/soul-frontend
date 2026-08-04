@@ -10,6 +10,8 @@ import CreatePage from './pages/Create';
 import SettingsPage from './pages/Settings';
 import UserProfilePage from './pages/UserProfile';
 import CreateHighlightPage from './pages/CreateHighlight/CreateHighlightPage';
+import DigitalEducationPage from './pages/DigitalEducation';
+import DataTransparencyPage from './pages/DataTransparency';
 
 export default function App() {
   return (
@@ -26,6 +28,8 @@ export default function App() {
         <Route path="/create" element={<CreatePage />} />
         <Route path="/settings" element={<SettingsPage />} />
         <Route path="/highlights/create" element={<CreateHighlightPage />} />
+        <Route path="/education" element={<DigitalEducationPage />} />
+        <Route path="/transparency" element={<DataTransparencyPage />} />
       </Routes>
     </BrowserRouter>
   );

@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { Header } from '../../components/layout/Header';
 import { BottomNav } from '../../components/layout/BottomNav';
 import { Sidebar } from '../../components/layout/Sidebar';
-import { Pencil, Check, X, Moon, Play, Plus, Minus, ChevronDown, ChevronUp } from 'lucide-react';
+import { Pencil, Check, X, Moon, Play, Plus, Minus, ChevronDown, ChevronUp, AlertTriangle } from 'lucide-react';
 import { cn } from '../../utils/cn';
 import { useTranslation } from '../../i18n';
 
@@ -23,11 +23,41 @@ export default function ScreentimePage() {
   const [focusTime, setFocusTime] = useState('30');
   const [focusTask, setFocusTask] = useState('');
   const [showMoreWeekly, setShowMoreWeekly] = useState(false);
+  const [isFocusActive, setIsFocusActive] = useState(false);
+  const [focusTimeLeft, setFocusTimeLeft] = useState(0);
+  const [isTryingToExit, setIsTryingToExit] = useState(false);
+  const [exitTimer, setExitTimer] = useState(5);
+  const [focusCompleted, setFocusCompleted] = useState(false);
 
   useEffect(() => {
     const timer = setTimeout(() => setLoading(false), 500);
     return () => clearTimeout(timer);
   }, []);
+
+  // Timer do Modo Foco
+  useEffect(() => {
+    let interval: ReturnType<typeof setInterval>;
+    if (isFocusActive && focusTimeLeft > 0) {
+      interval = setInterval(() => {
+        setFocusTimeLeft((prev) => prev - 1);
+      }, 1000);
+    } else if (isFocusActive && focusTimeLeft === 0) {
+      setIsFocusActive(false);
+      setFocusCompleted(true); // Dispara tela de celebração
+    }
+    return () => clearInterval(interval);
+  }, [isFocusActive, focusTimeLeft]);
+
+  // Timer da Fricção de Saída
+  useEffect(() => {
+    let interval: ReturnType<typeof setInterval>;
+    if (isTryingToExit && exitTimer > 0) {
+      interval = setInterval(() => {
+        setExitTimer((prev) => prev - 1);
+      }, 1000);
+    }
+    return () => clearInterval(interval);
+  }, [isTryingToExit, exitTimer]);
 
   const { t } = useTranslation('screentime');
 
@@ -61,6 +91,94 @@ export default function ScreentimePage() {
     return `${h > 0 ? `${h}h ` : ''}${m > 0 ? `${m}m` : ''}`.trim();
   }
 
+  if (isFocusActive) {
+    const m = Math.floor(focusTimeLeft / 60);
+    const s = focusTimeLeft % 60;
+    const timeDisplay = `${m.toString().padStart(2, '0')}:${s.toString().padStart(2, '0')}`;
+
+    return (
+      <div className="fixed inset-0 z-[100] bg-black flex flex-col items-center justify-center p-6 animate-fade-in">
+        <div className="flex flex-col items-center max-w-md w-full text-center space-y-8">
+          <Moon className="w-12 h-12 text-zinc-500" />
+          
+          <div className="space-y-2">
+            <h2 className="text-xl text-zinc-400 font-medium">Focando em:</h2>
+            <p className="text-3xl font-bold text-white leading-tight">{focusTask || 'Momento de Calmaria'}</p>
+          </div>
+
+          <div className="text-7xl font-extrabold text-white tabular-nums tracking-tight">
+            {timeDisplay}
+          </div>
+
+          {!isTryingToExit ? (
+            <button 
+              onClick={() => { setIsTryingToExit(true); setExitTimer(5); }}
+              className="mt-12 text-zinc-500 hover:text-white transition-colors text-sm"
+            >
+              Encerrar antes do tempo
+            </button>
+          ) : (
+            <div className="mt-8 flex flex-col items-center space-y-4 bg-white/[0.03] border border-white/10 p-6 rounded-3xl animate-slide-up">
+              <p className="text-sm text-zinc-300">Sua tarefa já foi concluída?</p>
+              <div className="flex items-center gap-3 w-full">
+                <button 
+                  onClick={() => setIsTryingToExit(false)}
+                  className="flex-1 bg-white text-black font-semibold py-3 rounded-xl hover:bg-zinc-200 transition-colors"
+                >
+                  Continuar
+                </button>
+                <button 
+                  disabled={exitTimer > 0}
+                  onClick={() => { setIsFocusActive(false); setIsTryingToExit(false); }}
+                  className="flex-1 bg-transparent border border-white/20 text-white font-semibold py-3 rounded-xl disabled:opacity-30 transition-colors"
+                >
+                  {exitTimer > 0 ? `Sair (${exitTimer}s)` : 'Sair'}
+                </button>
+              </div>
+            </div>
+          )}
+        </div>
+      </div>
+    );
+  }
+
+  // Tela de Celebração ao Concluir o Modo Foco
+  if (focusCompleted) {
+    return (
+      <div className="fixed inset-0 z-[100] bg-black flex flex-col items-center justify-center p-6 animate-fade-in">
+        <div className="flex flex-col items-center max-w-md w-full text-center space-y-8">
+          <div className="relative">
+            <div className="w-24 h-24 rounded-full bg-white/5 border border-white/10 flex items-center justify-center">
+              <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" className="text-white">
+                <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/>
+                <polyline points="22 4 12 14.01 9 11.01"/>
+              </svg>
+            </div>
+          </div>
+
+          <div className="space-y-3">
+            <h2 className="text-3xl font-extrabold text-white">Sessão concluída!</h2>
+            <p className="text-zinc-400 leading-relaxed max-w-xs mx-auto">
+              Você se dedicou a: <strong className="text-white">{focusTask || 'sua sessão de foco'}</strong>. Esse tipo de atenção sustentada fortalece seu córtex pré-frontal.
+            </p>
+          </div>
+
+          <div className="bg-white/[0.03] border border-white/10 rounded-2xl p-5 w-full space-y-1">
+            <p className="text-xs text-zinc-500">Agora, antes de voltar ao app&hellip;</p>
+            <p className="text-sm text-zinc-300 leading-relaxed">Respire fundo. Estique o corpo. Tome uma água. Você merece essa pausa real.</p>
+          </div>
+
+          <button
+            onClick={() => setFocusCompleted(false)}
+            className="text-zinc-500 hover:text-white text-sm transition-colors"
+          >
+            Continuar no Soul
+          </button>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="min-h-[100dvh] bg-[#0c0c0e] flex flex-col lg:flex-row text-white font-sans antialiased">
       <Sidebar />
@@ -84,6 +202,21 @@ export default function ScreentimePage() {
                 Visão geral da sua navegação hoje
               </p>
             </div>
+
+            {/* ALERTA DE META EXCEDIDA */}
+            {TODAY_USED >= dailyGoal && (
+              <div className="bg-red-500/10 border border-red-500/20 rounded-2xl p-4 flex items-start sm:items-center justify-between animate-fade-in gap-4">
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 rounded-xl bg-red-500/20 flex items-center justify-center shrink-0">
+                    <AlertTriangle className="w-5 h-5 text-red-400" />
+                  </div>
+                  <div>
+                    <h4 className="text-sm font-bold text-red-400">Meta Diária Excedida</h4>
+                    <p className="text-xs text-red-400/80 mt-0.5">Você ultrapassou o seu limite de tempo de tela hoje. Considere fazer uma pausa offline.</p>
+                  </div>
+                </div>
+              </div>
+            )}
 
             {/* PARTE SUPERIOR: 2 Cards lado a lado no PC */}
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-5 items-stretch">
@@ -219,7 +352,20 @@ export default function ScreentimePage() {
                   </div>
                 </div>
 
-                <button className="w-full bg-white text-black font-semibold rounded-2xl py-3.5 text-sm flex items-center justify-center gap-2 hover:bg-zinc-200 active:scale-[0.98] transition-all">
+                <button 
+                  onClick={() => {
+                    if (!focusTask.trim()) {
+                      alert('Por favor, defina uma intenção/tarefa para sua sessão.');
+                      return;
+                    }
+                    const t = parseInt(focusTime, 10);
+                    if (!isNaN(t) && t > 0) {
+                      setFocusTimeLeft(t * 60);
+                      setIsFocusActive(true);
+                    }
+                  }}
+                  className="w-full bg-white text-black font-semibold rounded-2xl py-3.5 text-sm flex items-center justify-center gap-2 hover:bg-zinc-200 active:scale-[0.98] transition-all"
+                >
                   <Play className="w-4 h-4 fill-black" />
                   <span>Iniciar foco</span>
                 </button>

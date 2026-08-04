@@ -29,37 +29,78 @@ export interface Message {
   status?: 'sent' | 'delivered' | 'read';
 }
 
-const INITIAL_CHATS: Chat[] = [
-  { id: 1, username: 'lucas.rodrigues', name: 'Lucas Rodrigues', avatar: 'https://i.pravatar.cc/150?u=lucas', lastMsg: 'Na correria. Bora treinar amanhã?', time: '10:42', unread: 2, online: true },
-  { id: 2, username: 'maria', name: 'Maria Silva', avatar: 'https://i.pravatar.cc/150?u=maria', lastMsg: 'Que texto incrível no seu post!', time: 'Ontem', unread: 0, online: false },
-  { id: 3, username: 'elizabeth.p', name: 'Elizabeth Pelegrini', avatar: 'https://i.pravatar.cc/150?u=elizabeth', lastMsg: 'Obrigada pela indicação de livro.', time: 'Segunda', unread: 0, online: true },
-  { id: 4, username: 'joao.carlos', name: 'João Carlos', avatar: 'https://i.pravatar.cc/150?u=joao', lastMsg: 'Você viu a última feature do Soul?', time: '14 de abr.', unread: 0, online: false },
+const initialChats: Chat[] = [
+  {
+    id: 1,
+    username: 'renatoval',
+    name: 'Renato Valença',
+    avatar: 'https://i.pravatar.cc/150?u=renatoval',
+    lastMsg: 'Cara, achei sensacional aquele livro que você me indicou.',
+    time: '14:20',
+    unread: 2,
+    online: true,
+  },
+  {
+    id: 2,
+    username: 'ma.silveira',
+    name: 'Mariana Silveira',
+    avatar: 'https://i.pravatar.cc/150?u=ma.silveira',
+    lastMsg: 'Combinado então! A gente se vê amanhã no mesmo horário.',
+    time: 'Ontem',
+    unread: 0,
+    online: false,
+  },
+  {
+    id: 3,
+    username: 'felipe.nog',
+    name: 'Felipe Nogueira',
+    avatar: 'https://i.pravatar.cc/150?u=felipe.nog',
+    lastMsg: 'Mandei as referências lá no grupo.',
+    time: 'Ontem',
+    unread: 0,
+    online: true,
+  },
+  {
+    id: 4,
+    username: 'julia.borges',
+    name: 'Julia Borges',
+    avatar: 'https://i.pravatar.cc/150?u=julia.borges',
+    lastMsg: 'Hahahaha, sim! Mas é sobre isso.',
+    time: 'Segunda',
+    unread: 0,
+    online: false,
+  }
 ];
 
-const INITIAL_MESSAGES: Record<number, Message[]> = {
+const initialMessages: Record<number, Message[]> = {
   1: [
-    { id: '1-1', chatId: 1, senderId: 1, text: 'Fala Eduardo, tudo bem?', time: '10:30', isMine: false },
-    { id: '1-2', chatId: 1, senderId: 'me', text: 'Tudo ótimo, Lucas! E contigo?', time: '10:32', isMine: true, status: 'read' },
-    { id: '1-3', chatId: 1, senderId: 1, text: 'Na correria. Bora treinar amanhã?', time: '10:42', isMine: false },
+    { id: 101, chatId: 1, senderId: 1, text: 'Fala! Tudo bem?', time: '14:00', isMine: false },
+    { id: 102, chatId: 1, senderId: 'me', text: 'Tudo ótimo, e com você?', time: '14:05', isMine: true, status: 'read' },
+    { id: 103, chatId: 1, senderId: 1, text: 'Tudo certo.', time: '14:15', isMine: false },
+    { id: 104, chatId: 1, senderId: 1, text: 'Cara, achei sensacional aquele livro que você me indicou.', time: '14:20', isMine: false },
   ],
   2: [
-    { id: '2-1', chatId: 2, senderId: 2, text: 'Oi Eduardo! Vi seu último post sobre presença e atenção plena.', time: 'Ontem 18:20', isMine: false },
-    { id: '2-2', chatId: 2, senderId: 2, text: 'Que texto incrível no seu post!', time: 'Ontem 18:21', isMine: false },
+    { id: 201, chatId: 2, senderId: 'me', text: 'Vamos fechar aquele projeto amanhã?', time: '09:00', isMine: true, status: 'read' },
+    { id: 202, chatId: 2, senderId: 2, text: 'Claro, me manda o link da call depois.', time: '09:10', isMine: false },
+    { id: 203, chatId: 2, senderId: 'me', text: 'Feito.', time: '09:15', isMine: true, status: 'read' },
+    { id: 204, chatId: 2, senderId: 2, text: 'Combinado então! A gente se vê amanhã no mesmo horário.', time: 'Ontem', isMine: false },
   ],
   3: [
-    { id: '3-1', chatId: 3, senderId: 'me', text: 'Oi Elizabeth! Conseguiu começar aquele livro que conversamos?', time: 'Segunda 14:10', isMine: true, status: 'read' },
-    { id: '3-2', chatId: 3, senderId: 3, text: 'Obrigada pela indicação de livro.', time: 'Segunda 15:05', isMine: false },
+    { id: 301, chatId: 3, senderId: 3, text: 'Ei, você viu aquele último artigo sobre UX consciente?', time: '10:00', isMine: false },
+    { id: 302, chatId: 3, senderId: 'me', text: 'Vi sim, achei as ideias muito boas.', time: '10:30', isMine: true, status: 'read' },
+    { id: 303, chatId: 3, senderId: 3, text: 'Legal. Mandei as referências lá no grupo.', time: 'Ontem', isMine: false },
   ],
   4: [
-    { id: '4-1', chatId: 4, senderId: 4, text: 'Você viu a última feature do Soul?', time: '14 de abr.', isMine: false },
-  ],
+    { id: 401, chatId: 4, senderId: 'me', text: 'Acho que finalmente entendi como focar sem distração.', time: 'Domingo', isMine: true, status: 'read' },
+    { id: 402, chatId: 4, senderId: 4, text: 'Hahahaha, sim! Mas é sobre isso.', time: 'Segunda', isMine: false },
+  ]
 };
 
 export default function MessagesPage() {
   const navigate = useNavigate();
   const [loading, setLoading] = useState(true);
-  const [chats, setChats] = useState<Chat[]>(INITIAL_CHATS);
-  const [messages, setMessages] = useState<Record<number, Message[]>>(INITIAL_MESSAGES);
+  const [chats, setChats] = useState<Chat[]>(initialChats);
+  const [messages, setMessages] = useState<Record<number, Message[]>>(initialMessages);
   const [activeChatId, setActiveChatId] = useState<number | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
   const [msgInput, setMsgInput] = useState('');
@@ -245,9 +286,6 @@ export default function MessagesPage() {
                       >
                         <div className="relative shrink-0">
                           <img src={chat.avatar} alt={chat.name} className="w-12 h-12 lg:w-14 lg:h-14 rounded-2xl object-cover" />
-                          {chat.online && (
-                            <div className="absolute bottom-0 right-0.5 w-3.5 h-3.5 rounded-full bg-emerald-500 border-[2.5px] border-background" />
-                          )}
                         </div>
                         <div className="flex-1 min-w-0">
                           <div className="flex justify-between items-baseline mb-0.5">
@@ -309,11 +347,7 @@ export default function MessagesPage() {
 
                         <div className="flex-1 min-w-0">
                           <h2 className="font-semibold text-sm lg:text-base truncate group-hover:underline">{selectedChat?.name}</h2>
-                          {selectedChat?.online ? (
-                            <p className="text-xs text-emerald-400 font-medium">Online</p>
-                          ) : (
-                            <p className="text-xs text-textSecondary">Visto por último: {selectedChat?.time}</p>
-                          )}
+                          <p className="text-xs text-textSecondary">@{selectedChat?.username}</p>
                         </div>
                       </div>
 

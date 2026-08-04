@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Sidebar } from '../../components/layout/Sidebar';
 import { Header } from '../../components/layout/Header';
@@ -9,69 +9,28 @@ import type { Post } from '../../services/postService';
 import { Plus, X } from 'lucide-react';
 import { ScreenLoader } from '../../components/ui/ScreenLoader';
 
-const PROFILE_IMAGES = [
-  'https://images.unsplash.com/photo-1507525428034-b723cf961d3e?auto=format&fit=crop&q=80&w=800', 
-  'https://images.unsplash.com/photo-1519681393784-d120267933ba?auto=format&fit=crop&q=80&w=800', 
-  'https://images.unsplash.com/photo-1470071459604-3b5ec3a7fe05?auto=format&fit=crop&q=80&w=800', 
-  'https://images.unsplash.com/photo-1447752875215-b2761acb3c5d?auto=format&fit=crop&q=80&w=800', 
-  'https://images.unsplash.com/photo-1506744038136-46273834b3fb?auto=format&fit=crop&q=80&w=800', 
-  'https://images.unsplash.com/photo-1534447677768-be436bb09401?auto=format&fit=crop&q=80&w=800', 
-];
-
-const INITIAL_PROFILE_POSTS: Post[] = PROFILE_IMAGES.map((img, i) => ({
-  id: `profile-post-${i}`,
-  author: {
-    id: 'user-1',
-    name: 'Helena Martins',
-    username: 'helenamartins',
-    avatarUrl: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&q=80&w=300&h=300',
-    verified: true,
-  },
-  content: 'Conectando com a imensidão da natureza. 🌿✨',
-  imageUrl: img,
-  likesCount: 150 + i * 55,
-  commentsCount: 14 + i * 4,
-  createdAt: new Date(Date.now() - (i + 1) * 3600000 * 4).toISOString(),
-}));
-
-const INITIAL_HIGHLIGHTS = [
-  {
-    id: '1',
-    name: 'Viagens',
-    cover: 'https://images.unsplash.com/photo-1488646953014-85cb44e25828?auto=format&fit=crop&q=80&w=200&h=200',
-    image: 'https://images.unsplash.com/photo-1488646953014-85cb44e25828?auto=format&fit=crop&q=80&w=800&h=1200',
-    type: 'image',
-  },
-  {
-    id: '2',
-    name: 'Natureza',
-    cover: 'https://images.unsplash.com/photo-1470071459604-3b5ec3a7fe05?auto=format&fit=crop&q=80&w=200&h=200',
-    image: 'https://images.unsplash.com/photo-1470071459604-3b5ec3a7fe05?auto=format&fit=crop&q=80&w=800&h=1200',
-    type: 'image',
-  },
-];
-
 export default function ProfilePage() {
   const navigate = useNavigate();
   const [loading, setLoading] = useState(true);
-  const [highlightsList, setHighlightsList] = useState(INITIAL_HIGHLIGHTS);
+  const [highlightsList, setHighlightsList] = useState<{id: string; name: string; cover: string; image: string; type?: string}[]>([]);
 
   const [profileData] = useState({
-    username: 'helenamartins',
-    fullName: 'Helena Martins',
-    bio: 'Colecionadora de horizontes e momentos de paz. 🌿✨',
-    avatarUrl: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&q=80&w=600&h=600',
+    username: '',
+    fullName: '',
+    bio: '',
+    avatarUrl: '',
   });
 
   const [feedModal, setFeedModal] = useState<{ list: Post[]; startIndex: number } | null>(null);
   const [activeHighlightIndex, setActiveHighlightIndex] = useState<number | null>(null);
 
-  // Carrega destaques criados salvos
   useEffect(() => {
     const saved = localStorage.getItem('@app:highlights');
     if (saved) {
-      const parsed = JSON.parse(saved);
-      setHighlightsList([...parsed, ...INITIAL_HIGHLIGHTS]);
+      try {
+        const parsed = JSON.parse(saved);
+        setHighlightsList(parsed);
+      } catch { /* ignora */ }
     }
     const timer = setTimeout(() => setLoading(false), 300);
     return () => clearTimeout(timer);
@@ -158,10 +117,10 @@ export default function ProfilePage() {
 
                 {/* Grade de Posts */}
                 <div className="grid grid-cols-3 gap-1 md:gap-4">
-                  {INITIAL_PROFILE_POSTS.map((post, index) => (
+                  {([] as Post[]).map((post, index) => (
                     <div
                       key={post.id}
-                      onClick={() => setFeedModal({ list: INITIAL_PROFILE_POSTS, startIndex: index })}
+                      onClick={() => setFeedModal({ list: [], startIndex: index })}
                       className="aspect-square bg-white/5 md:rounded-2xl overflow-hidden cursor-pointer relative"
                     >
                       <img src={post.imageUrl} alt="" className="w-full h-full object-cover" />
