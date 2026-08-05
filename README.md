@@ -56,6 +56,7 @@ O Soul nasce como contraponto a esse modelo.
 ## Equipe
 
 Brendo Reis, Eduardo dos Santos, Felipe Thomaz, Erika Akahoshi, Evilyn Aparecida
+##
 Orientador: Prof. Ricardo Orrico
 
 ## Fundamentação
