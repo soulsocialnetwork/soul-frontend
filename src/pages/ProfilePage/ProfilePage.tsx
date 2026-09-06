@@ -51,7 +51,7 @@ export default function ProfilePage() {
               <div className="w-full max-w-4xl mx-auto pt-4 lg:pt-8 px-4 sm:px-6 space-y-8">
 
                 {/* Perfil Header */}
-                <div className="bg-white/[0.02] border border-white/5 rounded-3xl p-6 md:p-10">
+                <div className="bg-white/[0.02] border border-white/5 rounded-2xl p-6 md:p-10">
                   <div className="flex flex-col md:flex-row gap-8 items-center md:items-start">
                     <div className="w-28 h-28 md:w-40 md:h-40 rounded-2xl overflow-hidden border border-white/10 p-1 bg-white/5 shrink-0">
                       <img src={profileData.avatarUrl} alt="Avatar" className="w-full h-full rounded-2xl object-cover" />
@@ -137,7 +137,7 @@ export default function ProfilePage() {
       {/* MODAL VISUALIZAR DESTAQUE */}
       {activeHighlightIndex !== null && (
         <div className="fixed inset-0 bg-black/90 backdrop-blur-md z-[99999] flex items-center justify-center p-4">
-          <div className="relative w-full max-w-sm h-[75vh] bg-zinc-900 border border-white/10 rounded-3xl overflow-hidden flex flex-col justify-between p-4">
+          <div className="relative w-full max-w-sm h-[75vh] bg-zinc-900 border border-white/10 rounded-2xl overflow-hidden flex flex-col justify-between p-4">
             <div className="relative z-10 flex items-center justify-between">
               <span className="text-xs font-bold text-white tracking-wide">
                 {highlightsList[activeHighlightIndex]?.name}

@@ -1,5 +1,6 @@
 import { BrowserRouter, Routes, Route } from 'react-router-dom';
 import InitialPage from './pages/Initial';
+import { AuthProvider } from './context/AuthContext';
 import AuthPage from './pages/Auth';
 import FeedPage from './pages/Feed';
 import SoulsPage from './pages/Soults';
@@ -16,10 +17,12 @@ import DataTransparencyPage from './pages/DataTransparency';
 export default function App() {
   return (
     <BrowserRouter>
-      <Routes>
+      <AuthProvider>
+        <Routes>
         <Route path="/" element={<InitialPage />} />
         <Route path="/auth" element={<AuthPage />} />
         <Route path="/feed" element={<FeedPage />} />
+        <Route path="/post/:id" element={<FeedPage />} />
         <Route path="/soults" element={<SoulsPage />} />
         <Route path="/screentime" element={<ScreentimePage />} />
         <Route path="/profile" element={<ProfilePage />} />
@@ -30,7 +33,8 @@ export default function App() {
         <Route path="/highlights/create" element={<CreateHighlightPage />} />
         <Route path="/education" element={<DigitalEducationPage />} />
         <Route path="/transparency" element={<DataTransparencyPage />} />
-      </Routes>
+        </Routes>
+      </AuthProvider>
     </BrowserRouter>
   );
 }

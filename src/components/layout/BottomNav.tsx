@@ -2,6 +2,7 @@ import { useNavigate, useLocation } from 'react-router-dom';
 import { useState } from 'react';
 import { Home, Ghost, Plus, MessageSquare, MoreHorizontal, Settings, Clock, LogOut, X } from 'lucide-react';
 import { cn } from '../../utils/cn';
+import { useAuth } from '../../context/AuthContext';
 
 const MORE_ITEMS = [
   { icon: Clock,    label: 'Tempo de Tela',  path: '/screentime', danger: false },
@@ -12,6 +13,7 @@ const MORE_ITEMS = [
 export function BottomNav() {
   const navigate = useNavigate();
   const { pathname } = useLocation();
+  const { logout } = useAuth();
   const [moreOpen, setMoreOpen] = useState(false);
 
   return (
@@ -24,7 +26,7 @@ export function BottomNav() {
             onClick={() => setMoreOpen(false)}
           />
           <div className="fixed bottom-[68px] inset-x-0 z-[60] px-4 pb-3 animate-slide-up">
-            <div className="glass-card rounded-3xl p-3 max-w-lg mx-auto space-y-1 border border-white/10 shadow-2xl">
+            <div className="glass-card rounded-2xl p-3 max-w-lg mx-auto space-y-1 border border-white/10 shadow-2xl">
               <div className="flex items-center justify-between px-3 pt-2 pb-3 border-b border-white/10">
                 <span className="text-sm font-semibold text-textSecondary uppercase tracking-widest">Mais opções</span>
                 <button onClick={() => setMoreOpen(false)} className="text-textSecondary hover:text-white transition-colors">
@@ -34,9 +36,14 @@ export function BottomNav() {
               {MORE_ITEMS.map(({ icon: Icon, label, path, danger }) => (
                 <button
                   key={label}
-                  onClick={() => {
+                  onClick={async () => {
                     setMoreOpen(false);
-                    if (path) navigate(path);
+                    if (path) {
+                      navigate(path);
+                      return;
+                    }
+                    await logout();
+                    navigate('/auth');
                   }}
                   className={cn(
                     'w-full flex items-center gap-4 px-4 py-3.5 rounded-2xl text-[15px] font-medium transition-all active:scale-[0.98]',

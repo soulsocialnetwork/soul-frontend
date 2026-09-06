@@ -33,7 +33,7 @@ export default function DigitalEducationPage() {
 
         <div className="space-y-6 mt-10">
           
-          <div className="bg-white/[0.03] border border-white/5 rounded-3xl p-6 space-y-4 relative overflow-hidden">
+          <div className="bg-white/[0.03] border border-white/5 rounded-2xl p-6 space-y-4 relative overflow-hidden">
             <div className="absolute top-0 right-0 p-6 opacity-10">
               <ShieldAlert className="w-24 h-24" />
             </div>
@@ -46,7 +46,7 @@ export default function DigitalEducationPage() {
             </p>
           </div>
 
-          <div className="bg-white/[0.03] border border-white/5 rounded-3xl p-6 space-y-4 relative overflow-hidden">
+          <div className="bg-white/[0.03] border border-white/5 rounded-2xl p-6 space-y-4 relative overflow-hidden">
             <div className="absolute top-0 right-0 p-6 opacity-10">
               <Brain className="w-24 h-24" />
             </div>
@@ -59,7 +59,7 @@ export default function DigitalEducationPage() {
             </p>
           </div>
 
-          <div className="bg-white/[0.03] border border-white/5 rounded-3xl p-6 space-y-4 relative overflow-hidden">
+          <div className="bg-white/[0.03] border border-white/5 rounded-2xl p-6 space-y-4 relative overflow-hidden">
             <div className="absolute top-0 right-0 p-6 opacity-10">
               <Target className="w-24 h-24" />
             </div>

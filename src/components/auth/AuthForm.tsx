@@ -3,7 +3,6 @@ import { Input } from '../ui/Input';
 import { Button } from '../ui/Button';
 import { DateOfBirthPicker } from './DateOfBirthPicker';
 import { useTranslation } from '../../i18n';
-import { Info, ShieldCheck } from 'lucide-react';
 
 interface LoginFormData {
   email: string;
@@ -20,10 +19,12 @@ interface RegisterFormData extends LoginFormData {
 
 interface AuthFormProps {
   mode: 'login' | 'register';
+  error?: string;
+  isSubmitting?: boolean;
   onSubmit: (data: LoginFormData | RegisterFormData) => void | Promise<void>;
 }
 
-export function AuthForm({ mode, onSubmit }: AuthFormProps) {
+export function AuthForm({ mode, error, isSubmitting = false, onSubmit }: AuthFormProps) {
   const { t } = useTranslation('auth');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -35,10 +36,17 @@ export function AuthForm({ mode, onSubmit }: AuthFormProps) {
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
+    if (isSubmitting) return;
     if (mode === 'login') {
       onSubmit({ email, password });
     } else {
-      onSubmit({ email, password, fullName, username, dobDay, dobMonth, dobYear });
+      onSubmit({ 
+        email, 
+        password, 
+        name: fullName, 
+        username, 
+        dateOfBirth: `${dobYear}-${String(dobMonth).padStart(2, '0')}-${String(dobDay).padStart(2, '0')}`
+      } as unknown as RegisterFormData);
     }
   };
 
@@ -59,7 +67,11 @@ export function AuthForm({ mode, onSubmit }: AuthFormProps) {
         </>
       )}
 
-      <Button type="submit" variant="primary" size="lg" className="mt-4 w-full">
+      {error && (
+        <p className="text-xs text-red-400/80 ml-1 animate-fade-in">{error}</p>
+      )}
+
+      <Button type="submit" variant="primary" size="lg" className="mt-4 w-full" disabled={isSubmitting}>
         {mode === 'login' ? t('login') : t('register')}
       </Button>
     </form>

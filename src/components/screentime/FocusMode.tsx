@@ -30,7 +30,7 @@ export function FocusMode() {
   const C    = 2 * Math.PI * 38;
 
   return (
-    <div className="glass-card rounded-3xl p-5 flex flex-col gap-4">
+    <div className="glass-card rounded-2xl p-5 flex flex-col gap-4">
       {/* Header */}
       <div className="flex items-center gap-2">
         <Moon className="w-4 h-4 text-textSecondary" />

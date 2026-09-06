@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
+import { PartyPopper } from 'lucide-react';
 import { useTranslation } from '../../i18n';
 import { cn } from '../../utils/cn';
 
@@ -33,7 +34,7 @@ export function BreakTimer() {
   const C     = 2 * Math.PI * 32;
 
   return (
-    <div className="glass-card rounded-3xl p-5 flex flex-col gap-4">
+    <div className="glass-card rounded-2xl p-5 flex flex-col gap-4">
 
       { }
       {!active && (
@@ -80,9 +81,10 @@ export function BreakTimer() {
       )}
 
       {done && (
-        <p className="text-center text-sm text-emerald-400 font-semibold py-1 animate-fade-in">
-          {t('breakDone')} 🎉
-        </p>
+        <div className="flex items-center justify-center gap-2 text-emerald-400 py-1 animate-fade-in">
+          <PartyPopper className="w-5 h-5 text-emerald-400" />
+          <p className="text-sm font-semibold">{t('breakDone')}</p>
+        </div>
       )}
 
       <button
