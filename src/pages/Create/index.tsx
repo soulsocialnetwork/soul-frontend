@@ -15,6 +15,7 @@ import { cn } from '../../utils/cn';
 import { useNavigate } from 'react-router-dom';
 import { useTranslation } from '../../i18n';
 import { postService } from '../../services/postService';
+import { soultService } from '../../services/soultService';
 import { getHttpErrorMessage } from '../../services/api';
 import { useAuth } from '../../context/AuthContext';
 
@@ -46,7 +47,10 @@ export default function CreatePage() {
 
   // Post state
   const [content, setContent] = useState('');
+  const MAX_CHARS = 500;
   const [mediaPreview, setMediaPreview] = useState<string | null>(null);
+  const [mediaFile, setMediaFile] = useState<File | null>(null);
+  const [soultFile, setSoultFile] = useState<File | null>(null);
   const [intention, setIntention] = useState<string | null>(null);
   const [showCategoryModal, setShowCategoryModal] = useState(false);
 
@@ -76,6 +80,7 @@ export default function CreatePage() {
   function handleMediaFileChange(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0];
     if (!file) return;
+    setMediaFile(file);
     const reader = new FileReader();
     reader.onload = (ev) => setMediaPreview(ev.target?.result as string);
     reader.readAsDataURL(file);
@@ -85,6 +90,7 @@ export default function CreatePage() {
   function handleSoultFileChange(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0];
     if (!file) return;
+    setSoultFile(file);
     const reader = new FileReader();
     reader.onload = (ev) => setSoultVideo(ev.target?.result as string);
     reader.readAsDataURL(file);
@@ -108,15 +114,25 @@ export default function CreatePage() {
     setPublishError('');
     try {
       if (mode === 'post') {
+        let imageUrl: string | undefined = undefined;
+        if (mediaFile) {
+          imageUrl = await postService.uploadMedia(mediaFile);
+        }
         await postService.createPost({
           content: content.trim(),
-          imageUrl: mediaPreview || undefined,
+          imageUrl,
+          category: intention || undefined,
         });
       } else {
-        // Soult: video post — sent as imageUrl for now until backend supports video type
-        await postService.createPost({
-          content: soultCaption.trim(),
-          imageUrl: soultVideo || undefined,
+        let videoUrl: string | undefined = undefined;
+        if (soultFile) {
+          videoUrl = await postService.uploadMedia(soultFile);
+        }
+        if (!videoUrl) throw new Error('Falha ao enviar vídeo');
+        await soultService.createSoult({
+          caption: soultCaption.trim(),
+          videoUrl: videoUrl,
+          category: intention || undefined,
         });
       }
       setIsConfirming(false);
@@ -131,7 +147,7 @@ export default function CreatePage() {
 
   const selectedCategory = ALL_CATEGORIES.find(c => c.id === intention);
 
-  const canPublishPost = (content.trim() || mediaPreview) && !!intention;
+  const canPublishPost = (content.trim().length > 0 || mediaPreview) && !!intention;
   const canPublishSoult = !!soultVideo && !!intention;
 
   return (
@@ -181,10 +197,25 @@ export default function CreatePage() {
                 <div className="flex-1 flex flex-col">
                   <textarea
                     value={content}
-                    onChange={(e) => setContent(e.target.value)}
+                    onChange={(e) => {
+                      if (e.target.value.length <= MAX_CHARS) setContent(e.target.value);
+                    }}
                     placeholder="O que você gostaria de compartilhar com calma?"
                     className="w-full bg-transparent text-xl sm:text-2xl text-textPrimary placeholder:text-textSecondary/40 focus:outline-none resize-none flex-1 min-h-[160px]"
                   />
+                  {/* Contador de caracteres */}
+                  <div className="flex justify-end mt-1 mb-2">
+                    <span className={cn(
+                      'text-xs tabular-nums transition-colors',
+                      content.length >= MAX_CHARS
+                        ? 'text-red-400 font-semibold'
+                        : content.length >= MAX_CHARS * 0.8
+                        ? 'text-amber-400'
+                        : 'text-white/20'
+                    )}>
+                      {content.length}/{MAX_CHARS}
+                    </span>
+                  </div>
 
                   {mediaPreview && (
                     <div className="relative mt-4 rounded-2xl overflow-hidden bg-black/40 border border-white/10 group">

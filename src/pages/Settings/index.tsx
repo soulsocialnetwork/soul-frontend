@@ -12,7 +12,10 @@ LogOut,
 X,
 Check,
 Trash2,
-ShieldCheck
+ShieldCheck,
+Loader2,
+Eye,
+EyeOff
 } from 'lucide-react';
 import { cn } from '../../utils/cn';
 import { useTranslation } from '../../i18n';
@@ -78,6 +81,16 @@ const [quietModeStart, setQuietModeStart] = useState('22:00');
 const [quietModeEnd, setQuietModeEnd] = useState('08:00');
 
 const [deleteConfirmText, setDeleteConfirmText] = useState('');
+const [isDeletingAccount, setIsDeletingAccount] = useState(false);
+
+// Segurança — troca de senha
+const [currentPassword, setCurrentPassword] = useState('');
+const [newPassword, setNewPassword]         = useState('');
+const [confirmPassword, setConfirmPassword] = useState('');
+const [showNewPwd, setShowNewPwd]           = useState(false);
+const [passwordError, setPasswordError]     = useState('');
+const [passwordSuccess, setPasswordSuccess] = useState(false);
+const [isChangingPassword, setIsChangingPassword] = useState(false);
 
 const handleLanguageChange = (langCode: string) => {
 setLanguage(langCode);
@@ -366,44 +379,87 @@ return ( <div className="min-h-[100dvh] bg-background flex flex-col lg:flex-row 
   {activeModal === 'security' && (
     <ModalWrapper
       title="Privacidade e Segurança"
-      onClose={() => setActiveModal(null)}
+      onClose={() => { setActiveModal(null); setPasswordError(''); setPasswordSuccess(false); setCurrentPassword(''); setNewPassword(''); setConfirmPassword(''); }}
     >
       <form
-        onSubmit={(e) => {
+        onSubmit={async (e) => {
           e.preventDefault();
-          setActiveModal(null);
+          setPasswordError('');
+          setPasswordSuccess(false);
+          if (!currentPassword) { setPasswordError('Informe a senha atual.'); return; }
+          if (newPassword.length < 8) { setPasswordError('A nova senha precisa ter no mínimo 8 caracteres.'); return; }
+          if (!/[A-Z]/.test(newPassword)) { setPasswordError('Use ao menos uma letra maiúscula.'); return; }
+          if (!/[0-9]/.test(newPassword)) { setPasswordError('Use ao menos um número.'); return; }
+          if (newPassword !== confirmPassword) { setPasswordError('As senhas não coincidem.'); return; }
+          setIsChangingPassword(true);
+          try {
+            // TODO: chamar authService.changePassword(currentPassword, newPassword) quando o backend estiver pronto
+            await new Promise(r => setTimeout(r, 800)); // simula latência
+            setPasswordSuccess(true);
+            setCurrentPassword(''); setNewPassword(''); setConfirmPassword('');
+          } catch {
+            setPasswordError('Falha ao alterar a senha. Verifique a senha atual.');
+          } finally {
+            setIsChangingPassword(false);
+          }
         }}
-        className="space-y-5"
+        className="space-y-4"
       >
         <div className="space-y-1.5">
-          <label className="text-xs font-medium text-textSecondary ml-1">
-            Senha Atual
-          </label>
-
+          <label className="text-xs font-medium text-textSecondary ml-1">Senha Atual</label>
           <input
             type="password"
+            value={currentPassword}
+            onChange={(e) => { setCurrentPassword(e.target.value); setPasswordError(''); }}
             placeholder="••••••••"
             className="w-full bg-black/20 border border-white/10 rounded-xl px-4 py-3.5 text-sm text-textPrimary focus:outline-none focus:border-white/30 transition-colors"
           />
         </div>
 
         <div className="space-y-1.5">
-          <label className="text-xs font-medium text-textSecondary ml-1">
-            Nova Senha
-          </label>
+          <label className="text-xs font-medium text-textSecondary ml-1">Nova Senha</label>
+          <div className="relative">
+            <input
+              type={showNewPwd ? 'text' : 'password'}
+              value={newPassword}
+              onChange={(e) => { setNewPassword(e.target.value); setPasswordError(''); }}
+              placeholder="••••••••"
+              className="w-full bg-black/20 border border-white/10 rounded-xl px-4 py-3.5 pr-11 text-sm text-textPrimary focus:outline-none focus:border-white/30 transition-colors"
+            />
+            <button type="button" onClick={() => setShowNewPwd(p => !p)} className="absolute right-3 top-1/2 -translate-y-1/2 text-white/30 hover:text-white/60 transition-colors">
+              {showNewPwd ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+            </button>
+          </div>
+          {newPassword.length > 0 && (
+            <p className={cn('text-xs ml-1', newPassword.length >= 8 && /[A-Z]/.test(newPassword) && /[0-9]/.test(newPassword) ? 'text-emerald-400' : 'text-amber-400')}>
+              {newPassword.length >= 8 && /[A-Z]/.test(newPassword) && /[0-9]/.test(newPassword) ? '✓ Senha forte' : 'Mín. 8 chars, 1 maiúscula, 1 número'}
+            </p>
+          )}
+        </div>
 
+        <div className="space-y-1.5">
+          <label className="text-xs font-medium text-textSecondary ml-1">Confirmar Nova Senha</label>
           <input
             type="password"
+            value={confirmPassword}
+            onChange={(e) => { setConfirmPassword(e.target.value); setPasswordError(''); }}
             placeholder="••••••••"
-            className="w-full bg-black/20 border border-white/10 rounded-xl px-4 py-3.5 text-sm text-textPrimary focus:outline-none focus:border-white/30 transition-colors"
+            className={cn('w-full bg-black/20 border rounded-xl px-4 py-3.5 text-sm text-textPrimary focus:outline-none transition-colors', confirmPassword.length > 0 && confirmPassword !== newPassword ? 'border-red-500/50 focus:border-red-500' : 'border-white/10 focus:border-white/30')}
           />
+          {confirmPassword.length > 0 && confirmPassword !== newPassword && (
+            <p className="text-xs text-red-400 ml-1">As senhas não coincidem.</p>
+          )}
         </div>
+
+        {passwordError && <p className="text-xs text-red-400 ml-1">{passwordError}</p>}
+        {passwordSuccess && <p className="text-xs text-emerald-400 ml-1">✓ Senha alterada com sucesso!</p>}
 
         <button
           type="submit"
-          className="w-full py-3.5 bg-white text-black font-bold rounded-xl hover:bg-white/90 active:scale-[0.98] transition-all text-sm mt-2"
+          disabled={isChangingPassword}
+          className="w-full py-3.5 bg-white text-black font-bold rounded-xl hover:bg-white/90 active:scale-[0.98] transition-all text-sm mt-2 disabled:opacity-50 flex items-center justify-center gap-2"
         >
-          Atualizar Senha
+          {isChangingPassword ? <><Loader2 className="w-4 h-4 animate-spin" />Alterando...</> : 'Atualizar Senha'}
         </button>
       </form>
     </ModalWrapper>
@@ -715,14 +771,21 @@ return ( <div className="min-h-[100dvh] bg-background flex flex-col lg:flex-row 
         </div>
 
         <button
-          disabled={deleteConfirmText !== 'EXCLUIR'}
-          onClick={() => {
-            setActiveModal(null);
-            navigate('/auth');
+          disabled={deleteConfirmText !== 'EXCLUIR' || isDeletingAccount}
+          onClick={async () => {
+            setIsDeletingAccount(true);
+            try {
+              // TODO: chamar authService.deleteAccount() quando o backend estiver pronto
+              await new Promise(r => setTimeout(r, 1000)); // simula
+              await logout();
+              navigate('/auth');
+            } catch {
+              setIsDeletingAccount(false);
+            }
           }}
-          className="w-full py-3.5 bg-red-500 text-white font-bold rounded-xl hover:bg-red-600 active:scale-[0.98] transition-all text-sm disabled:opacity-30 disabled:cursor-not-allowed"
+          className="w-full py-3.5 bg-red-500 text-white font-bold rounded-xl hover:bg-red-600 active:scale-[0.98] transition-all text-sm disabled:opacity-30 disabled:cursor-not-allowed flex items-center justify-center gap-2"
         >
-          Excluir permanentemente
+          {isDeletingAccount ? <><Loader2 className="w-4 h-4 animate-spin" />Excluindo...</> : 'Excluir permanentemente'}
         </button>
       </div>
     </ModalWrapper>

@@ -14,11 +14,13 @@ import {
   UserCheck,
   Loader2,
   Trash2,
+  Flag,
 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import type { Post } from '../../services/postService';
 import { postService } from '../../services/postService';
 import { userService } from '../../services/userService';
+import { moderationService } from '../../services/moderationService';
 import { useTranslation } from '../../i18n';
 import { cn } from '../../utils/cn';
 import { useAuth } from '../../context/AuthContext';
@@ -108,6 +110,8 @@ export function PostCard({ post, index = 0, onDelete }: PostCardProps) {
   const [likeAnim, setLikeAnim] = useState(false);
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [likeLoading, setLikeLoading] = useState(false);
+  const [reportLoading, setReportLoading] = useState(false);
+  const [reported, setReported] = useState(false);
 
   const [commentsOpen, setCommentsOpen] = useState(false);
   const [newComment, setNewComment] = useState('');
@@ -181,11 +185,28 @@ export function PostCard({ post, index = 0, onDelete }: PostCardProps) {
     setShowDeleteModal(true);
   };
 
+  const handleReport = async () => {
+    if (reportLoading || reported) return;
+    setReportLoading(true);
+    try {
+      await moderationService.reportPost(post.id, 'Conteúdo inadequado');
+      setReported(true);
+      // Feedback discreto
+      setTimeout(() => {
+        onDelete?.(post.id); // Remove da view otimisticamente
+      }, 2000);
+    } catch {
+      // Ignora erro por enquanto
+    } finally {
+      setReportLoading(false);
+    }
+  };
+
   const confirmDeletePost = async () => {
-    setShowDeleteModal(false);
     setIsDeleting(true);
     try {
       await postService.deletePost(post.id);
+      setShowDeleteModal(false);
       onDelete?.(post.id);
     } catch (err) {
       console.error('Falha ao excluir o post', err);
@@ -318,27 +339,42 @@ export function PostCard({ post, index = 0, onDelete }: PostCardProps) {
               <span>{isDeleting ? 'Excluindo...' : 'Excluir'}</span>
             </button>
           ) : (
-            <button
-              onClick={handleFollowToggle}
-              className={cn(
-                'flex items-center gap-1 px-3 py-1.5 rounded-full text-xs font-semibold transition-all shrink-0 active:scale-95',
-                isFollowing
-                  ? 'bg-white/10 text-textSecondary hover:bg-white/15 border border-white/10'
-                  : 'bg-white text-black hover:bg-white/90 shadow-sm'
-              )}
-            >
-              {isFollowing ? (
-                <>
-                  <UserCheck className="w-3.5 h-3.5" />
-                  <span>Conectado</span>
-                </>
-              ) : (
-                <>
-                  <UserPlus className="w-3.5 h-3.5" />
-                  <span>Conectar</span>
-                </>
-              )}
-            </button>
+            <div className="flex items-center gap-2">
+              <button
+                onClick={handleFollowToggle}
+                className={cn(
+                  'flex items-center gap-1 px-3 py-1.5 rounded-full text-xs font-semibold transition-all shrink-0 active:scale-95',
+                  isFollowing
+                    ? 'bg-white/10 text-textSecondary hover:bg-white/15 border border-white/10'
+                    : 'bg-white text-black hover:bg-white/90 shadow-sm'
+                )}
+              >
+                {isFollowing ? (
+                  <>
+                    <UserCheck className="w-3.5 h-3.5" />
+                    <span>Seguindo</span>
+                  </>
+                ) : (
+                  <>
+                    <UserPlus className="w-3.5 h-3.5" />
+                    <span>Seguir</span>
+                  </>
+                )}
+              </button>
+              
+              <button
+                onClick={handleReport}
+                disabled={reportLoading || reported}
+                className={cn(
+                  "p-1.5 rounded-full text-xs transition-colors shrink-0 active:scale-95",
+                  reported ? "text-red-400 bg-red-400/10" : "text-textSecondary hover:text-white hover:bg-white/10",
+                  reportLoading && "opacity-50"
+                )}
+                title="Denunciar publicação"
+              >
+                {reportLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Flag className="w-4 h-4" />}
+              </button>
+            </div>
           )}
         </div>
 
@@ -621,7 +657,7 @@ export function PostCard({ post, index = 0, onDelete }: PostCardProps) {
           >
             <div className="flex items-center justify-between mb-6">
               <h3 className="text-lg font-bold text-white">
-                Conexão com Propósito
+                Seguir com Propósito
               </h3>
 
               <button
@@ -668,7 +704,7 @@ export function PostCard({ post, index = 0, onDelete }: PostCardProps) {
               onClick={handleConfirmConnect}
               className="w-full py-4 bg-white text-black font-bold rounded-xl transition-all disabled:opacity-40 disabled:cursor-not-allowed hover:bg-zinc-100 active:scale-[0.98]"
             >
-              Estabelecer Conexão
+              Começar a Seguir
             </button>
           </div>
         </div>
@@ -706,9 +742,12 @@ export function PostCard({ post, index = 0, onDelete }: PostCardProps) {
               </button>
               <button
                 onClick={confirmDeletePost}
-                className="flex-1 py-3 bg-red-500 hover:bg-red-600 text-white font-semibold rounded-xl transition-all text-sm"
+                disabled={isDeleting}
+                className="flex-1 py-3 bg-red-500 hover:bg-red-600 text-white font-semibold rounded-xl transition-all text-sm disabled:opacity-60 disabled:cursor-not-allowed flex items-center justify-center gap-2"
               >
-                Excluir
+                {isDeleting ? (
+                  <><Loader2 className="w-4 h-4 animate-spin" />Excluindo...</>
+                ) : 'Excluir'}
               </button>
             </div>
           </div>

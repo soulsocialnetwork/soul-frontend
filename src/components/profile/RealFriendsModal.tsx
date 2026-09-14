@@ -1,5 +1,4 @@
 import { X, Users, Link } from 'lucide-react';
-import { useEffect, useRef } from 'react';
 
 interface RealFriendsModalProps {
   username: string;

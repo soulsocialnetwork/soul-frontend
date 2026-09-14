@@ -106,6 +106,7 @@ profilePicture: string | null;
 export interface PostRequest {
 content: string;
 imageUrl?: string;
+category?: string;
 }
 
 export interface PagePostResponse {

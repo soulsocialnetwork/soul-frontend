@@ -65,11 +65,14 @@ export default function FeedPage() {
   const [activeTab, setActiveTab] = useState<FeedTab>('house');
   const [posts, setPosts] = useState<Post[]>([]);
   const [loading, setLoading] = useState(true);
+  const [loadingMore, setLoadingMore] = useState(false);
   const [feedError, setFeedError] = useState('');
   const [searchQuery, setSearchQuery] = useState('');
   const [searchFocused, setSearchFocused] = useState(false);
   const [searchResults, setSearchResults] = useState<ProfileSummary[]>([]);
   const [isSearching, setIsSearching] = useState(false);
+  const [page, setPage] = useState(0);
+  const [hasMore, setHasMore] = useState(true);
   
   const [intentionState, setIntentionState] = useState<'check' | 'show' | 'done'>('check');
   const [activeCategories, setActiveCategories] = useState<CategoryId[]>([]);
@@ -108,12 +111,16 @@ export default function FeedPage() {
     const loadFeed = async () => {
       setLoading(true);
       setFeedError('');
+      setPage(0);
+      setHasMore(true);
 
       try {
-        const feedPosts = await postService.getFeed();
+        const response = await postService.getFeedPaged(0, 20);
 
         if (!cancelled) {
-          setPosts(feedPosts);
+          setPosts(response.posts);
+          setHasMore(!response.isLast);
+          setPage(1);
         }
       } catch (error) {
         if (!cancelled) {
@@ -133,6 +140,26 @@ export default function FeedPage() {
       cancelled = true;
     };
   }, []);
+
+  const handleLoadMore = async () => {
+    if (loadingMore || !hasMore) return;
+    setLoadingMore(true);
+    try {
+      const response = await postService.getFeedPaged(page, 20);
+      setPosts((prev) => {
+        const existing = prev ?? [];
+        const ids = new Set(existing.map((p: Post) => p.id));
+        const newPosts = response.posts.filter((p: Post) => !ids.has(p.id));
+        return [...existing, ...newPosts];
+      });
+      setHasMore(!response.isLast);
+      setPage((p) => p + 1);
+    } catch {
+      // silencia erro de paginação
+    } finally {
+      setLoadingMore(false);
+    }
+  };
 
   const handleIntention = (route: string | null) => {
     sessionStorage.setItem(SESSION_KEY, '1');
@@ -348,6 +375,26 @@ export default function FeedPage() {
               posts={filteredPosts}
               loading={loading}
             />
+
+            {/* Botão carregar mais */}
+            {!loading && hasMore && filteredPosts.length > 0 && (
+              <div className="flex justify-center pb-4">
+                <button
+                  onClick={handleLoadMore}
+                  disabled={loadingMore}
+                  className="flex items-center gap-2 px-6 py-2.5 rounded-2xl border border-white/[0.08] bg-white/[0.03] text-sm text-zinc-400 hover:text-white hover:bg-white/[0.06] hover:border-white/[0.15] active:scale-[0.97] transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  {loadingMore ? (
+                    <>
+                      <Loader2 className="w-4 h-4 animate-spin" />
+                      Carregando...
+                    </>
+                  ) : (
+                    'Carregar mais'
+                  )}
+                </button>
+              </div>
+            )}
           </div>
         </main>
       </div>

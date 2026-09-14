@@ -13,26 +13,43 @@ import UserProfilePage from './pages/UserProfile';
 import CreateHighlightPage from './pages/CreateHighlight/CreateHighlightPage';
 import DigitalEducationPage from './pages/DigitalEducation';
 import DataTransparencyPage from './pages/DataTransparency';
+import { PrivateRoute, PublicRoute } from './components/router/PrivateRoute';
+import VerifyEmailPage from './pages/Auth/VerifyEmail.tsx';
+import ModerationPage from './pages/Moderation';
 
 export default function App() {
   return (
-    <BrowserRouter>
+    <BrowserRouter
+      future={{
+        v7_startTransition: true,
+        v7_relativeSplatPath: true,
+      }}
+    >
       <AuthProvider>
         <Routes>
-        <Route path="/" element={<InitialPage />} />
-        <Route path="/auth" element={<AuthPage />} />
-        <Route path="/feed" element={<FeedPage />} />
-        <Route path="/post/:id" element={<FeedPage />} />
-        <Route path="/soults" element={<SoulsPage />} />
-        <Route path="/screentime" element={<ScreentimePage />} />
-        <Route path="/profile" element={<ProfilePage />} />
-        <Route path="/profile/:username" element={<UserProfilePage />} />
-        <Route path="/messages" element={<MessagesPage />} />
-        <Route path="/create" element={<CreatePage />} />
-        <Route path="/settings" element={<SettingsPage />} />
-        <Route path="/highlights/create" element={<CreateHighlightPage />} />
-        <Route path="/education" element={<DigitalEducationPage />} />
-        <Route path="/transparency" element={<DataTransparencyPage />} />
+          {/* Rotas públicas — se já logado, vai pro feed */}
+          <Route element={<PublicRoute />}>
+            <Route path="/" element={<InitialPage />} />
+            <Route path="/auth" element={<AuthPage />} />
+            <Route path="/verify-email" element={<VerifyEmailPage />} />
+          </Route>
+
+          {/* Rotas protegidas — requer login */}
+          <Route element={<PrivateRoute />}>
+            <Route path="/feed" element={<FeedPage />} />
+            <Route path="/post/:id" element={<FeedPage />} />
+            <Route path="/soults" element={<SoulsPage />} />
+            <Route path="/screentime" element={<ScreentimePage />} />
+            <Route path="/profile" element={<ProfilePage />} />
+            <Route path="/profile/:username" element={<UserProfilePage />} />
+            <Route path="/messages" element={<MessagesPage />} />
+            <Route path="/create" element={<CreatePage />} />
+            <Route path="/settings" element={<SettingsPage />} />
+            <Route path="/highlights/create" element={<CreateHighlightPage />} />
+            <Route path="/education" element={<DigitalEducationPage />} />
+            <Route path="/transparency" element={<DataTransparencyPage />} />
+            <Route path="/moderation" element={<ModerationPage />} />
+          </Route>
         </Routes>
       </AuthProvider>
     </BrowserRouter>

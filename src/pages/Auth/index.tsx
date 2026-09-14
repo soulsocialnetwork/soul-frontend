@@ -48,7 +48,7 @@ export default function AuthPage() {
           email: (data as Parameters<typeof authService.register>[0]).email, 
           password: (data as Parameters<typeof authService.register>[0]).password 
         });
-        navigate('/feed');
+        navigate('/verify-email');
       }
     } catch (error) {
       setAuthError(getHttpErrorMessage(error));

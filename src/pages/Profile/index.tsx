@@ -23,6 +23,7 @@ import {
   Check,
   Trash2,
   QrCode,
+  Loader2,
 } from 'lucide-react';
 import { cn } from '../../utils/cn';
 import { ScreenLoader } from '../../components/ui/ScreenLoader';
@@ -97,6 +98,8 @@ export default function ProfilePage() {
   const [editForm, setEditForm] = useState<ProfileData>(EMPTY_PROFILE);
 
   const [showEditModal, setShowEditModal] = useState(false);
+  const [isSavingProfile, setIsSavingProfile] = useState(false);
+  const [profileSaveError, setProfileSaveError] = useState('');
   const [feedModal, setFeedModal] = useState<{
     list: Post[];
     startIndex: number;
@@ -108,8 +111,9 @@ export default function ProfilePage() {
   const [showAvatarPickerModal, setShowAvatarPickerModal] = useState(false);
   const avatarFileInputRef = useRef<HTMLInputElement>(null);
 
-  const [connectionsCount, setConnectionsCount] = useState(0);
+  const [followersCount, setFollowersCount] = useState(0);
   const [followingCount, setFollowingCount] = useState(0);
+  const [postCount, setPostCount] = useState(0);
   const [showRealFriendsModal, setShowRealFriendsModal] = useState(false);
 
   const [connectionsModal, setConnectionsModal] = useState<{ type: 'followers' | 'following', title: string } | null>(null);
@@ -144,8 +148,9 @@ export default function ProfilePage() {
           avatarUrl: profile.profilePicture || '',
         });
 
-        setConnectionsCount(profile.followerCount);
+        setFollowersCount(profile.followerCount);
         setFollowingCount(profile.followingCount);
+        setPostCount(profile.postCount);
 
         const postsResponse = await api.get<PagePostResponse>(
           endpoints.profiles.posts(profile.username),
@@ -199,19 +204,35 @@ export default function ProfilePage() {
 
   const handleSaveProfile = async (e: React.FormEvent) => {
     e.preventDefault();
+    setProfileSaveError('');
 
+    // Validações frontend
+    if (!editForm.fullName.trim() || editForm.fullName.trim().length < 2) {
+      setProfileSaveError('O nome precisa ter pelo menos 2 caracteres.');
+      return;
+    }
+    if (editForm.bio.length > 160) {
+      setProfileSaveError('A bio pode ter no máximo 160 caracteres.');
+      return;
+    }
+
+    setIsSavingProfile(true);
     try {
       const payload: Record<string, string> = {};
-      if (editForm.fullName) payload.name = editForm.fullName;
-      if (editForm.bio !== undefined) payload.bio = editForm.bio;
+      if (editForm.fullName.trim()) payload.name = editForm.fullName.trim();
+      payload.bio = editForm.bio.trim();
       if (editForm.avatarUrl) payload.profilePicture = editForm.avatarUrl;
 
       await api.patch(endpoints.user.me, payload);
 
-      setProfileData(editForm);
+      setProfileData({ ...editForm, fullName: editForm.fullName.trim(), bio: editForm.bio.trim() });
       setShowEditModal(false);
+      setProfileSaveError('');
     } catch (error) {
       console.error('Erro ao atualizar perfil:', error);
+      setProfileSaveError('Não foi possível salvar. Tente novamente.');
+    } finally {
+      setIsSavingProfile(false);
     }
   };
 
@@ -353,7 +374,7 @@ export default function ProfilePage() {
                       <div className="flex gap-6 mb-5 text-sm">
                         <div className="flex flex-col items-center md:items-start">
                           <span className="font-bold text-lg leading-none">
-                            {displayPosts.length}
+                            {postCount}
                           </span>
                           <span className="text-textSecondary text-xs">
                             posts
@@ -365,7 +386,7 @@ export default function ProfilePage() {
                           className="flex flex-col items-center md:items-start cursor-pointer hover:opacity-80 active:scale-95 transition-all"
                         >
                           <span className="font-bold text-lg leading-none">
-                            {connectionsCount}
+                            {followersCount}
                           </span>
                           <span className="text-textSecondary text-xs">
                             seguidores
@@ -388,8 +409,8 @@ export default function ProfilePage() {
                           onClick={() => setShowRealFriendsModal(true)}
                           className="flex flex-col items-center md:items-start cursor-pointer hover:opacity-80 active:scale-95 transition-all"
                         >
-                          <span className="font-bold text-lg leading-none">
-                            0
+                          <span className="text-[10px] font-semibold text-textSecondary/60 bg-white/5 border border-white/10 rounded-full px-2 py-0.5 leading-none mb-0.5">
+                            em breve
                           </span>
                           <span className="text-textSecondary text-xs">
                             amigos reais
@@ -655,21 +676,28 @@ export default function ProfilePage() {
 
                 <textarea
                   value={editForm.bio}
-                  onChange={(e) =>
-                    setEditForm({
-                      ...editForm,
-                      bio: e.target.value,
-                    })
-                  }
+                  onChange={(e) => {
+                    if (e.target.value.length <= 160)
+                      setEditForm({ ...editForm, bio: e.target.value });
+                  }}
                   rows={3}
                   className="w-full bg-white/5 border border-white/10 rounded-2xl p-4 text-sm text-textPrimary focus:outline-none focus:border-white/30 resize-none"
                 />
+                <div className="flex justify-end mt-1">
+                  <span className={cn('text-[10px] tabular-nums', editForm.bio.length >= 150 ? 'text-amber-400' : 'text-white/20')}>
+                    {editForm.bio.length}/160
+                  </span>
+                </div>
               </div>
+
+              {profileSaveError && (
+                <p className="text-xs text-red-400 text-center -mt-2">{profileSaveError}</p>
+              )}
 
               <div className="flex gap-3 pt-2">
                 <button
                   type="button"
-                  onClick={() => setShowEditModal(false)}
+                  onClick={() => { setShowEditModal(false); setProfileSaveError(''); }}
                   className="flex-1 py-3 bg-white/5 text-textPrimary font-semibold rounded-2xl hover:bg-white/10 transition-colors text-sm"
                 >
                   Cancelar
@@ -677,10 +705,14 @@ export default function ProfilePage() {
 
                 <button
                   type="submit"
-                  className="flex-1 py-3 bg-white text-black font-semibold rounded-2xl hover:bg-white/90 transition-colors text-sm flex items-center justify-center gap-1.5"
+                  disabled={isSavingProfile}
+                  className="flex-1 py-3 bg-white text-black font-semibold rounded-2xl hover:bg-white/90 transition-colors text-sm flex items-center justify-center gap-1.5 disabled:opacity-60"
                 >
-                  <Check className="w-4 h-4" />
-                  Salvar
+                  {isSavingProfile ? (
+                    <><Loader2 className="w-4 h-4 animate-spin" />Salvando...</>
+                  ) : (
+                    <><Check className="w-4 h-4" />Salvar</>
+                  )}
                 </button>
               </div>
             </form>
@@ -872,10 +904,10 @@ export default function ProfilePage() {
                 <img
                   src={avatarFilePreview}
                   alt="Preview"
-                  className="w-28 h-28 rounded-full object-cover border border-white/10"
+                  className="w-28 h-28 rounded-2xl object-cover border border-white/10"
                 />
               ) : (
-                <div className="w-28 h-28 rounded-full bg-white/5 border border-white/10 flex items-center justify-center">
+                <div className="w-28 h-28 rounded-2xl bg-white/5 border border-white/10 flex items-center justify-center">
                   <Camera className="w-8 h-8 text-zinc-500" />
                 </div>
               )}

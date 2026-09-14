@@ -17,6 +17,7 @@ import type { Soult } from '../../services/soultService';
 import { soultService } from '../../services/soultService';
 import { useNavigate } from 'react-router-dom';
 import { cn } from '../../utils/cn';
+import { useAuth } from '../../context/AuthContext';
 
 interface SoultCardProps {
   soult: Soult;
@@ -32,7 +33,9 @@ interface Comment {
 
 export function SoultCard({ soult }: SoultCardProps) {
   const navigate = useNavigate();
+  const { user: currentUser } = useAuth();
   const videoRef = useRef<HTMLVideoElement>(null);
+  const isOwn = !!(currentUser && soult.userId && currentUser.id === soult.userId);
 
   const [playing, setPlaying] = useState(false);
   const [liked, setLiked] = useState(false);
@@ -281,21 +284,24 @@ export function SoultCard({ soult }: SoultCardProps) {
               )}
             </div>
 
-            <button
-              onClick={handleFollowToggle}
-              className={cn(
-                'flex items-center gap-1 px-2.5 py-1 rounded-lg text-[11px] font-semibold transition-all shrink-0 active:scale-95 pointer-events-auto',
-                isFollowing
-                  ? 'bg-white/10 text-white/70 border border-white/10'
-                  : 'bg-white text-black hover:bg-white/90'
-              )}
-            >
-              {isFollowing ? (
-                <><UserCheck className="w-3 h-3" /><span>Seguindo</span></>
-              ) : (
-                <><UserPlus className="w-3 h-3" /><span>Seguir</span></>
-              )}
-            </button>
+            {/* Só mostra o botão Seguir se não for o próprio usuário */}
+            {!isOwn && (
+              <button
+                onClick={handleFollowToggle}
+                className={cn(
+                  'flex items-center gap-1 px-2.5 py-1 rounded-lg text-[11px] font-semibold transition-all shrink-0 active:scale-95 pointer-events-auto',
+                  isFollowing
+                    ? 'bg-white/10 text-white/70 border border-white/10'
+                    : 'bg-white text-black hover:bg-white/90'
+                )}
+              >
+                {isFollowing ? (
+                  <><UserCheck className="w-3 h-3" /><span>Seguindo</span></>
+                ) : (
+                  <><UserPlus className="w-3 h-3" /><span>Seguir</span></>
+                )}
+              </button>
+            )}
           </div>
 
           <p className="text-white font-semibold text-sm line-clamp-1 pointer-events-auto cursor-pointer"

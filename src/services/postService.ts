@@ -69,6 +69,27 @@ export const postService = {
     return response.data.content.map(convertPostResponseToPost);
   },
 
+  async getFeedPaged(
+    page: number = 0,
+    size: number = 20
+  ): Promise<{ posts: Post[]; isLast: boolean; totalPages: number }> {
+    const response = await api.get<PagePostResponse>(
+      endpoints.feed.list,
+      {
+        params: {
+          page,
+          size,
+        },
+      }
+    );
+
+    return {
+      posts: response.data.content.map(convertPostResponseToPost),
+      isLast: response.data.last,
+      totalPages: response.data.totalPages,
+    };
+  },
+
   async getPosts(
     page: number = 0,
     size: number = 10
@@ -166,5 +187,14 @@ export const postService = {
       `/posts/${encodeURIComponent(postId)}/likes/me`
     );
     return response.data.liked;
+  },
+
+  async uploadMedia(file: File): Promise<string> {
+    const formData = new FormData();
+    formData.append('file', file);
+    const response = await api.post<{ url: string }>('/media/upload', formData, {
+      headers: { 'Content-Type': 'multipart/form-data' },
+    });
+    return response.data.url;
   },
 };
