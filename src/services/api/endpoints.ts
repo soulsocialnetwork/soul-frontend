@@ -35,9 +35,27 @@ export const endpoints = {
     commentsCount: (postId: string) => `/posts/${postId}/comments/count`,
     like: (postId: string) => `/posts/${postId}/like`,
     likesCount: (postId: string) => `/posts/${postId}/likes/count`,
+    likesMe: (postId: string) => `/posts/${postId}/likes/me`,
   },
   feed: {
     list: '/feed',
+  },
+  soults: {
+    list: '/soults',
+    byId: (id: string) => `/soults/${id}`,
+    byUser: (username: string) => `/soults/user/${encodeURIComponent(username)}`,
+    like: (id: string) => `/soults/${id}/like`,
+  },
+  messages: {
+    conversations: '/messages/conversations',
+    conversationWith: (username: string) => `/messages/conversations/${encodeURIComponent(username)}`,
+    conversationById: (id: string) => `/messages/conversations/${id}`,
+    messages: (convId: string) => `/messages/conversations/${convId}/msgs`,
+  },
+  notifications: {
+    list: '/notifications',
+    markRead: '/notifications/read-all',
+    markOneRead: (id: string) => `/notifications/${id}/read`,
   },
 } as const;
 

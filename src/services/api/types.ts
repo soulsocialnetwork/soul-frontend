@@ -9,6 +9,7 @@ bio: string | null;
 accountStatus: boolean;
 privacyStatus: boolean;
 metricsStatus: boolean;
+role?: string;
 }
 
 export interface CurrentUserResponse {
@@ -23,6 +24,7 @@ createdAt: string;
 accountStatus: boolean;
 privacyStatus: boolean;
 metricsStatus: boolean;
+role?: string;
 }
 
 export interface LoginResponse {
@@ -93,14 +95,19 @@ last: boolean;
 }
 
 export interface PostResponse {
-id: string;
-content: string;
-imageUrl: string | null;
-createdAt: string;
-userId: string;
-username: string;
-name: string;
-profilePicture: string | null;
+  id: string;
+  content: string;
+  imageUrl: string | null;
+  category: string | null;
+  createdAt: string;
+  userId: string;
+  username: string;
+  name: string;
+  profilePicture: string | null;
+  verified: boolean;
+  likesCount: number;
+  commentsCount: number;
+  hasLiked: boolean;
 }
 
 export interface PostRequest {
@@ -141,6 +148,45 @@ export interface CommentResponse {
 
 export interface PageCommentResponse {
   content: CommentResponse[];
+  totalPages: number;
+  totalElements: number;
+  size: number;
+  number: number;
+  first: boolean;
+  last: boolean;
+}
+
+export interface SoultResponse {
+  id: string;
+  videoUrl: string;
+  thumbnailUrl: string | null;
+  caption: string | null;
+  category: string | null;
+  duration: number | null;
+  viewsCount: number;
+  likesCount: number;
+  hasLiked: boolean;
+  createdAt: string;
+  userId: string;
+  username: string;
+  name: string;
+  profilePicture: string | null;
+}
+
+export interface NotificationResponse {
+  id: string;
+  type: 'FOLLOW' | 'LIKE' | 'COMMENT';
+  actorId: string;
+  actorUsername: string;
+  actorName: string;
+  actorProfilePicture: string | null;
+  postId: string | null;
+  read: boolean;
+  createdAt: string;
+}
+
+export interface PageNotificationResponse {
+  content: NotificationResponse[];
   totalPages: number;
   totalElements: number;
   size: number;

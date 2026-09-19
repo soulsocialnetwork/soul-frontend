@@ -25,8 +25,10 @@ export interface Post {
   };
   content: string;
   imageUrl?: string;
+  category?: string;
   likesCount: number;
   commentsCount: number;
+  hasLiked?: boolean;
   createdAt: string;
   initialComments?: PostComment[];
 }
@@ -41,12 +43,14 @@ function convertPostResponseToPost(
       name: postResponse.name,
       username: postResponse.username,
       avatarUrl: postResponse.profilePicture || undefined,
-      verified: false,
+      verified: postResponse.verified || false,
     },
     content: postResponse.content,
     imageUrl: postResponse.imageUrl || undefined,
-    likesCount: 0,
-    commentsCount: 0,
+    category: postResponse.category || undefined,
+    likesCount: postResponse.likesCount || 0,
+    commentsCount: postResponse.commentsCount || 0,
+    hasLiked: postResponse.hasLiked || false,
     createdAt: postResponse.createdAt,
   };
 }
@@ -105,6 +109,27 @@ export const postService = {
     );
 
     return response.data.content.map(convertPostResponseToPost);
+  },
+
+  async getPostsPaged(
+    page: number = 0,
+    size: number = 20
+  ): Promise<{ posts: Post[]; isLast: boolean; totalPages: number }> {
+    const response = await api.get<PagePostResponse>(
+      endpoints.posts.list,
+      {
+        params: {
+          page,
+          size,
+        },
+      }
+    );
+
+    return {
+      posts: response.data.content.map(convertPostResponseToPost),
+      isLast: response.data.last,
+      totalPages: response.data.totalPages,
+    };
   },
 
   async getPostById(postId: string): Promise<Post> {
@@ -183,10 +208,10 @@ export const postService = {
   },
 
   async hasLiked(postId: string): Promise<boolean> {
-    const response = await api.get<{ liked: boolean }>(
-      `/posts/${encodeURIComponent(postId)}/likes/me`
+    const response = await api.get<{ hasLiked: boolean }>(
+      endpoints.posts.likesMe(postId)
     );
-    return response.data.liked;
+    return response.data.hasLiked;
   },
 
   async uploadMedia(file: File): Promise<string> {

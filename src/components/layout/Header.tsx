@@ -29,8 +29,8 @@ export function Header() {
 
     fetchPendingRequests();
 
-    // Recarrega a cada 60s
-    const interval = setInterval(fetchPendingRequests, 60_000);
+    // Recarrega a cada 10s
+    const interval = setInterval(fetchPendingRequests, 10_000);
 
     return () => {
       cancelled = true;

@@ -12,6 +12,7 @@ import type { CurrentUserResponse, PagePostResponse, ProfileSummary } from '../.
 import { userService } from '../../services/userService';
 import { ConnectionsModal } from '../../components/profile/ConnectionsModal';
 import { RealFriendsModal } from '../../components/profile/RealFriendsModal';
+import { postService } from '../../services/postService';
 import {
   Grid,
   Bookmark,
@@ -108,6 +109,7 @@ export default function ProfilePage() {
   const [activeHighlightIndex, setActiveHighlightIndex] = useState<number | null>(null);
 
   const [avatarFilePreview, setAvatarFilePreview] = useState('');
+  const [avatarFile, setAvatarFile] = useState<File | null>(null);
   const [showAvatarPickerModal, setShowAvatarPickerModal] = useState(false);
   const avatarFileInputRef = useRef<HTMLInputElement>(null);
 
@@ -121,7 +123,21 @@ export default function ProfilePage() {
   const [connectionsLoading, setConnectionsLoading] = useState(false);
 
   const [displayPosts, setDisplayPosts] = useState<Post[]>([]);
-  const [savedPosts] = useState<Post[]>([]);
+  const [savedPosts, setSavedPosts] = useState<Post[]>([]);
+
+  useEffect(() => {
+    const loadSaved = () => {
+      try {
+        const posts = JSON.parse(localStorage.getItem('soul_saved_posts') || '[]');
+        setSavedPosts(posts);
+      } catch {
+        setSavedPosts([]);
+      }
+    };
+    loadSaved();
+    window.addEventListener('savedPostsUpdated', loadSaved);
+    return () => window.removeEventListener('savedPostsUpdated', loadSaved);
+  }, []);
 
   useEffect(() => {
     const loadProfile = async () => {
@@ -218,14 +234,21 @@ export default function ProfilePage() {
 
     setIsSavingProfile(true);
     try {
-      const payload: Record<string, string> = {};
-      if (editForm.fullName.trim()) payload.name = editForm.fullName.trim();
-      payload.bio = editForm.bio.trim();
-      if (editForm.avatarUrl) payload.profilePicture = editForm.avatarUrl;
+      let finalAvatarUrl = editForm.avatarUrl;
+      if (avatarFile) {
+        finalAvatarUrl = await postService.uploadMedia(avatarFile);
+      }
 
-      await api.patch(endpoints.user.me, payload);
+      const payload = {
+        name: editForm.fullName.trim(),
+        bio: editForm.bio.trim(),
+        profilePicture: finalAvatarUrl || ''
+      };
 
-      setProfileData({ ...editForm, fullName: editForm.fullName.trim(), bio: editForm.bio.trim() });
+      await api.put(endpoints.user.me, payload);
+
+      setProfileData({ ...editForm, fullName: editForm.fullName.trim(), bio: editForm.bio.trim(), avatarUrl: finalAvatarUrl || '' });
+      setAvatarFile(null);
       setShowEditModal(false);
       setProfileSaveError('');
     } catch (error) {
@@ -303,6 +326,7 @@ export default function ProfilePage() {
   function handleAvatarFileChange(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0];
     if (!file) return;
+    setAvatarFile(file);
     const reader = new FileReader();
     reader.onload = (ev) => {
       setAvatarFilePreview(ev.target?.result as string);
@@ -468,7 +492,7 @@ export default function ProfilePage() {
                           <div className="w-16 h-16 md:w-20 md:h-20 rounded-2xl border border-white/10 p-1 flex items-center justify-center bg-white/5 overflow-hidden">
                             {highlight.type === 'video' ? (
                               <video
-                                src={highlight.cover}
+                                src={`${highlight.cover}#t=0.001`}
                                 className="w-full h-full rounded-2xl object-cover pointer-events-none"
                               />
                             ) : (
@@ -760,7 +784,7 @@ export default function ProfilePage() {
 
               {highlightsList[activeHighlightIndex].type === 'video' ? (
                 <video
-                  src={highlightsList[activeHighlightIndex].image}
+                  src={`${highlightsList[activeHighlightIndex].image}#t=0.001`}
                   controls
                   autoPlay
                   className="absolute inset-0 w-full h-full object-cover z-0"

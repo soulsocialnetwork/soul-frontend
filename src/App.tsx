@@ -10,6 +10,7 @@ import MessagesPage from './pages/Messages';
 import CreatePage from './pages/Create';
 import SettingsPage from './pages/Settings';
 import UserProfilePage from './pages/UserProfile';
+import PostDetailPage from './pages/PostDetail';
 import CreateHighlightPage from './pages/CreateHighlight/CreateHighlightPage';
 import DigitalEducationPage from './pages/DigitalEducation';
 import DataTransparencyPage from './pages/DataTransparency';
@@ -37,7 +38,7 @@ export default function App() {
           {/* Rotas protegidas — requer login */}
           <Route element={<PrivateRoute />}>
             <Route path="/feed" element={<FeedPage />} />
-            <Route path="/post/:id" element={<FeedPage />} />
+            <Route path="/post/:id" element={<PostDetailPage />} />
             <Route path="/soults" element={<SoulsPage />} />
             <Route path="/screentime" element={<ScreentimePage />} />
             <Route path="/profile" element={<ProfilePage />} />

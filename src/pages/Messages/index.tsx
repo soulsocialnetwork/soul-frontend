@@ -2,7 +2,7 @@ import { useState, useRef, useEffect, useCallback } from 'react';
 import { Sidebar } from '../../components/layout/Sidebar';
 import { Header } from '../../components/layout/Header';
 import { BottomNav } from '../../components/layout/BottomNav';
-import { Search, Send, ArrowLeft, MoreHorizontal, Plus, X, Loader2, User, CheckCheck, Clock } from 'lucide-react';
+import { Search, Send, ArrowLeft, MoreHorizontal, Plus, X, Loader2, User, CheckCheck, Check } from 'lucide-react';
 import { cn } from '../../utils/cn';
 import { messageService, type Conversation, type Message } from '../../services/messageService';
 import { userService } from '../../services/userService';
@@ -10,7 +10,7 @@ import { useAuth } from '../../context/AuthContext';
 import type { ProfileSummary } from '../../services/api/types';
 
 function MessageStatus({ readAt }: { readAt: string | null }) {
-  if (!readAt) return <Clock className="w-3 h-3 text-black/30" />;
+  if (!readAt) return <Check className="w-3 h-3 text-black/40" />;
   return <CheckCheck className="w-3 h-3 text-black/70" />;
 }
 
@@ -55,6 +55,34 @@ export default function MessagesPage() {
   }, []);
 
   useEffect(() => { loadConversations(); }, [loadConversations]);
+
+  // Poll conversations list every 10 seconds
+  useEffect(() => {
+    const interval = setInterval(async () => {
+      try {
+        const res = await messageService.getConversations();
+        setConversations(res.content || []);
+      } catch { /* ignore */ }
+    }, 10000);
+    return () => clearInterval(interval);
+  }, []);
+
+  // Poll messages in active conversation every 3 seconds
+  useEffect(() => {
+    if (!selected) return;
+    const interval = setInterval(async () => {
+      try {
+        const res = await messageService.getMessages(selected.id);
+        setMessages(prev => {
+          const existingIds = new Set(prev.map(m => m.id));
+          const newMsgs = (res.content || []).filter(m => !existingIds.has(m.id));
+          if (newMsgs.length === 0) return prev;
+          return [...prev, ...newMsgs];
+        });
+      } catch { /* ignore */ }
+    }, 3000);
+    return () => clearInterval(interval);
+  }, [selected?.id]);
 
   useEffect(() => {
     if (!newConvSearch.trim()) { setSearchResults([]); return; }

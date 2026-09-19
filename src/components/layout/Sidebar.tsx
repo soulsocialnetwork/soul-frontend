@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { 
   Home, Ghost, Plus, MessageSquare, Clock,
-  Bell, Settings, LogOut
+  Bell, Settings, LogOut, Shield
 } from 'lucide-react';
 import soulzinhoWebm from '../../assets/soulzinho-animacao-ofical-tela-inicial.webm';
 import { cn } from '../../utils/cn';
@@ -34,7 +34,7 @@ export function Sidebar() {
     };
 
     fetchPending();
-    const id = setInterval(fetchPending, 60_000);
+    const id = setInterval(fetchPending, 10_000);
     return () => { cancelled = true; clearInterval(id); };
   }, []);
 
@@ -52,6 +52,10 @@ export function Sidebar() {
     { icon: MessageSquare, label: t('nav.messages'),   path: '/messages' },
     { icon: Clock,         label: t('nav.screentime'), path: '/screentime' },
   ];
+
+  if (user?.role === 'ADMIN' || user?.role === 'MODERATOR') {
+    mainNavItems.push({ icon: Shield, label: 'Moderação', path: '/moderation' });
+  }
 
   const avatarUrl = user?.profilePicture;
   const initial = user?.name?.charAt(0).toUpperCase() ?? user?.username?.charAt(0).toUpperCase() ?? '?';

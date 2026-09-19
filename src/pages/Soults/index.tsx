@@ -26,7 +26,7 @@ export default function SoulsPage() {
           </h1>
         </div>
 
-        <main className="w-full h-full lg:w-[400px] lg:h-[calc(100dvh-3rem)] lg:max-h-[850px] lg:rounded-xl lg:border lg:border-white/10 lg:shadow-2xl overflow-hidden relative bg-black">
+        <main className="w-full h-full lg:w-[400px] lg:h-[calc(100dvh-3rem)] lg:max-h-[850px] lg:rounded-xl lg:border lg:border-white/10 lg:shadow-2xl relative bg-black">
           <SoultList soults={soults} loading={loading} />
         </main>
       </div>

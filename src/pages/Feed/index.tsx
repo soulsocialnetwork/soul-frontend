@@ -115,7 +115,7 @@ export default function FeedPage() {
       setHasMore(true);
 
       try {
-        const response = await postService.getFeedPaged(0, 20);
+        const response = await postService.getPostsPaged(0, 20);
 
         if (!cancelled) {
           setPosts(response.posts);
@@ -141,11 +141,29 @@ export default function FeedPage() {
     };
   }, []);
 
+  useEffect(() => {
+    const interval = setInterval(async () => {
+      try {
+        const response = await postService.getPostsPaged(0, 20);
+        setPosts((prev) => {
+          const existing = prev ?? [];
+          const existingIds = new Set(existing.map(p => p.id));
+          const newPosts = response.posts.filter(p => !existingIds.has(p.id));
+          if (newPosts.length === 0) return prev;
+          return [...newPosts, ...existing];
+        });
+      } catch {
+        // silencia erro de polling
+      }
+    }, 30000);
+    return () => clearInterval(interval);
+  }, []);
+
   const handleLoadMore = async () => {
     if (loadingMore || !hasMore) return;
     setLoadingMore(true);
     try {
-      const response = await postService.getFeedPaged(page, 20);
+      const response = await postService.getPostsPaged(page, 20);
       setPosts((prev) => {
         const existing = prev ?? [];
         const ids = new Set(existing.map((p: Post) => p.id));

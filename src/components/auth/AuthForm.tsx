@@ -40,9 +40,7 @@ function calcAge(year: string, month: string, day: string): number {
 }
 
 function passwordStrength(pwd: string): { ok: boolean; message: string } {
-  if (pwd.length < 8) return { ok: false, message: 'A senha precisa ter no mínimo 8 caracteres.' };
-  if (!/[A-Z]/.test(pwd)) return { ok: false, message: 'Use ao menos uma letra maiúscula.' };
-  if (!/[0-9]/.test(pwd)) return { ok: false, message: 'Use ao menos um número.' };
+  if (pwd.length < 6) return { ok: false, message: 'A senha precisa ter no mínimo 6 caracteres.' };
   return { ok: true, message: '' };
 }
 
@@ -67,10 +65,16 @@ export function AuthForm({ mode, error, isSubmitting = false, onSubmit }: AuthFo
       errors.email = 'E-mail inválido.';
     }
 
-    // Senha
-    const pwd = passwordStrength(password);
-    if (!pwd.ok) {
-      errors.password = pwd.message;
+    // Senha (validação de formato apenas no cadastro)
+    if (mode === 'register') {
+      const pwd = passwordStrength(password);
+      if (!pwd.ok) {
+        errors.password = pwd.message;
+      }
+    } else {
+      if (!password) {
+        errors.password = 'Informe sua senha.';
+      }
     }
 
     if (mode === 'register') {

@@ -20,10 +20,10 @@ import { useNavigate } from 'react-router-dom';
 import type { Post } from '../../services/postService';
 import { postService } from '../../services/postService';
 import { userService } from '../../services/userService';
-import { moderationService } from '../../services/moderationService';
 import { useTranslation } from '../../i18n';
 import { cn } from '../../utils/cn';
 import { useAuth } from '../../context/AuthContext';
+import { ReportModal } from '../modals/ReportModal';
 
 // Converte timestamp ISO em texto relativo
 function timeAgo(
@@ -72,46 +72,57 @@ export function PostCard({ post, index = 0, onDelete }: PostCardProps) {
   const navigate = useNavigate();
   const { user } = useAuth();
 
-  const [liked, setLiked] = useState(false);
+  const [liked, setLiked] = useState(post.hasLiked || false);
   const [likes, setLikes] = useState(post.likesCount || 0);
   const [commentsCount, setCommentsCount] = useState(post.commentsCount || 0);
   const [isDeleting, setIsDeleting] = useState(false);
+  const [isFollowing, setIsFollowing] = useState(false);
+  const [lightboxOpen, setLightboxOpen] = useState(false);
 
   useEffect(() => {
     let mounted = true;
-
-    // Carrega contagens E estados do usuário atual (curtiu? segue?) do backend
-    Promise.all([
-      postService.getLikesCount(post.id),
-      postService.getCommentsCount(post.id),
-      postService.hasLiked(post.id).catch(() => false),
-      post.author.username
-        ? userService.getFollowStatus(post.author.username)
-            .then(r => r.status === 'FOLLOWING')
-            .catch(() => false)
-        : Promise.resolve(false),
-    ])
-      .then(([fetchedLikes, fetchedComments, alreadyLiked, alreadyFollowing]) => {
-        if (mounted) {
-          setLikes(fetchedLikes as number);
-          setCommentsCount(fetchedComments as number);
-          setLiked(alreadyLiked as boolean);
-          setIsFollowing(alreadyFollowing as boolean);
-        }
-      })
-      .catch(() => {});
-
-    return () => {
-      mounted = false;
-    };
+    if (post.author.username) {
+      userService.getFollowStatus(post.author.username)
+        .then(r => { if (mounted) setIsFollowing(r.status === 'FOLLOWING'); })
+        .catch(() => {});
+    }
+    return () => { mounted = false; };
   }, [post.id, post.author.username]);
-  const [saved, setSaved] = useState(false);
-  const [isFollowing, setIsFollowing] = useState(false);
+  const [saved, setSaved] = useState(() => {
+    const savedPostsStr = localStorage.getItem('soul_saved_posts');
+    if (!savedPostsStr) return false;
+    try {
+      const parsed = JSON.parse(savedPostsStr);
+      return parsed.some((p: any) => p.id === post.id);
+    } catch {
+      return false;
+    }
+  });
+
+  const handleSaveToggle = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    const nextSaved = !saved;
+    setSaved(nextSaved);
+    
+    let savedPosts: any[] = [];
+    try {
+      savedPosts = JSON.parse(localStorage.getItem('soul_saved_posts') || '[]');
+    } catch {}
+
+    if (nextSaved) {
+      if (!savedPosts.some(p => p.id === post.id)) {
+        savedPosts.push(post);
+      }
+    } else {
+      savedPosts = savedPosts.filter(p => p.id !== post.id);
+    }
+    localStorage.setItem('soul_saved_posts', JSON.stringify(savedPosts));
+    window.dispatchEvent(new Event('savedPostsUpdated'));
+  };
   const [likeAnim, setLikeAnim] = useState(false);
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [likeLoading, setLikeLoading] = useState(false);
-  const [reportLoading, setReportLoading] = useState(false);
-  const [reported, setReported] = useState(false);
+  const [showReportModal, setShowReportModal] = useState(false);
 
   const [commentsOpen, setCommentsOpen] = useState(false);
   const [newComment, setNewComment] = useState('');
@@ -161,10 +172,9 @@ export function PostCard({ post, index = 0, onDelete }: PostCardProps) {
     }
   };
 
-  const handleSave = () => {
-    // O backend atual não possui endpoint de favoritos/salvos.
-    // Mantemos somente o estado visual até existir um contrato de API.
-    setSaved((current) => !current);
+  const handleSave = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    handleSaveToggle(e);
   };
 
   const handleFollowToggle = async () => {
@@ -185,21 +195,8 @@ export function PostCard({ post, index = 0, onDelete }: PostCardProps) {
     setShowDeleteModal(true);
   };
 
-  const handleReport = async () => {
-    if (reportLoading || reported) return;
-    setReportLoading(true);
-    try {
-      await moderationService.reportPost(post.id, 'Conteúdo inadequado');
-      setReported(true);
-      // Feedback discreto
-      setTimeout(() => {
-        onDelete?.(post.id); // Remove da view otimisticamente
-      }, 2000);
-    } catch {
-      // Ignora erro por enquanto
-    } finally {
-      setReportLoading(false);
-    }
+  const handleReport = () => {
+    setShowReportModal(true);
   };
 
   const confirmDeletePost = async () => {
@@ -364,15 +361,10 @@ export function PostCard({ post, index = 0, onDelete }: PostCardProps) {
               
               <button
                 onClick={handleReport}
-                disabled={reportLoading || reported}
-                className={cn(
-                  "p-1.5 rounded-full text-xs transition-colors shrink-0 active:scale-95",
-                  reported ? "text-red-400 bg-red-400/10" : "text-textSecondary hover:text-white hover:bg-white/10",
-                  reportLoading && "opacity-50"
-                )}
+                className="p-1.5 rounded-full text-xs transition-colors shrink-0 active:scale-95 text-textSecondary hover:text-white hover:bg-white/10"
                 title="Denunciar publicação"
               >
-                {reportLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Flag className="w-4 h-4" />}
+                <Flag className="w-4 h-4" />
               </button>
             </div>
           )}
@@ -396,6 +388,10 @@ export function PostCard({ post, index = 0, onDelete }: PostCardProps) {
               src={post.imageUrl}
               alt="Post media"
               className="w-full aspect-[3/4] lg:aspect-video object-cover object-top"
+              onClick={(e) => {
+                e.stopPropagation();
+                setLightboxOpen(true);
+              }}
             />
           ) : (
             <div className="w-full aspect-[3/4] lg:aspect-video bg-gradient-to-br from-surfaceHighlight to-background" />
@@ -753,6 +749,33 @@ export function PostCard({ post, index = 0, onDelete }: PostCardProps) {
           </div>
         </div>
       )}
+
+      {lightboxOpen && post.imageUrl && (
+        <div
+          className="fixed inset-0 z-[999] bg-black/95 flex items-center justify-center p-4 animate-fade-in"
+          onClick={() => setLightboxOpen(false)}
+        >
+          <button
+            className="absolute top-4 right-4 w-10 h-10 rounded-full bg-white/10 flex items-center justify-center text-white hover:bg-white/20 transition-colors z-10"
+            onClick={() => setLightboxOpen(false)}
+          >
+            <X className="w-5 h-5" />
+          </button>
+          <img
+            src={post.imageUrl}
+            alt="Post completo"
+            className="max-w-full max-h-full object-contain rounded-2xl"
+            onClick={e => e.stopPropagation()}
+          />
+        </div>
+      )}
+
+      <ReportModal
+        isOpen={showReportModal}
+        onClose={() => setShowReportModal(false)}
+        targetId={post.id}
+        targetType="POST"
+      />
     </>
   );
 }

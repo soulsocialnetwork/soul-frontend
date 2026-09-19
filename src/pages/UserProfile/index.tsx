@@ -12,10 +12,12 @@ import {
   MessageSquare,
   Trash2,
   Play,
+  Flag,
 } from 'lucide-react';
 import { BottomNav } from '../../components/layout/BottomNav';
 import { Sidebar } from '../../components/layout/Sidebar';
 import { PostCard } from '../../components/feed/PostCard';
+import { ReportModal } from '../../components/modals/ReportModal';
 import { cn } from '../../utils/cn';
 import {
   userService,
@@ -60,6 +62,7 @@ export default function UserProfilePage() {
   const [connectionsModal, setConnectionsModal] = useState<{ type: 'followers' | 'following'; title: string } | null>(null);
   const [connectionsList, setConnectionsList] = useState<ProfileSummary[]>([]);
   const [connectionsLoading, setConnectionsLoading] = useState(false);
+  const [reportTarget, setReportTarget] = useState<{ id: string; type: 'ACCOUNT' | 'SOULT' } | null>(null);
 
   // Load profile
   useEffect(() => {
@@ -133,7 +136,7 @@ export default function UserProfilePage() {
     setIsFollowing(!prev);
     setUser(u => u ? {
       ...u,
-      followersCount: prev ? Math.max(0, (u.followersCount || 0) - 1) : (u.followersCount || 0) + 1,
+      followerCount: prev ? Math.max(0, (u.followerCount || 0) - 1) : (u.followerCount || 0) + 1,
     } : null);
     try {
       if (prev) await userService.unfollow(username);
@@ -142,7 +145,7 @@ export default function UserProfilePage() {
       setIsFollowing(prev);
       setUser(u => u ? {
         ...u,
-        followersCount: prev ? (u.followersCount || 0) + 1 : Math.max(0, (u.followersCount || 0) - 1),
+        followerCount: prev ? (u.followerCount || 0) + 1 : Math.max(0, (u.followerCount || 0) - 1),
       } : null);
     } finally {
       setFollowLoading(false);
@@ -304,11 +307,26 @@ export default function UserProfilePage() {
                       {!isOwnProfile && (
                         <button
                           onClick={handleSendMessage}
-                          disabled={sendingMsg}
-                          title="Enviar mensagem"
-                          className="flex items-center justify-center gap-2 px-4 h-9 rounded-xl text-[13px] font-semibold bg-white/[0.06] border border-white/10 text-white hover:bg-white/10 transition-all active:scale-95 disabled:opacity-60 shrink-0"
+                          disabled={sendingMsg || !isFollowing}
+                          title={!isFollowing ? 'Você precisa seguir o usuário para enviar mensagem' : 'Enviar mensagem'}
+                          className={cn(
+                            'flex items-center justify-center gap-2 px-4 h-9 rounded-xl text-[13px] font-semibold bg-white/[0.06] border border-white/10 text-white transition-all shrink-0',
+                            !isFollowing || sendingMsg
+                              ? 'opacity-50 cursor-not-allowed'
+                              : 'hover:bg-white/10 active:scale-95'
+                          )}
                         >
                           {sendingMsg ? <Loader2 className="w-4 h-4 animate-spin" /> : <><MessageSquare className="w-4 h-4" /><span className="hidden sm:inline">Mensagem</span></>}
+                        </button>
+                      )}
+
+                      {!isOwnProfile && (
+                        <button
+                          onClick={() => setReportTarget({ id: user.id, type: 'ACCOUNT' })}
+                          className="flex items-center justify-center p-2.5 rounded-xl bg-white/[0.06] border border-white/10 text-textSecondary hover:text-white hover:bg-white/10 transition-all shrink-0 active:scale-95"
+                          title="Denunciar Conta"
+                        >
+                          <Flag className="w-4 h-4" />
                         </button>
                       )}
                     </div>
@@ -323,7 +341,7 @@ export default function UserProfilePage() {
                       onClick={() => handleOpenConnections('followers')}
                       className="flex flex-col items-center md:items-start cursor-pointer hover:opacity-80 active:scale-95 transition-all"
                     >
-                      <span className="font-bold text-base sm:text-lg leading-none">{user.followersCount || 0}</span>
+                      <span className="font-bold text-base sm:text-lg leading-none">{user.followerCount || 0}</span>
                       <span className="text-textSecondary text-xs mt-1">seguidores</span>
                     </div>
                     <div
@@ -424,7 +442,7 @@ export default function UserProfilePage() {
                       {soult.thumbnailUrl ? (
                         <img src={soult.thumbnailUrl} alt="Soult" className="w-full h-full object-cover" />
                       ) : soult.videoUrl ? (
-                        <video src={soult.videoUrl} className="w-full h-full object-cover" muted />
+                        <video src={`${soult.videoUrl}#t=0.001`} className="w-full h-full object-cover" muted />
                       ) : (
                         <div className="w-full h-full flex items-center justify-center">
                           <Play className="w-8 h-8 text-white/30" />
@@ -448,6 +466,16 @@ export default function UserProfilePage() {
                               ? <Loader2 className="w-3 h-3 animate-spin" />
                               : <Trash2 className="w-3 h-3" />
                             }
+                          </button>
+                        )}
+                        
+                        {!isOwnProfile && (
+                          <button
+                            onClick={(e) => { e.stopPropagation(); setReportTarget({ id: soult.id, type: 'SOULT' }); }}
+                            className="self-end p-1.5 rounded-full bg-black/50 hover:bg-black/70 text-white/70 hover:text-white transition-colors border border-white/10"
+                            title="Denunciar Soult"
+                          >
+                            <Flag className="w-3 h-3" />
                           </button>
                         )}
                       </div>
@@ -522,6 +550,15 @@ export default function UserProfilePage() {
           users={connectionsList}
           loading={connectionsLoading}
           onClose={() => setConnectionsModal(null)}
+        />
+      )}
+
+      {reportTarget && (
+        <ReportModal
+          isOpen={true}
+          onClose={() => setReportTarget(null)}
+          targetId={reportTarget.id}
+          targetType={reportTarget.type}
         />
       )}
     </div>

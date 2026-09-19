@@ -23,6 +23,7 @@ avatarUrl: string;
 bio: string;
 verified: boolean;
 connectionsCount: number;
+followerCount: number;
 friendsCount: number;
 postsCount: number;
 posts: UserPost[];
@@ -41,6 +42,7 @@ avatarUrl: profile.profilePicture || '',
 bio: profile.bio || '',
 verified: false,
 connectionsCount: profile.followerCount,
+followerCount: profile.followerCount,
 friendsCount: 0,
 postsCount: profile.postCount,
 posts: [],
