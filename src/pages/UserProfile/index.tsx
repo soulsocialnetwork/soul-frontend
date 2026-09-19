@@ -1,3 +1,4 @@
+import { SecureImage, SecureVideo } from '../../components/ui/SecureMedia';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useState, useEffect } from 'react';
 import {
@@ -29,6 +30,8 @@ import type { Post } from '../../services/postService';
 import type { ProfileSummary } from '../../services/api/types';
 import { messageService } from '../../services/messageService';
 import { ConnectionsModal } from '../../components/profile/ConnectionsModal';
+import { moderationService } from '../../services/moderationService';
+import { getHttpErrorMessage } from '../../services/api';
 import { useAuth } from '../../context/AuthContext';
 
 type ProfileTab = 'posts' | 'soults';
@@ -36,6 +39,8 @@ type ProfileTab = 'posts' | 'soults';
 export default function UserProfilePage() {
   const { username } = useParams<{ username: string }>();
   const navigate = useNavigate();
+  const [banning, setBanning] = useState(false);
+  const [banError, setBanError] = useState('');
   const { user: currentUser } = useAuth();
 
   useEffect(() => {
@@ -69,6 +74,7 @@ export default function UserProfilePage() {
     if (!username) { setLoadingProfile(false); return; }
     let cancelled = false;
     setLoadingProfile(true);
+    setBanError('');
     userService.getByUsername(username)
       .then(data => { if (!cancelled) setUser(data); })
       .catch(() => { if (!cancelled) setUser(null); })
@@ -127,6 +133,21 @@ export default function UserProfilePage() {
   }, [feedModal, showAvatarModal]);
 
   const isOwnProfile = currentUser?.username === username;
+
+  const handleBan = async () => {
+    if (!user || banning || user.banned) return;
+    if (!window.confirm(`Banir @${user.username}? Esta conta perderá o acesso ao Soul.`)) return;
+    setBanning(true);
+    setBanError('');
+    try {
+      await moderationService.banAccount(user.id);
+      setUser(previous => previous ? { ...previous, banned: true } : previous);
+    } catch (error) {
+      setBanError(getHttpErrorMessage(error));
+    } finally {
+      setBanning(false);
+    }
+  };
 
   const handleFollowClick = async () => {
     // Never allow self-follow
@@ -258,6 +279,8 @@ export default function UserProfilePage() {
 
         <main className="flex-1 overflow-y-auto no-scrollbar pb-24 lg:pb-12">
           <div className="w-full max-w-4xl mx-auto pt-4 lg:pt-8 px-4 sm:px-6 space-y-8">
+            {banError && <p role="alert" className="p-4 rounded-xl bg-red-500/10 text-red-400">{banError}</p>}
+            {user.banned && <p role="status" className="p-4 rounded-xl bg-red-500/10 text-red-400">Esta conta foi banida.</p>}
             {/* Profile Card */}
             <div className="bg-white/[0.02] border border-white/5 rounded-2xl p-5 sm:p-6 md:p-10">
               <div className="flex flex-col md:flex-row gap-6 md:gap-8 items-center md:items-start w-full">
@@ -266,7 +289,7 @@ export default function UserProfilePage() {
                   className="w-24 h-24 sm:w-28 sm:h-28 md:w-40 md:h-40 rounded-2xl overflow-hidden border border-white/10 p-1 bg-white/5 shrink-0 cursor-pointer active:scale-95 transition-transform"
                 >
                   {user.avatarUrl ? (
-                    <img src={user.avatarUrl} alt={user.name} className="w-full h-full rounded-2xl object-cover object-top" />
+                    <SecureImage src={user.avatarUrl} alt={user.name} className="w-full h-full rounded-2xl object-cover object-top" />
                   ) : (
                     <div className="w-full h-full rounded-2xl bg-white/5 flex items-center justify-center text-2xl font-bold text-textSecondary">
                       {user.name.charAt(0).toUpperCase()}
@@ -281,7 +304,12 @@ export default function UserProfilePage() {
                       {user.verified && <CheckCircle2 className="w-5 h-5 text-accent shrink-0" strokeWidth={2.5} />}
                     </div>
 
-                    <div className="flex items-center gap-2 w-full md:w-auto shrink-0">
+                    <div className="flex flex-wrap items-center gap-2 w-full md:w-auto shrink-0">
+                      {currentUser?.role === 'ADMIN' && !isOwnProfile && !user.banned && (
+                        <button onClick={handleBan} disabled={banning} className="px-4 h-9 rounded-xl bg-red-500/10 text-red-400 hover:bg-red-500/20 text-sm font-semibold disabled:opacity-50">
+                          {banning ? 'Banindo...' : 'Banir conta'}
+                        </button>
+                      )}
                       {/* Só exibe o botão Seguir se não for o próprio perfil */}
                       {!isOwnProfile && (
                         <button
@@ -410,7 +438,7 @@ export default function UserProfilePage() {
                       className="aspect-square bg-white/5 md:rounded-2xl overflow-hidden cursor-pointer active:scale-95 transition-transform flex items-center justify-center relative group"
                     >
                       {post.imageUrl ? (
-                        <img src={post.imageUrl} alt={`Post ${index + 1}`} className="w-full h-full object-cover" />
+                        <SecureImage src={post.imageUrl} alt={`Post ${index + 1}`} className="w-full h-full object-cover" />
                       ) : (
                         <div className="w-full h-full p-4 flex items-center justify-center text-center">
                           <p className="text-xs text-textSecondary line-clamp-5">{post.content || 'Publicação'}</p>
@@ -440,9 +468,9 @@ export default function UserProfilePage() {
                       className="aspect-[9/16] bg-black md:rounded-2xl overflow-hidden relative group"
                     >
                       {soult.thumbnailUrl ? (
-                        <img src={soult.thumbnailUrl} alt="Soult" className="w-full h-full object-cover" />
+                        <SecureImage src={soult.thumbnailUrl} alt="Soult" className="w-full h-full object-cover" />
                       ) : soult.videoUrl ? (
-                        <video src={`${soult.videoUrl}#t=0.001`} className="w-full h-full object-cover" muted />
+                        <SecureVideo src={`${soult.videoUrl}#t=0.001`} className="w-full h-full object-cover" muted />
                       ) : (
                         <div className="w-full h-full flex items-center justify-center">
                           <Play className="w-8 h-8 text-white/30" />
@@ -508,7 +536,7 @@ export default function UserProfilePage() {
             <X className="w-6 h-6" />
           </button>
           {user.avatarUrl ? (
-            <img
+            <SecureImage
               src={user.avatarUrl}
               alt="Foto de perfil"
               onClick={e => e.stopPropagation()}

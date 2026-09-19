@@ -1,3 +1,4 @@
+import { SecureImage } from '../../components/ui/SecureMedia';
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Header } from '../../components/layout/Header';
@@ -85,19 +86,20 @@ export default function FeedPage() {
       return;
     }
 
+    let cancelled = false;
     const delayDebounceFn = setTimeout(async () => {
       setIsSearching(true);
       try {
         const response = await userService.searchProfiles(searchQuery.trim(), 0, 5);
-        setSearchResults(response.content);
+        if (!cancelled) setSearchResults(response.content);
       } catch (err) {
         console.error(err);
       } finally {
-        setIsSearching(false);
+        if (!cancelled) setIsSearching(false);
       }
     }, 500);
 
-    return () => clearTimeout(delayDebounceFn);
+    return () => { cancelled = true; clearTimeout(delayDebounceFn); };
   }, [searchQuery]);
 
   useEffect(() => {
@@ -344,7 +346,7 @@ export default function FeedPage() {
                      searchResults.map(user => (
                        <div key={user.id} onClick={() => navigate(`/profile/${user.username}`)} className="flex items-center gap-3 p-3 hover:bg-white/5 cursor-pointer rounded-xl transition-colors">
                           <div className="w-8 h-8 rounded-full overflow-hidden bg-white/10 flex items-center justify-center shrink-0">
-                            {user.profilePicture ? <img src={user.profilePicture} className="w-full h-full object-cover" /> : <span className="flex items-center justify-center w-full h-full text-xs font-bold text-white">{user.name.charAt(0)}</span>}
+                            {user.profilePicture ? <SecureImage src={user.profilePicture} className="w-full h-full object-cover" /> : <span className="flex items-center justify-center w-full h-full text-xs font-bold text-white">{user.name.charAt(0)}</span>}
                           </div>
                           <div className="flex-1 min-w-0">
                             <p className="text-sm font-semibold text-white leading-none truncate">{user.username}</p>

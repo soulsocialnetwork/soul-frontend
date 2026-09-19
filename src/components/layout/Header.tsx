@@ -1,3 +1,4 @@
+import { SecureImage } from '../ui/SecureMedia';
 import { Bell } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { useState, useEffect } from 'react';
@@ -56,7 +57,7 @@ export function Header() {
     <>
       <header className="sticky top-0 z-40 glass-header lg:hidden">
         <div className="flex items-center justify-between px-5 h-16 max-w-lg mx-auto">
-          <img
+          <SecureImage
             src={logoSvg}
             alt="Soul"
             className="h-8 object-contain cursor-pointer opacity-90 hover:opacity-100 transition-opacity"
@@ -85,7 +86,7 @@ export function Header() {
               className="w-9 h-9 rounded-2xl glass-pill flex items-center justify-center transition-all hover:scale-105 active:scale-95 overflow-hidden"
             >
               {avatarUrl ? (
-                <img
+                <SecureImage
                   src={avatarUrl}
                   alt={user?.name}
                   className="w-full h-full object-cover"

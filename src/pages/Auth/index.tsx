@@ -1,3 +1,4 @@
+import { SecureImage, SecureVideo } from '../../components/ui/SecureMedia';
 import { useState, useEffect } from 'react';
 import { useSearchParams, useNavigate } from 'react-router-dom';
 import { AuthHeader } from '../../components/auth/AuthHeader';
@@ -66,7 +67,7 @@ export default function AuthPage() {
         {/* lado esquerdo com a logo em svg, slogan e soulzinho animado maior */}
         <div className="hidden lg:flex flex-1 flex-col items-start text-left z-10">
           <div className="mb-6">
-            <img src={logoBrancaSvg} alt="Soul" className="h-8 w-auto" />
+            <SecureImage src={logoBrancaSvg} alt="Soul" className="h-8 w-auto" />
           </div>
           <h1 className="text-4xl lg:text-5xl font-extrabold tracking-tight text-white leading-tight mb-2">
             {t('slogan1', 'Seu espaço de calmaria.')}
@@ -74,7 +75,7 @@ export default function AuthPage() {
           <p className="text-textSecondary text-base mb-6 max-w-sm">
             {t('sloganSubtitle', 'Conexões autênticas, no seu próprio ritmo e sem manipulação.')}
           </p>
-          <video 
+          <SecureVideo 
             src={soulzinhoWebm} 
             className="w-64 lg:w-72 h-auto drop-shadow-2xl opacity-90" 
             autoPlay 

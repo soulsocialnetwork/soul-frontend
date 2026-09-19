@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { cn } from '../../utils/cn';
 import { AlertTriangle, Loader2, X } from 'lucide-react';
+import { getHttpErrorMessage } from '../../services/api';
 import { moderationService } from '../../services/moderationService';
 
 interface ReportModalProps {
@@ -39,12 +40,8 @@ export function ReportModal({ isOpen, onClose, targetId, targetType }: ReportMod
         setSuccess(false);
         setSelectedReason('');
       }, 2000);
-    } catch (err: any) {
-      if (err.response?.status === 400) {
-        setError(err.response.data || 'Você já denunciou isso.');
-      } else {
-        setError('Ocorreu um erro ao enviar a denúncia. Tente novamente.');
-      }
+    } catch (err: unknown) {
+      setError(getHttpErrorMessage(err));
     } finally {
       setLoading(false);
     }

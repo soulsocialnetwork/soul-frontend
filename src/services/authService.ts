@@ -25,6 +25,7 @@ export const authService = {
       throw new Error('Resposta de login sem token.');
     }
 
+    tokenStorage.clearSession();
     tokenStorage.setAccessToken(payload.token);
     if (payload.refreshToken) {
       tokenStorage.setRefreshToken(payload.refreshToken);
@@ -45,11 +46,30 @@ export const authService = {
         const body: RefreshTokenRequest = { refreshToken };
         await api.post(endpoints.user.logout, body);
       }
+    } catch {
+      // Always finish local logout, even when the server is unreachable.
     } finally {
       tokenStorage.clearSession();
     }
   },
 
+  async changePassword(currentPassword: string, newPassword: string) {
+    await api.put(endpoints.user.password, { currentPassword, newPassword });
+  },
+  async deleteAccount() {
+    await api.delete(endpoints.user.me);
+    tokenStorage.clearSession();
+  },
+  async updateProfile(data: { name: string; bio: string; profilePicture: string | null }) {
+    const response = await api.put<CurrentUserResponse>(endpoints.user.me, data);
+    return response.data;
+  },
+  async updateNotifications(data: object) {
+    await api.put('/user/me/notifications', data);
+  },
+  async updateScreentime(dailyTimeLimit: number | null) {
+    await api.put('/user/me/screentime', { dailyTimeLimit });
+  },
   async register(data: RegisterRequestDTO) {
     const response = await api.post(endpoints.user.create, data);
     return response.data;

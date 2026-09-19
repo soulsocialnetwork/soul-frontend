@@ -1,3 +1,4 @@
+import { SecureImage, SecureVideo } from '../../components/ui/SecureMedia';
 import { useState, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Sidebar } from '../../components/layout/Sidebar';
@@ -134,9 +135,9 @@ export default function CreateHighlightPage() {
           {selectedMedia ? (
             <div className="relative rounded-2xl overflow-hidden bg-black/40 border border-white/10 group">
               {mediaType === 'image' ? (
-                <img src={selectedMedia} alt="Preview" className="w-full max-h-[400px] object-cover" />
+                <SecureImage src={selectedMedia} alt="Preview" className="w-full max-h-[400px] object-cover" />
               ) : (
-                <video src={selectedMedia} className="w-full max-h-[400px] object-cover" controls />
+                <SecureVideo src={selectedMedia} className="w-full max-h-[400px] object-cover" controls />
               )}
               <button
                 type="button"

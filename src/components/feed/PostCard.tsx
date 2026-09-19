@@ -1,3 +1,4 @@
+import { SecureImage } from '../ui/SecureMedia';
 import { useState, useEffect } from 'react';
 import {
   Heart,
@@ -89,11 +90,11 @@ export function PostCard({ post, index = 0, onDelete }: PostCardProps) {
     return () => { mounted = false; };
   }, [post.id, post.author.username]);
   const [saved, setSaved] = useState(() => {
-    const savedPostsStr = localStorage.getItem('soul_saved_posts');
+    const savedPostsStr = localStorage.getItem(`soul_saved_posts:${user?.id}`);
     if (!savedPostsStr) return false;
     try {
       const parsed = JSON.parse(savedPostsStr);
-      return parsed.some((p: any) => p.id === post.id);
+      return Array.isArray(parsed) && parsed.some((p: string | { id: string }) => (typeof p === 'string' ? p : p.id) === post.id);
     } catch {
       return false;
     }
@@ -104,19 +105,20 @@ export function PostCard({ post, index = 0, onDelete }: PostCardProps) {
     const nextSaved = !saved;
     setSaved(nextSaved);
     
-    let savedPosts: any[] = [];
+    let savedPosts: string[] = [];
     try {
-      savedPosts = JSON.parse(localStorage.getItem('soul_saved_posts') || '[]');
+      const stored = JSON.parse(localStorage.getItem(`soul_saved_posts:${user?.id}`) || '[]');
+      savedPosts = Array.isArray(stored) ? stored.map(p => typeof p === 'string' ? p : p.id).filter(id => typeof id === 'string') : [];
     } catch {}
 
     if (nextSaved) {
-      if (!savedPosts.some(p => p.id === post.id)) {
-        savedPosts.push(post);
+      if (!savedPosts.includes(post.id)) {
+        savedPosts.push(post.id);
       }
     } else {
-      savedPosts = savedPosts.filter(p => p.id !== post.id);
+      savedPosts = savedPosts.filter(id => id !== post.id);
     }
-    localStorage.setItem('soul_saved_posts', JSON.stringify(savedPosts));
+    localStorage.setItem(`soul_saved_posts:${user?.id}`, JSON.stringify(savedPosts));
     window.dispatchEvent(new Event('savedPostsUpdated'));
   };
   const [likeAnim, setLikeAnim] = useState(false);
@@ -294,7 +296,7 @@ export function PostCard({ post, index = 0, onDelete }: PostCardProps) {
           >
             <div className="w-10 h-10 rounded-full glass-pill flex items-center justify-center shrink-0 overflow-hidden">
               {post.author.avatarUrl ? (
-                <img
+                <SecureImage
                   src={post.author.avatarUrl}
                   alt={post.author.name}
                   className="w-full h-full object-cover object-top"
@@ -384,7 +386,7 @@ export function PostCard({ post, index = 0, onDelete }: PostCardProps) {
           className="mx-3 mb-3 rounded-2xl overflow-hidden cursor-pointer active:scale-[0.98] transition-transform"
         >
           {post.imageUrl ? (
-            <img
+            <SecureImage
               src={post.imageUrl}
               alt="Post media"
               className="w-full aspect-[3/4] lg:aspect-video object-cover object-top"
@@ -508,7 +510,7 @@ export function PostCard({ post, index = 0, onDelete }: PostCardProps) {
                   >
                     <div className="w-8 h-8 rounded-full bg-white/10 border border-white/20 flex items-center justify-center shrink-0 overflow-hidden cursor-pointer hover:opacity-80" onClick={() => { setCommentsOpen(false); navigate(`/profile/${item.username}`); }}>
                       {item.profilePicture ? (
-                        <img src={item.profilePicture} alt={item.username} className="w-full h-full object-cover" />
+                        <SecureImage src={item.profilePicture} alt={item.username} className="w-full h-full object-cover" />
                       ) : (
                         <span className="text-white font-bold text-xs">
                           {item.username.charAt(0).toUpperCase()}
@@ -761,7 +763,7 @@ export function PostCard({ post, index = 0, onDelete }: PostCardProps) {
           >
             <X className="w-5 h-5" />
           </button>
-          <img
+          <SecureImage
             src={post.imageUrl}
             alt="Post completo"
             className="max-w-full max-h-full object-contain rounded-2xl"

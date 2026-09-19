@@ -1,3 +1,4 @@
+import { SecureImage, SecureVideo } from '../../components/ui/SecureMedia';
 import { useState, useRef, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Sidebar } from '../../components/layout/Sidebar';
@@ -126,18 +127,20 @@ export default function ProfilePage() {
   const [savedPosts, setSavedPosts] = useState<Post[]>([]);
 
   useEffect(() => {
-    const loadSaved = () => {
+    let cancelled = false;
+    const loadSaved = async () => {
       try {
-        const posts = JSON.parse(localStorage.getItem('soul_saved_posts') || '[]');
-        setSavedPosts(posts);
-      } catch {
-        setSavedPosts([]);
-      }
+        const stored = JSON.parse(localStorage.getItem(`soul_saved_posts:${user?.id}`) || '[]');
+        const ids: string[] = Array.isArray(stored) ? stored.map(item => typeof item === 'string' ? item : item.id).filter(id => typeof id === 'string') : [];
+        localStorage.setItem(`soul_saved_posts:${user?.id}`, JSON.stringify(ids));
+        const results = await Promise.allSettled(ids.map(id => postService.getPostById(id)));
+        if (!cancelled) setSavedPosts(results.flatMap(result => result.status === 'fulfilled' ? [result.value] : []));
+      } catch { if (!cancelled) setSavedPosts([]); }
     };
     loadSaved();
     window.addEventListener('savedPostsUpdated', loadSaved);
-    return () => window.removeEventListener('savedPostsUpdated', loadSaved);
-  }, []);
+    return () => { cancelled = true; window.removeEventListener('savedPostsUpdated', loadSaved); };
+  }, [user?.id]);
 
   useEffect(() => {
     const loadProfile = async () => {
@@ -359,7 +362,7 @@ export default function ProfilePage() {
                       className="w-28 h-28 md:w-40 md:h-40 rounded-2xl overflow-hidden border border-white/10 p-1 bg-white/5 shrink-0 cursor-pointer active:scale-95 transition-transform"
                     >
                       {profileData.avatarUrl ? (
-                        <img
+                        <SecureImage
                           src={profileData.avatarUrl}
                           alt="Avatar"
                           className="w-full h-full rounded-2xl object-cover"
@@ -491,12 +494,12 @@ export default function ProfilePage() {
                         >
                           <div className="w-16 h-16 md:w-20 md:h-20 rounded-2xl border border-white/10 p-1 flex items-center justify-center bg-white/5 overflow-hidden">
                             {highlight.type === 'video' ? (
-                              <video
+                              <SecureVideo
                                 src={`${highlight.cover}#t=0.001`}
                                 className="w-full h-full rounded-2xl object-cover pointer-events-none"
                               />
                             ) : (
-                              <img
+                              <SecureImage
                                 src={highlight.cover}
                                 alt={highlight.name}
                                 className="w-full h-full rounded-2xl object-cover"
@@ -566,7 +569,7 @@ export default function ProfilePage() {
                           className="aspect-square bg-white/5 md:rounded-2xl overflow-hidden cursor-pointer active:scale-95 transition-transform flex items-center justify-center relative group"
                         >
                           {post.imageUrl ? (
-                            <img
+                            <SecureImage
                               src={post.imageUrl}
                               alt={`Post ${index + 1}`}
                               className="w-full h-full object-cover"
@@ -632,7 +635,7 @@ export default function ProfilePage() {
               <div className="flex flex-col items-center gap-3">
                 <div className="relative w-24 h-24 rounded-2xl overflow-hidden border border-white/10 group bg-white/5">
                   {editForm.avatarUrl ? (
-                    <img
+                    <SecureImage
                       src={editForm.avatarUrl}
                       alt="Avatar Preview"
                       className="w-full h-full object-cover"
@@ -783,14 +786,14 @@ export default function ProfilePage() {
               </div>
 
               {highlightsList[activeHighlightIndex].type === 'video' ? (
-                <video
+                <SecureVideo
                   src={`${highlightsList[activeHighlightIndex].image}#t=0.001`}
                   controls
                   autoPlay
                   className="absolute inset-0 w-full h-full object-cover z-0"
                 />
               ) : (
-                <img
+                <SecureImage
                   src={highlightsList[activeHighlightIndex].image}
                   alt="Conteúdo do destaque"
                   className="absolute inset-0 w-full h-full object-cover z-0"
@@ -865,7 +868,7 @@ export default function ProfilePage() {
           </button>
 
           {profileData.avatarUrl ? (
-            <img
+            <SecureImage
               src={profileData.avatarUrl}
               alt="Foto de perfil expandida"
               onClick={(e) => e.stopPropagation()}
@@ -925,7 +928,7 @@ export default function ProfilePage() {
 
             <div className="flex flex-col items-center gap-4">
               {avatarFilePreview ? (
-                <img
+                <SecureImage
                   src={avatarFilePreview}
                   alt="Preview"
                   className="w-28 h-28 rounded-2xl object-cover border border-white/10"

@@ -20,6 +20,19 @@ export const moderationService = {
     return res.data;
   },
 
+  async getReportedSoults(page = 0, size = 20) {
+    const res = await api.get('/moderation/reports/soults', { params: { page, size } });
+    return res.data;
+  },
+
+  async removeSoult(id: string): Promise<void> {
+    await api.delete(`/moderation/soults/${id}/remove`);
+  },
+
+  async ignoreSoultReport(id: string): Promise<void> {
+    await api.post(`/moderation/soults/${id}/ignore`);
+  },
+
   async approvePost(postId: string): Promise<void> {
     await api.post(`/moderation/posts/${postId}/approve`);
   },

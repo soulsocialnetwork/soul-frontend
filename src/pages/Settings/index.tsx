@@ -20,6 +20,8 @@ EyeOff
 import { cn } from '../../utils/cn';
 import { useTranslation } from '../../i18n';
 import { ScreenLoader } from '../../components/ui/ScreenLoader';
+import { authService } from '../../services/authService';
+import { getHttpErrorMessage } from '../../services/api';
 import { useAuth } from '../../context/AuthContext';
 
 type ModalType =
@@ -37,8 +39,10 @@ export default function SettingsPage() {
 const [loading, setLoading] = useState(true);
 const { i18n } = useTranslation();
 const [activeModal, setActiveModal] = useState<ModalType>(null);
-const { user, logout } = useAuth();
+const { user, logout, refreshUser } = useAuth();
 const navigate = useNavigate();
+const [saveError, setSaveError] = useState('');
+const [saving, setSaving] = useState(false);
 
 useEffect(() => {
 const timer = setTimeout(() => setLoading(false), 500);
@@ -74,11 +78,11 @@ const [bio, setBio] = useState(
   user?.bio || ''
 );
 
-const [notifPush, setNotifPush] = useState(true);
-const [notifEmail, setNotifEmail] = useState(false);
-const [notifQuietMode, setNotifQuietMode] = useState(true);
-const [quietModeStart, setQuietModeStart] = useState('22:00');
-const [quietModeEnd, setQuietModeEnd] = useState('08:00');
+const [notifPush, setNotifPush] = useState(user?.notifPush ?? true);
+const [notifEmail, setNotifEmail] = useState(user?.notifEmail ?? false);
+const [notifQuietMode, setNotifQuietMode] = useState(user?.notifQuietMode ?? false);
+const [quietModeStart, setQuietModeStart] = useState(user?.quietModeStart ?? '22:00');
+const [quietModeEnd, setQuietModeEnd] = useState(user?.quietModeEnd ?? '08:00');
 
 const [deleteConfirmText, setDeleteConfirmText] = useState('');
 const [isDeletingAccount, setIsDeletingAccount] = useState(false);
@@ -340,6 +344,7 @@ return ( <div className="min-h-[100dvh] bg-background flex flex-col lg:flex-row 
       onClose={() => setActiveModal(null)}
     >
       <div className="space-y-5">
+        {saveError && <p role="alert" className="text-red-400 text-sm">{saveError}</p>}
         <div className="space-y-1.5">
           <label className="text-xs font-medium text-textSecondary ml-1">
             Nome completo
@@ -367,7 +372,15 @@ return ( <div className="min-h-[100dvh] bg-background flex flex-col lg:flex-row 
         </div>
 
         <button
-          onClick={() => setActiveModal(null)}
+          disabled={saving}
+          onClick={async () => {
+            setSaving(true); setSaveError('');
+            try {
+              await authService.updateProfile({ name, bio, profilePicture: user?.profilePicture ?? null });
+              await refreshUser(); setActiveModal(null);
+            } catch (error) { setSaveError(getHttpErrorMessage(error)); }
+            finally { setSaving(false); }
+          }}
           className="w-full py-3.5 bg-white text-black font-bold rounded-xl hover:bg-white/90 active:scale-[0.98] transition-all text-sm mt-2"
         >
           Salvar Alterações
@@ -393,12 +406,11 @@ return ( <div className="min-h-[100dvh] bg-background flex flex-col lg:flex-row 
           if (newPassword !== confirmPassword) { setPasswordError('As senhas não coincidem.'); return; }
           setIsChangingPassword(true);
           try {
-            // TODO: chamar authService.changePassword(currentPassword, newPassword) quando o backend estiver pronto
-            await new Promise(r => setTimeout(r, 800)); // simula latência
+            await authService.changePassword(currentPassword, newPassword);
             setPasswordSuccess(true);
             setCurrentPassword(''); setNewPassword(''); setConfirmPassword('');
-          } catch {
-            setPasswordError('Falha ao alterar a senha. Verifique a senha atual.');
+          } catch (error) {
+            setPasswordError(getHttpErrorMessage(error));
           } finally {
             setIsChangingPassword(false);
           }
@@ -606,11 +618,20 @@ return ( <div className="min-h-[100dvh] bg-background flex flex-col lg:flex-row 
             </div>
           </div>
         </div>
+        {saveError && <p role="alert" className="text-red-400 text-sm">{saveError}</p>}
+        <button disabled={saving} className="w-full py-3 bg-white text-black rounded-xl disabled:opacity-50" onClick={async () => {
+          setSaving(true); setSaveError('');
+          try {
+            await authService.updateNotifications({ notifPush, notifEmail, notifQuietMode, quietModeStart, quietModeEnd });
+            await refreshUser(); setActiveModal(null);
+          } catch (error) { setSaveError(getHttpErrorMessage(error)); }
+          finally { setSaving(false); }
+        }}>Salvar preferências</button>
       </div>
     </ModalWrapper>
   )}
 
-  {activeModal === 'help' && (
+  {activeModal === 'help'  && (
     <ModalWrapper
       title="Central de Ajuda"
       onClose={() => setActiveModal(null)}
@@ -688,6 +709,7 @@ return ( <div className="min-h-[100dvh] bg-background flex flex-col lg:flex-row 
       onClose={() => setActiveModal(null)}
     >
       <div className="space-y-5">
+        {saveError && <p role="alert" className="text-red-400 text-sm">{saveError}</p>}
         <div className="flex flex-col items-center gap-3 py-4">
           <div className="w-16 h-16 rounded-full bg-white/5 border border-white/10 flex items-center justify-center">
             <ShieldCheck className="w-8 h-8 text-white" />
@@ -743,6 +765,7 @@ return ( <div className="min-h-[100dvh] bg-background flex flex-col lg:flex-row 
       onClose={() => setActiveModal(null)}
     >
       <div className="space-y-5">
+        {saveError && <p role="alert" className="text-red-400 text-sm">{saveError}</p>}
         <div className="p-4 rounded-xl bg-white/[0.02] border border-white/5 space-y-2">
           <p className="text-[13px] text-textSecondary leading-relaxed">
             Seus dados serão permanentemente removidos dos nossos
@@ -775,11 +798,11 @@ return ( <div className="min-h-[100dvh] bg-background flex flex-col lg:flex-row 
           onClick={async () => {
             setIsDeletingAccount(true);
             try {
-              // TODO: chamar authService.deleteAccount() quando o backend estiver pronto
-              await new Promise(r => setTimeout(r, 1000)); // simula
+              await authService.deleteAccount();
               await logout();
               navigate('/auth');
-            } catch {
+            } catch (error) {
+              setSaveError(getHttpErrorMessage(error));
               setIsDeletingAccount(false);
             }
           }}

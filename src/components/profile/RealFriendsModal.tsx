@@ -1,3 +1,4 @@
+import { SecureImage } from '../ui/SecureMedia';
 import { X, Users, Link } from 'lucide-react';
 
 interface RealFriendsModalProps {
@@ -14,7 +15,7 @@ function QRCodeDisplay({ value }: { value: string }) {
 
   return (
     <div className="p-4 rounded-2xl bg-white">
-      <img
+      <SecureImage
         src={qrUrl}
         alt="QR Code"
         width={200}

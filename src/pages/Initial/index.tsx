@@ -1,3 +1,4 @@
+import { SecureVideo } from '../../components/ui/SecureMedia';
 import { useNavigate } from 'react-router-dom';
 import { Button } from '../../components/ui/Button';
 import { useTranslation } from '../../i18n';
@@ -24,7 +25,7 @@ export default function InitialPage() {
 
           {/* animação do mascote rodando em loop com tamanho maior */}
           <div className="w-full flex items-center justify-center lg:justify-start mt-6 lg:mt-8">
-            <video 
+            <SecureVideo 
               src={soulzinhoWebm} 
               className="w-64 sm:w-80 lg:w-96 h-auto drop-shadow-2xl" 
               autoPlay 

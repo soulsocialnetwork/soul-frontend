@@ -20,11 +20,12 @@ interface AuthContextValue {
   isAuthenticated: boolean;
   login: (data: LoginRequest) => Promise<void>;
   logout: () => Promise<void>;
+  refreshUser: () => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextValue | null>(null);
 
-const SESSION_PUBLIC_PATHS = new Set(['/', '/auth']);
+const SESSION_PUBLIC_PATHS = new Set(['/', '/auth', '/reset-password']);
 
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<CurrentUserResponse | null>(null);
@@ -70,6 +71,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     };
   }, [navigate]);
 
+  useEffect(() => {
+    const clear = () => { setUser(null); navigate('/auth', { replace: true }); };
+    window.addEventListener('soul:session-expired', clear);
+    return () => window.removeEventListener('soul:session-expired', clear);
+  }, [navigate]);
+
+  const refreshUser = useCallback(async () => { setUser(await authService.getMe()); }, []);
+
   const login = useCallback(async (data: LoginRequest) => {
     await authService.login(data);
     try {
@@ -85,8 +94,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const logout = useCallback(async () => {
-    await authService.logout();
-    setUser(null);
+    try { await authService.logout(); } finally { setUser(null); sessionStorage.removeItem('@soul:intention_shown'); }
   }, []);
 
   const value = useMemo<AuthContextValue>(
@@ -96,8 +104,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       isAuthenticated: user !== null,
       login,
       logout,
+      refreshUser,
     }),
-    [user, isLoading, login, logout]
+    [user, isLoading, login, logout, refreshUser]
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

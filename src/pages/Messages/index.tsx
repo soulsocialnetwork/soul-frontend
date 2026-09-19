@@ -1,3 +1,5 @@
+import { SecureImage } from '../../components/ui/SecureMedia';
+import { getHttpErrorMessage } from '../../services/api';
 import { useState, useRef, useEffect, useCallback } from 'react';
 import { Sidebar } from '../../components/layout/Sidebar';
 import { Header } from '../../components/layout/Header';
@@ -19,7 +21,7 @@ function ConvAvatar({ conv, size = 'md' }: { conv: Conversation; size?: 'sm' | '
   return (
     <div className={cn('rounded-2xl flex items-center justify-center font-bold text-white bg-white/10 border border-white/10 overflow-hidden shrink-0', s)}>
       {conv.otherAvatar
-        ? <img src={conv.otherAvatar} alt={conv.otherName} className="w-full h-full object-cover" />
+        ? <SecureImage src={conv.otherAvatar} alt={conv.otherName} className="w-full h-full object-cover" />
         : <User className="w-5 h-5 text-white/50" />}
     </div>
   );
@@ -27,6 +29,9 @@ function ConvAvatar({ conv, size = 'md' }: { conv: Conversation; size?: 'sm' | '
 
 export default function MessagesPage() {
   const { user } = useAuth();
+  const [conversationError, setConversationError] = useState('');
+  const [messageError, setMessageError] = useState('');
+  const activeConversation = useRef<string | null>(null);
   const [conversations, setConversations] = useState<Conversation[]>([]);
   const [selected, setSelected] = useState<Conversation | null>(null);
   const [messages, setMessages] = useState<Message[]>([]);
@@ -35,6 +40,9 @@ export default function MessagesPage() {
   const [showMobileChat, setShowMobileChat] = useState(false);
   const [loadingConvs, setLoadingConvs] = useState(true);
   const [loadingMsgs, setLoadingMsgs] = useState(false);
+  const [olderPage, setOlderPage] = useState(1);
+  const [hasOlder, setHasOlder] = useState(false);
+  const [loadingOlder, setLoadingOlder] = useState(false);
   const [sending, setSending] = useState(false);
   const [showNewConv, setShowNewConv] = useState(false);
   const [newConvSearch, setNewConvSearch] = useState('');
@@ -44,11 +52,12 @@ export default function MessagesPage() {
 
   const loadConversations = useCallback(async () => {
     setLoadingConvs(true);
+    setConversationError('');
     try {
       const res = await messageService.getConversations();
       setConversations(res.content || []);
-    } catch {
-      setConversations([]);
+    } catch (error) {
+      setConversationError(getHttpErrorMessage(error));
     } finally {
       setLoadingConvs(false);
     }
@@ -62,7 +71,8 @@ export default function MessagesPage() {
       try {
         const res = await messageService.getConversations();
         setConversations(res.content || []);
-      } catch { /* ignore */ }
+        setConversationError('');
+      } catch (error) { setConversationError(getHttpErrorMessage(error)); }
     }, 10000);
     return () => clearInterval(interval);
   }, []);
@@ -73,11 +83,11 @@ export default function MessagesPage() {
     const interval = setInterval(async () => {
       try {
         const res = await messageService.getMessages(selected.id);
+        if (activeConversation.current !== selected.id) return;
         setMessages(prev => {
-          const existingIds = new Set(prev.map(m => m.id));
-          const newMsgs = (res.content || []).filter(m => !existingIds.has(m.id));
-          if (newMsgs.length === 0) return prev;
-          return [...prev, ...newMsgs];
+          const merged = new Map(prev.map(m => [m.id, m]));
+          res.content.forEach(m => merged.set(m.id, m));
+          return [...merged.values()].sort((a, b) => a.createdAt.localeCompare(b.createdAt));
         });
       } catch { /* ignore */ }
     }, 3000);
@@ -98,17 +108,41 @@ export default function MessagesPage() {
   }, [newConvSearch]);
 
   const handleSelectConv = async (conv: Conversation) => {
+    activeConversation.current = conv.id;
+    setMessageError('');
     setSelected(conv);
     setShowMobileChat(true);
     setLoadingMsgs(true);
     setMessages([]);
     try {
       const res = await messageService.getMessages(conv.id);
+      if (activeConversation.current !== conv.id) return;
       setMessages(res.content || []);
-    } catch { setMessages([]); }
-    finally { setLoadingMsgs(false); }
+      setOlderPage(1);
+      setHasOlder(!res.last);
+    } catch (error) {
+      if (activeConversation.current === conv.id) setMessageError(getHttpErrorMessage(error));
+    } finally { if (activeConversation.current === conv.id) setLoadingMsgs(false); }
     // clear unread
     setConversations(prev => prev.map(c => c.id === conv.id ? { ...c, unreadCount: 0 } : c));
+  };
+
+  const loadOlder = async () => {
+    if (!selected || loadingOlder || !hasOlder) return;
+    const id = selected.id;
+    setLoadingOlder(true);
+    try {
+      const res = await messageService.getMessages(id, olderPage);
+      if (activeConversation.current !== id) return;
+      setMessages(previous => {
+        const merged = new Map(previous.map(m => [m.id, m]));
+        res.content.forEach(m => merged.set(m.id, m));
+        return [...merged.values()].sort((a, b) => a.createdAt.localeCompare(b.createdAt));
+      });
+      setOlderPage(page => page + 1);
+      setHasOlder(!res.last);
+    } catch (error) { setMessageError(getHttpErrorMessage(error)); }
+    finally { setLoadingOlder(false); }
   };
 
   const handleStartConv = async (username: string) => {
@@ -123,7 +157,7 @@ export default function MessagesPage() {
         return [conv, ...prev];
       });
       handleSelectConv(conv);
-    } catch { /* ignore */ }
+    } catch (error) { setConversationError(getHttpErrorMessage(error)); }
   };
 
   const handleSend = async () => {
@@ -131,12 +165,17 @@ export default function MessagesPage() {
     const content = newMsg.trim();
     setNewMsg('');
     setSending(true);
+    setMessageError('');
     try {
       const msg = await messageService.sendMessage(selected.id, content);
-      setMessages(prev => [...prev, msg]);
+      if (activeConversation.current === selected.id) setMessages(prev => prev.some(m => m.id === msg.id) ? prev : [...prev, msg]);
       setConversations(prev => prev.map(c => c.id === selected.id ? { ...c, lastMessage: content, lastMessageAt: msg.createdAt } : c));
-    } catch { /* ignore */ }
-    finally { setSending(false); }
+    } catch (error) {
+      if (activeConversation.current === selected.id) {
+        setMessageError(getHttpErrorMessage(error));
+        setNewMsg(current => current || content);
+      }
+    } finally { setSending(false); }
   };
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
@@ -144,6 +183,7 @@ export default function MessagesPage() {
   };
 
   useEffect(() => {
+    if (loadingOlder) return;
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [messages.length]);
 
@@ -162,6 +202,7 @@ export default function MessagesPage() {
       <Sidebar />
       <div className="flex-1 flex flex-col min-w-0 h-full">
         <Header />
+        {messageError && <p role="alert" className="px-5 py-3 text-sm text-red-400">{messageError}</p>}
         <main className="flex-1 flex overflow-hidden">
           {/* Left Panel */}
           <div className={cn(
@@ -189,11 +230,15 @@ export default function MessagesPage() {
               </div>
             </div>
             <div className="flex-1 overflow-y-auto no-scrollbar pb-24 lg:pb-4">
+              {conversationError && <div role="alert" className="px-5 py-3 text-sm text-red-400">
+                <p>Não foi possível atualizar as conversas: {conversationError}</p>
+                <button onClick={loadConversations} className="mt-2 underline">Tentar novamente</button>
+              </div>}
               {loadingConvs ? (
                 <div className="flex justify-center items-center h-32"><Loader2 className="w-5 h-5 animate-spin text-white/30" /></div>
               ) : filtered.length === 0 ? (
                 <div className="flex flex-col items-center justify-center h-40 text-center px-6 gap-3">
-                  <p className="text-sm text-white/30">Nenhuma conversa ainda</p>
+                  <p className="text-sm text-white/30">{conversationError ? 'Conversas indisponíveis no momento' : 'Nenhuma conversa ainda'}</p>
                   <button onClick={() => setShowNewConv(true)} className="text-xs text-white/50 hover:text-white border border-white/10 px-3 py-1.5 rounded-full transition-colors">
                     Iniciar conversa
                   </button>
@@ -237,6 +282,7 @@ export default function MessagesPage() {
             !showMobileChat && !selected ? 'hidden lg:flex' : '',
             showMobileChat ? 'flex' : 'hidden lg:flex'
           )}>
+            {selected && hasOlder && <button disabled={loadingOlder} onClick={loadOlder} className="py-2 text-sm text-white/60 hover:text-white">{loadingOlder ? 'Carregando...' : 'Carregar mensagens anteriores'}</button>}
             {!selected ? (
               <div className="flex-1 flex flex-col items-center justify-center text-center p-6">
                 <div className="w-16 h-16 rounded-2xl bg-white/[0.03] border border-white/[0.06] flex items-center justify-center mb-5">
@@ -264,7 +310,7 @@ export default function MessagesPage() {
                   </button>
                   <div className={cn('w-9 h-9 rounded-2xl flex items-center justify-center font-bold overflow-hidden shrink-0', 'bg-white/10 border border-white/10')}>
                     {selected.otherAvatar
-                      ? <img src={selected.otherAvatar} alt={selected.otherName} className="w-full h-full object-cover" />
+                      ? <SecureImage src={selected.otherAvatar} alt={selected.otherName} className="w-full h-full object-cover" />
                       : <User className="w-4 h-4 text-white/50" />}
                   </div>
                   <div className="flex-1 min-w-0">
@@ -290,7 +336,7 @@ export default function MessagesPage() {
                           {!fromMe && !prevSame && (
                             <div className="w-7 h-7 rounded-xl flex items-center justify-center bg-white/10 border border-white/10 shrink-0 mt-auto overflow-hidden">
                               {selected.otherAvatar
-                                ? <img src={selected.otherAvatar} className="w-full h-full object-cover" />
+                                ? <SecureImage src={selected.otherAvatar} className="w-full h-full object-cover" />
                                 : <User className="w-3.5 h-3.5 text-white/50" />}
                             </div>
                           )}
@@ -378,7 +424,7 @@ export default function MessagesPage() {
                       className="w-full flex items-center gap-3 px-3 py-2.5 hover:bg-white/5 rounded-xl transition-colors text-left"
                     >
                       <div className="w-9 h-9 rounded-xl bg-white/10 border border-white/10 flex items-center justify-center overflow-hidden shrink-0">
-                        {u.profilePicture ? <img src={u.profilePicture} className="w-full h-full object-cover" /> : <User className="w-4 h-4 text-white/50" />}
+                        {u.profilePicture ? <SecureImage src={u.profilePicture} className="w-full h-full object-cover" /> : <User className="w-4 h-4 text-white/50" />}
                       </div>
                       <div className="flex-1 min-w-0">
                         <p className="text-sm font-semibold text-white truncate">{u.name}</p>

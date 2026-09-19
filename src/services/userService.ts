@@ -16,6 +16,7 @@ createdAt?: string;
 }
 
 export interface UserProfile {
+banned?: boolean;
 id: string;
 name: string;
 username: string;
@@ -36,6 +37,7 @@ profile: PublicProfileResponse
 ): UserProfile {
 return {
 id: profile.id,
+banned: profile.banned,
 name: profile.name,
 username: profile.username,
 avatarUrl: profile.profilePicture || '',

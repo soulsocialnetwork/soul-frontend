@@ -1,3 +1,4 @@
+import { SecureImage, SecureVideo } from '../../components/ui/SecureMedia';
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Sidebar } from '../../components/layout/Sidebar';
@@ -54,7 +55,7 @@ export default function ProfilePage() {
                 <div className="bg-white/[0.02] border border-white/5 rounded-2xl p-6 md:p-10">
                   <div className="flex flex-col md:flex-row gap-8 items-center md:items-start">
                     <div className="w-28 h-28 md:w-40 md:h-40 rounded-2xl overflow-hidden border border-white/10 p-1 bg-white/5 shrink-0">
-                      <img src={profileData.avatarUrl} alt="Avatar" className="w-full h-full rounded-2xl object-cover" />
+                      <SecureImage src={profileData.avatarUrl} alt="Avatar" className="w-full h-full rounded-2xl object-cover" />
                     </div>
 
                     <div className="flex-1 flex flex-col items-center md:items-start text-center md:text-left w-full">
@@ -101,9 +102,9 @@ export default function ProfilePage() {
                         >
                           <div className="w-16 h-16 md:w-20 md:h-20 rounded-2xl border border-white/10 p-1 bg-white/5">
                             {h.type === 'video' ? (
-                              <video src={h.cover} className="w-full h-full rounded-2xl object-cover" />
+                              <SecureVideo src={h.cover} className="w-full h-full rounded-2xl object-cover" />
                             ) : (
-                              <img src={h.cover} alt={h.name} className="w-full h-full rounded-2xl object-cover" />
+                              <SecureImage src={h.cover} alt={h.name} className="w-full h-full rounded-2xl object-cover" />
                             )}
                           </div>
                           <span className="text-xs font-semibold text-textSecondary">{h.name}</span>
@@ -123,7 +124,7 @@ export default function ProfilePage() {
                       onClick={() => setFeedModal({ list: [], startIndex: index })}
                       className="aspect-square bg-white/5 md:rounded-2xl overflow-hidden cursor-pointer relative"
                     >
-                      <img src={post.imageUrl} alt="" className="w-full h-full object-cover" />
+                      <SecureImage src={post.imageUrl} alt="" className="w-full h-full object-cover" />
                     </div>
                   ))}
                 </div>
@@ -152,14 +153,14 @@ export default function ProfilePage() {
             </div>
             
             {highlightsList[activeHighlightIndex]?.type === 'video' ? (
-              <video
+              <SecureVideo
                 src={highlightsList[activeHighlightIndex]?.image}
                 controls
                 autoPlay
                 className="absolute inset-0 w-full h-full object-cover z-0"
               />
             ) : (
-              <img
+              <SecureImage
                 src={highlightsList[activeHighlightIndex]?.image}
                 alt=""
                 className="absolute inset-0 w-full h-full object-cover z-0"

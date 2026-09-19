@@ -1,3 +1,4 @@
+import { SecureImage, SecureVideo } from '../ui/SecureMedia';
 import { useState, useEffect } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { 
@@ -69,7 +70,7 @@ export function Sidebar() {
           className="cursor-pointer hover:scale-110 transition-transform mb-6 flex items-center justify-center"
           title="Soul"
         >
-          <video
+          <SecureVideo
             src={soulzinhoWebm}
             className="w-10 h-10 object-contain drop-shadow-md"
             autoPlay loop muted playsInline
@@ -143,7 +144,7 @@ export function Sidebar() {
           className="w-12 h-12 rounded-2xl overflow-hidden transition-all hover:scale-105 active:scale-95 border border-white/10 bg-white/5 flex items-center justify-center"
         >
           {avatarUrl ? (
-            <img src={avatarUrl} alt={user?.name} className="w-full h-full object-cover" />
+            <SecureImage src={avatarUrl} alt={user?.name} className="w-full h-full object-cover" />
           ) : (
             <span className="text-textSecondary text-sm font-bold">{initial}</span>
           )}

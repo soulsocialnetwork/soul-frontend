@@ -1,3 +1,4 @@
+import { SecureImage } from '../ui/SecureMedia';
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { cn } from '../../utils/cn';
@@ -213,7 +214,7 @@ export function NotificationsPanel({
                   >
                     <div className="w-10 h-10 sm:w-11 sm:h-11 rounded-full overflow-hidden shrink-0 bg-white/10 flex items-center justify-center">
                       {req.follower.profilePicture ? (
-                        <img
+                        <SecureImage
                           src={req.follower.profilePicture}
                           alt={req.follower.username}
                           className="w-full h-full object-cover"
@@ -287,7 +288,7 @@ export function NotificationsPanel({
                     <div className="relative shrink-0">
                       <div className="w-10 h-10 sm:w-11 sm:h-11 rounded-full overflow-hidden shrink-0 bg-white/10 flex items-center justify-center">
                         {notif.triggerAvatarUrl ? (
-                          <img
+                          <SecureImage
                             src={notif.triggerAvatarUrl}
                             alt={notif.triggerUsername}
                             className="w-full h-full object-cover"

@@ -1,22 +1,25 @@
+import { lazy, Suspense } from 'react';
 import { BrowserRouter, Routes, Route } from 'react-router-dom';
-import InitialPage from './pages/Initial';
+const InitialPage = lazy(() => import('./pages/Initial'));
 import { AuthProvider } from './context/AuthContext';
-import AuthPage from './pages/Auth';
-import FeedPage from './pages/Feed';
-import SoulsPage from './pages/Soults';
-import ScreentimePage from './pages/Screentime';
-import ProfilePage from './pages/Profile';
-import MessagesPage from './pages/Messages';
-import CreatePage from './pages/Create';
-import SettingsPage from './pages/Settings';
-import UserProfilePage from './pages/UserProfile';
-import PostDetailPage from './pages/PostDetail';
-import CreateHighlightPage from './pages/CreateHighlight/CreateHighlightPage';
-import DigitalEducationPage from './pages/DigitalEducation';
-import DataTransparencyPage from './pages/DataTransparency';
+const AuthPage = lazy(() => import('./pages/Auth'));
+const FeedPage = lazy(() => import('./pages/Feed'));
+const SoulsPage = lazy(() => import('./pages/Soults'));
+const ScreentimePage = lazy(() => import('./pages/Screentime'));
+const ProfilePage = lazy(() => import('./pages/Profile'));
+const MessagesPage = lazy(() => import('./pages/Messages'));
+const CreatePage = lazy(() => import('./pages/Create'));
+const SettingsPage = lazy(() => import('./pages/Settings'));
+const UserProfilePage = lazy(() => import('./pages/UserProfile'));
+const PostDetailPage = lazy(() => import('./pages/PostDetail'));
+const CreateHighlightPage = lazy(() => import('./pages/CreateHighlight/CreateHighlightPage'));
+const DigitalEducationPage = lazy(() => import('./pages/DigitalEducation'));
+const DataTransparencyPage = lazy(() => import('./pages/DataTransparency'));
 import { PrivateRoute, PublicRoute } from './components/router/PrivateRoute';
-import VerifyEmailPage from './pages/Auth/VerifyEmail.tsx';
-import ModerationPage from './pages/Moderation';
+const VerifyEmailPage = lazy(() => import('./pages/Auth/VerifyEmail.tsx'));
+const ModerationPage = lazy(() => import('./pages/Moderation'));
+
+const ResetPasswordPage = lazy(() => import('./pages/Auth/ResetPassword'));
 
 export default function App() {
   return (
@@ -27,11 +30,12 @@ export default function App() {
       }}
     >
       <AuthProvider>
-        <Routes>
+        <Suspense fallback={<div role="status" className="p-8 text-center">Carregando...</div>}><Routes>
           {/* Rotas públicas — se já logado, vai pro feed */}
           <Route element={<PublicRoute />}>
             <Route path="/" element={<InitialPage />} />
             <Route path="/auth" element={<AuthPage />} />
+            <Route path="/reset-password" element={<ResetPasswordPage />} />
             <Route path="/verify-email" element={<VerifyEmailPage />} />
           </Route>
 
@@ -51,7 +55,7 @@ export default function App() {
             <Route path="/transparency" element={<DataTransparencyPage />} />
             <Route path="/moderation" element={<ModerationPage />} />
           </Route>
-        </Routes>
+        </Routes></Suspense>
       </AuthProvider>
     </BrowserRouter>
   );

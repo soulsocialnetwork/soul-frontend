@@ -1,3 +1,4 @@
+import { Link } from 'react-router-dom';
 import { useState } from 'react';
 import { Input } from '../ui/Input';
 import { Button } from '../ui/Button';
@@ -146,6 +147,7 @@ export function AuthForm({ mode, error, isSubmitting = false, onSubmit }: AuthFo
           onChange={(e) => { setPassword(e.target.value); setFieldErrors(p => ({ ...p, password: '' })); }}
           required
         />
+        {mode === 'login' && <Link to="/reset-password" className="text-xs underline text-textSecondary">Esqueci minha senha</Link>}
         {fieldErrors.password && (
           <p className="text-xs text-red-400/80 ml-1">{fieldErrors.password}</p>
         )}

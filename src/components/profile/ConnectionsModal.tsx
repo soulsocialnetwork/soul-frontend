@@ -1,3 +1,4 @@
+import { SecureImage } from '../ui/SecureMedia';
 import { X, Loader2 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import type { ProfileSummary } from '../../services/api/types';
@@ -53,7 +54,7 @@ export function ConnectionsModal({ title, users, loading, onClose }: Connections
                 >
                   <div className="w-12 h-12 rounded-full bg-white/5 overflow-hidden shrink-0 flex items-center justify-center">
                     {user.profilePicture ? (
-                      <img
+                      <SecureImage
                         src={user.profilePicture}
                         alt={user.name}
                         className="w-full h-full object-cover"

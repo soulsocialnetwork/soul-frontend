@@ -1,3 +1,4 @@
+import { SecureImage } from './SecureMedia';
 import { useState } from 'react';
 import { X, ImageIcon } from 'lucide-react';
 
@@ -69,7 +70,7 @@ export function ImageUrlModal({
                   <p className="text-xs">URL inválida ou inacessível</p>
                 </div>
               ) : (
-                <img
+                <SecureImage
                   src={url}
                   alt="Preview"
                   className={`object-cover ${circular ? 'w-full h-full' : 'w-full max-h-40'}`}

@@ -1,3 +1,4 @@
+import { SecureImage, SecureVideo } from '../ui/SecureMedia';
 import { useState, useRef, useEffect } from 'react';
 import {
   Play,
@@ -209,7 +210,7 @@ export function SoultCard({ soult }: SoultCardProps) {
       >
         <div className="absolute inset-0 bg-neutral-950 -z-10" />
 
-        <video
+        <SecureVideo
           ref={videoRef}
           src={`${soult.videoUrl}#t=0.001`}
           poster={soult.thumbnailUrl || undefined}
@@ -266,7 +267,7 @@ export function SoultCard({ soult }: SoultCardProps) {
           >
             <div className="w-8 h-8 rounded-full overflow-hidden border border-white/20 shrink-0">
               {soult.author.avatarUrl ? (
-                <img src={soult.author.avatarUrl} alt={soult.author.name} className="w-full h-full object-cover object-top" />
+                <SecureImage src={soult.author.avatarUrl} alt={soult.author.name} className="w-full h-full object-cover object-top" />
               ) : (
                 <div className="w-full h-full bg-white/15 flex items-center justify-center">
                   <span className="text-white text-xs font-bold">{soult.author.name.charAt(0)}</span>

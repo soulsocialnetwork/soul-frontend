@@ -1,3 +1,4 @@
+import { SecureImage, SecureVideo } from '../../components/ui/SecureMedia';
 import { useState, useEffect, useRef } from 'react';
 import { Sidebar } from '../../components/layout/Sidebar';
 import { Header } from '../../components/layout/Header';
@@ -188,7 +189,7 @@ export default function CreatePage() {
               <div className="flex gap-4 flex-1">
                 <div className="w-11 h-11 rounded-full flex-shrink-0 overflow-hidden bg-white/5 border border-white/10 mt-1 flex items-center justify-center text-white/50">
                   {user?.profilePicture ? (
-                    <img src={user.profilePicture} alt={user?.name || 'Avatar'} className="w-full h-full object-cover" />
+                    <SecureImage src={user.profilePicture} alt={user?.name || 'Avatar'} className="w-full h-full object-cover" />
                   ) : (
                     <User className="w-6 h-6" />
                   )}
@@ -220,9 +221,9 @@ export default function CreatePage() {
                   {mediaPreview && (
                     <div className="relative mt-4 rounded-2xl overflow-hidden bg-black/40 border border-white/10 group">
                       {mediaPreview.startsWith('data:video') || mediaPreview.match(/\.(mp4|webm|ogg)$/i) ? (
-                        <video src={mediaPreview} className="w-full max-h-[400px] object-cover" controls />
+                        <SecureVideo src={mediaPreview} className="w-full max-h-[400px] object-cover" controls />
                       ) : (
-                        <img src={mediaPreview} alt="Preview" className="w-full max-h-[400px] object-cover" />
+                        <SecureImage src={mediaPreview} alt="Preview" className="w-full max-h-[400px] object-cover" />
                       )}
                       <button
                         onClick={() => setMediaPreview(null)}
@@ -282,7 +283,7 @@ export default function CreatePage() {
                 {/* Avatar */}
                 <div className="w-11 h-11 rounded-full flex-shrink-0 overflow-hidden bg-white/5 border border-white/10 mt-1 flex items-center justify-center text-white/50">
                   {user?.profilePicture ? (
-                    <img src={user.profilePicture} alt={user?.name || 'Avatar'} className="w-full h-full object-cover" />
+                    <SecureImage src={user.profilePicture} alt={user?.name || 'Avatar'} className="w-full h-full object-cover" />
                   ) : (
                     <User className="w-6 h-6" />
                   )}
@@ -299,7 +300,7 @@ export default function CreatePage() {
                   {/* Video preview inline */}
                   {soultVideo ? (
                     <div className="relative mt-4 rounded-2xl overflow-hidden bg-black group max-w-[280px]">
-                      <video
+                      <SecureVideo
                         src={soultVideo}
                         className="w-full aspect-[9/16] object-cover"
                         controls

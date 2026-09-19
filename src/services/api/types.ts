@@ -13,6 +13,12 @@ role?: string;
 }
 
 export interface CurrentUserResponse {
+notifPush?: boolean;
+notifEmail?: boolean;
+notifQuietMode?: boolean;
+quietModeStart?: string;
+quietModeEnd?: string;
+dailyTimeLimit?: number | null;
 id: string;
 name: string;
 username: string;
@@ -44,6 +50,7 @@ refreshToken: string;
 
 
 export interface PublicProfileResponse {
+banned?: boolean;
 id: string;
 name: string;
 username: string;

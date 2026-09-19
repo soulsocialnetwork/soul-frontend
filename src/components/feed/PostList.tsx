@@ -1,3 +1,4 @@
+import { SecureImage } from '../ui/SecureMedia';
 import { useState } from 'react';
 import { PostCard } from './PostCard';
 import type { Post } from '../../services/postService';
@@ -64,7 +65,7 @@ export function PostList({ posts, loading = false }: PostListProps) {
             className="group relative aspect-square rounded-2xl overflow-hidden bg-white/5 border border-white/10 hover:border-white/20 transition-all text-left flex flex-col active:scale-95"
           >
             {post.imageUrl ? (
-              <img
+              <SecureImage
                 src={post.imageUrl}
                 alt=""
                 className="absolute inset-0 w-full h-full object-cover opacity-50 group-hover:opacity-70 transition-opacity"
@@ -77,7 +78,7 @@ export function PostList({ posts, loading = false }: PostListProps) {
 
             <div className="relative z-10 p-4 flex flex-col h-full justify-between">
               <div className="flex items-center gap-2">
-                <img
+                <SecureImage
                   src={post.author.avatarUrl}
                   alt=""
                   className="w-6 h-6 rounded-full border border-white/20"
