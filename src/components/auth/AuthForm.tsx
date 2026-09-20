@@ -4,7 +4,7 @@ import { Input } from '../ui/Input';
 import { Button } from '../ui/Button';
 import { DateOfBirthPicker } from './DateOfBirthPicker';
 import { useTranslation } from '../../i18n';
-import { Loader2 } from 'lucide-react';
+import { ArrowRight, Loader2 } from 'lucide-react';
 
 interface LoginFormData {
   email: string;
@@ -147,7 +147,15 @@ export function AuthForm({ mode, error, isSubmitting = false, onSubmit }: AuthFo
           onChange={(e) => { setPassword(e.target.value); setFieldErrors(p => ({ ...p, password: '' })); }}
           required
         />
-        {mode === 'login' && <Link to="/reset-password" className="text-xs underline text-textSecondary">Esqueci minha senha</Link>}
+        {mode === 'login' && (
+          <Link
+            to="/reset-password"
+            className="group mt-1 self-end inline-flex min-h-10 items-center gap-2 px-3 py-2 text-xs font-medium text-textSecondary transition-colors hover:text-white focus-visible:text-white focus-visible:outline focus-visible:outline-1 focus-visible:outline-white/30"
+          >
+            Esqueci minha senha
+            <ArrowRight aria-hidden="true" className="h-3.5 w-3.5 opacity-50 transition-opacity group-hover:opacity-100 group-focus-visible:opacity-100" />
+          </Link>
+        )}
         {fieldErrors.password && (
           <p className="text-xs text-red-400/80 ml-1">{fieldErrors.password}</p>
         )}

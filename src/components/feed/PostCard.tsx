@@ -294,7 +294,7 @@ export function PostCard({ post, index = 0, onDelete }: PostCardProps) {
             className="flex items-center gap-3 min-w-0 cursor-pointer"
             onClick={() => navigate(`/profile/${post.author.username}`)}
           >
-            <div className="w-10 h-10 rounded-full glass-pill flex items-center justify-center shrink-0 overflow-hidden">
+            <div className="soul-squircle w-10 h-10 glass-pill flex items-center justify-center shrink-0 overflow-hidden">
               {post.author.avatarUrl ? (
                 <SecureImage
                   src={post.author.avatarUrl}
@@ -508,7 +508,7 @@ export function PostCard({ post, index = 0, onDelete }: PostCardProps) {
                     key={item.id}
                     className="flex gap-3 items-start"
                   >
-                    <div className="w-8 h-8 rounded-full bg-white/10 border border-white/20 flex items-center justify-center shrink-0 overflow-hidden cursor-pointer hover:opacity-80" onClick={() => { setCommentsOpen(false); navigate(`/profile/${item.username}`); }}>
+                    <div className="soul-squircle w-8 h-8 bg-white/10 border border-white/20 flex items-center justify-center shrink-0 overflow-hidden cursor-pointer hover:opacity-80" onClick={() => { setCommentsOpen(false); navigate(`/profile/${item.username}`); }}>
                       {item.profilePicture ? (
                         <SecureImage src={item.profilePicture} alt={item.username} className="w-full h-full object-cover" />
                       ) : (

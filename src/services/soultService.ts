@@ -55,7 +55,7 @@ function mapRawToSoult(s: any): Soult {
     title: s.caption || 'Sem legenda',
     description: s.category || '',
     videoUrl: s.videoUrl,
-    thumbnailUrl: s.thumbnailUrl || s.videoUrl,
+    thumbnailUrl: s.thumbnailUrl || '',
     duration: s.duration || 0,
     likesCount: s.likesCount || 0,
     commentsCount: 0,
@@ -73,6 +73,10 @@ function mapRawToSoult(s: any): Soult {
 }
 
 export const soultService = {
+  async getSoult(id: string): Promise<Soult> {
+    const res = await api.get(`/soults/${encodeURIComponent(id)}`);
+    return mapRawToSoult(res.data);
+  },
   async getSoults(page = 0, size = 10): Promise<Soult[]> {
     const res = await api.get<{ content: any[] }>('/soults', { params: { page, size } });
     return (res.data.content ?? []).map(mapRawToSoult);

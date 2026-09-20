@@ -187,7 +187,7 @@ export default function CreatePage() {
           {mode === 'post' && (
             <div className="flex-1 flex flex-col relative">
               <div className="flex gap-4 flex-1">
-                <div className="w-11 h-11 rounded-full flex-shrink-0 overflow-hidden bg-white/5 border border-white/10 mt-1 flex items-center justify-center text-white/50">
+                <div className="soul-squircle w-11 h-11 flex-shrink-0 overflow-hidden bg-white/5 border border-white/10 mt-1 flex items-center justify-center text-white/50">
                   {user?.profilePicture ? (
                     <SecureImage src={user.profilePicture} alt={user?.name || 'Avatar'} className="w-full h-full object-cover" />
                   ) : (
@@ -281,7 +281,7 @@ export default function CreatePage() {
             <div className="flex-1 flex flex-col relative">
               <div className="flex gap-4 flex-1">
                 {/* Avatar */}
-                <div className="w-11 h-11 rounded-full flex-shrink-0 overflow-hidden bg-white/5 border border-white/10 mt-1 flex items-center justify-center text-white/50">
+                <div className="soul-squircle w-11 h-11 flex-shrink-0 overflow-hidden bg-white/5 border border-white/10 mt-1 flex items-center justify-center text-white/50">
                   {user?.profilePicture ? (
                     <SecureImage src={user.profilePicture} alt={user?.name || 'Avatar'} className="w-full h-full object-cover" />
                   ) : (

@@ -9,6 +9,8 @@ import { cn } from '../../utils/cn';
 import { messageService, type Conversation, type Message } from '../../services/messageService';
 import { userService } from '../../services/userService';
 import { useAuth } from '../../context/AuthContext';
+import { useSearchParams } from 'react-router-dom';
+import { notifyNotificationsUpdated } from '../../services/notificationService';
 import type { ProfileSummary } from '../../services/api/types';
 
 function MessageStatus({ readAt }: { readAt: string | null }) {
@@ -19,7 +21,7 @@ function MessageStatus({ readAt }: { readAt: string | null }) {
 function ConvAvatar({ conv, size = 'md' }: { conv: Conversation; size?: 'sm' | 'md' | 'lg' }) {
   const s = { sm: 'w-9 h-9 text-xs', md: 'w-11 h-11 text-sm', lg: 'w-14 h-14 text-base' }[size];
   return (
-    <div className={cn('rounded-2xl flex items-center justify-center font-bold text-white bg-white/10 border border-white/10 overflow-hidden shrink-0', s)}>
+    <div className={cn('soul-squircle flex items-center justify-center font-bold text-white bg-white/10 border border-white/10 overflow-hidden shrink-0', s)}>
       {conv.otherAvatar
         ? <SecureImage src={conv.otherAvatar} alt={conv.otherName} className="w-full h-full object-cover" />
         : <User className="w-5 h-5 text-white/50" />}
@@ -28,6 +30,9 @@ function ConvAvatar({ conv, size = 'md' }: { conv: Conversation; size?: 'sm' | '
 }
 
 export default function MessagesPage() {
+  const [searchParams] = useSearchParams();
+  const linkedConversation = searchParams.get('conversation');
+  const openedFromNotification = useRef<string | null>(null);
   const { user } = useAuth();
   const [conversationError, setConversationError] = useState('');
   const [messageError, setMessageError] = useState('');
@@ -55,7 +60,11 @@ export default function MessagesPage() {
     setConversationError('');
     try {
       const res = await messageService.getConversations();
-      setConversations(res.content || []);
+      setConversations(previous => {
+        const content = res.content || [];
+        const open = previous.find(item => item.id === activeConversation.current);
+        return open && !content.some(item => item.id === open.id) ? [open, ...content] : content;
+      });
     } catch (error) {
       setConversationError(getHttpErrorMessage(error));
     } finally {
@@ -70,7 +79,11 @@ export default function MessagesPage() {
     const interval = setInterval(async () => {
       try {
         const res = await messageService.getConversations();
-        setConversations(res.content || []);
+        setConversations(previous => {
+          const content = res.content || [];
+          const open = previous.find(item => item.id === activeConversation.current);
+          return open && !content.some(item => item.id === open.id) ? [open, ...content] : content;
+        });
         setConversationError('');
       } catch (error) { setConversationError(getHttpErrorMessage(error)); }
     }, 10000);
@@ -118,6 +131,7 @@ export default function MessagesPage() {
       const res = await messageService.getMessages(conv.id);
       if (activeConversation.current !== conv.id) return;
       setMessages(res.content || []);
+      notifyNotificationsUpdated();
       setOlderPage(1);
       setHasOlder(!res.last);
     } catch (error) {
@@ -126,6 +140,21 @@ export default function MessagesPage() {
     // clear unread
     setConversations(prev => prev.map(c => c.id === conv.id ? { ...c, unreadCount: 0 } : c));
   };
+
+  useEffect(() => {
+    if (!linkedConversation || openedFromNotification.current === linkedConversation) return;
+    openedFromNotification.current = linkedConversation;
+    let cancelled = false;
+    messageService.getConversation(linkedConversation)
+      .then(conversation => {
+        if (!cancelled) {
+          setConversations(previous => previous.some(item => item.id === conversation.id) ? previous : [conversation, ...previous]);
+          void handleSelectConv(conversation);
+        }
+      })
+      .catch(cause => { if (!cancelled) setConversationError(getHttpErrorMessage(cause)); });
+    return () => { cancelled = true; };
+  }, [linkedConversation]);
 
   const loadOlder = async () => {
     if (!selected || loadingOlder || !hasOlder) return;
@@ -308,7 +337,7 @@ export default function MessagesPage() {
                   >
                     <ArrowLeft className="w-5 h-5 text-white/60" />
                   </button>
-                  <div className={cn('w-9 h-9 rounded-2xl flex items-center justify-center font-bold overflow-hidden shrink-0', 'bg-white/10 border border-white/10')}>
+                  <div className={cn('soul-squircle w-9 h-9 flex items-center justify-center font-bold overflow-hidden shrink-0', 'bg-white/10 border border-white/10')}>
                     {selected.otherAvatar
                       ? <SecureImage src={selected.otherAvatar} alt={selected.otherName} className="w-full h-full object-cover" />
                       : <User className="w-4 h-4 text-white/50" />}
@@ -334,7 +363,7 @@ export default function MessagesPage() {
                       return (
                         <div key={msg.id} className={cn('flex gap-2', fromMe ? 'flex-row-reverse' : 'flex-row', !prevSame ? 'mt-2' : '')}>
                           {!fromMe && !prevSame && (
-                            <div className="w-7 h-7 rounded-xl flex items-center justify-center bg-white/10 border border-white/10 shrink-0 mt-auto overflow-hidden">
+                            <div className="soul-squircle w-7 h-7 flex items-center justify-center bg-white/10 border border-white/10 shrink-0 mt-auto overflow-hidden">
                               {selected.otherAvatar
                                 ? <SecureImage src={selected.otherAvatar} className="w-full h-full object-cover" />
                                 : <User className="w-3.5 h-3.5 text-white/50" />}
@@ -423,7 +452,7 @@ export default function MessagesPage() {
                       onClick={() => handleStartConv(u.username)}
                       className="w-full flex items-center gap-3 px-3 py-2.5 hover:bg-white/5 rounded-xl transition-colors text-left"
                     >
-                      <div className="w-9 h-9 rounded-xl bg-white/10 border border-white/10 flex items-center justify-center overflow-hidden shrink-0">
+                      <div className="soul-squircle w-9 h-9 bg-white/10 border border-white/10 flex items-center justify-center overflow-hidden shrink-0">
                         {u.profilePicture ? <SecureImage src={u.profilePicture} className="w-full h-full object-cover" /> : <User className="w-4 h-4 text-white/50" />}
                       </div>
                       <div className="flex-1 min-w-0">

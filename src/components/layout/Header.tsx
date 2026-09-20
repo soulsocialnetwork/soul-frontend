@@ -1,54 +1,17 @@
 import { SecureImage } from '../ui/SecureMedia';
 import { Bell } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import logoSvg from '../../assets/logo-tipografica-soul-branca-sem-fundo.svg';
 import { NotificationsPanel } from './NotificationsPanel';
 import { useAuth } from '../../context/AuthContext';
-import { userService } from '../../services/userService';
+import { useNotificationCount } from '../../hooks/useNotificationCount';
 
 export function Header() {
   const navigate = useNavigate();
   const { user } = useAuth();
   const [isNotifOpen, setIsNotifOpen] = useState(false);
-  const [unreadCount, setUnreadCount] = useState(0);
-
-  // Carrega contagem de solicitações pendentes
-  useEffect(() => {
-    let cancelled = false;
-
-    const fetchPendingRequests = async () => {
-      try {
-        const data = await userService.getFollowRequests(0, 50);
-        if (!cancelled) {
-          setUnreadCount(data.content.length);
-        }
-      } catch {
-        // silencia erros
-      }
-    };
-
-    fetchPendingRequests();
-
-    // Recarrega a cada 10s
-    const interval = setInterval(fetchPendingRequests, 10_000);
-
-    return () => {
-      cancelled = true;
-      clearInterval(interval);
-    };
-  }, []);
-
-  // Quando o painel fecha, recarrega contagem (usuário pode ter aceito/rejeitado)
-  const handleCloseNotif = async () => {
-    setIsNotifOpen(false);
-    try {
-      const data = await userService.getFollowRequests(0, 50);
-      setUnreadCount(data.content.length);
-    } catch {
-      // silencia erros
-    }
-  };
+  const unreadCount = useNotificationCount();
 
   const avatarUrl = user?.profilePicture;
   const initial = user?.name?.charAt(0).toUpperCase() ?? user?.username?.charAt(0).toUpperCase() ?? '?';
@@ -83,7 +46,7 @@ export function Header() {
             <button
               onClick={() => navigate('/profile')}
               aria-label="Perfil"
-              className="w-9 h-9 rounded-2xl glass-pill flex items-center justify-center transition-all hover:scale-105 active:scale-95 overflow-hidden"
+              className="soul-squircle w-9 h-9 glass-pill flex items-center justify-center transition-all hover:scale-105 active:scale-95 overflow-hidden"
             >
               {avatarUrl ? (
                 <SecureImage
@@ -99,7 +62,7 @@ export function Header() {
         </div>
       </header>
 
-      <NotificationsPanel isOpen={isNotifOpen} onClose={handleCloseNotif} />
+      <NotificationsPanel isOpen={isNotifOpen} onClose={() => setIsNotifOpen(false)} />
     </>
   );
 }

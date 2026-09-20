@@ -1,5 +1,5 @@
 import { SecureImage, SecureVideo } from '../ui/SecureMedia';
-import { useState, useRef, useEffect } from 'react';
+import { useState, useRef, useEffect, useId } from 'react';
 import {
   Play,
   Heart,
@@ -40,6 +40,7 @@ function formatTime(seconds: number): string {
 interface SoultCardProps {
   soult: Soult;
   index?: number;
+  isActive?: boolean;
 }
 
 interface Comment {
@@ -49,10 +50,17 @@ interface Comment {
   time: string;
 }
 
-export function SoultCard({ soult }: SoultCardProps) {
+export function SoultCard({ soult, isActive = true }: SoultCardProps) {
   const navigate = useNavigate();
   const { user: currentUser } = useAuth();
   const videoRef = useRef<HTMLVideoElement>(null);
+  const captionId = useId();
+  const titleRef = useRef<HTMLParagraphElement>(null);
+  const descriptionRef = useRef<HTMLParagraphElement>(null);
+  const [captionExpanded, setCaptionExpanded] = useState(false);
+  const [captionOverflows, setCaptionOverflows] = useState(false);
+  const activeRef = useRef(isActive);
+  activeRef.current = isActive;
   const isOwn = !!(currentUser && soult.userId && currentUser.id === soult.userId);
 
   const [playing, setPlaying] = useState(false);
@@ -75,6 +83,35 @@ export function SoultCard({ soult }: SoultCardProps) {
   const [progress, setProgress] = useState(0);
   const [currentTime, setCurrentTime] = useState(0);
   const [duration, setDuration] = useState(0);
+
+  useEffect(() => {
+    if (!isActive) {
+      videoRef.current?.pause();
+      setCaptionExpanded(false);
+    }
+  }, [isActive]);
+
+  useEffect(() => {
+    if (captionExpanded) return;
+    const elements = [titleRef.current, descriptionRef.current].filter((element): element is HTMLParagraphElement => element !== null);
+    const measure = () => setCaptionOverflows(elements.some(element => element.scrollHeight > element.clientHeight + 1));
+    measure();
+    const observer = new ResizeObserver(measure);
+    elements.forEach(element => observer.observe(element));
+    return () => observer.disconnect();
+  }, [captionExpanded, soult.title, soult.description]);
+
+  useEffect(() => {
+    const video = videoRef.current;
+    const pauseWhenHidden = () => {
+      if (document.hidden) video?.pause();
+    };
+    document.addEventListener('visibilitychange', pauseWhenHidden);
+    return () => {
+      video?.pause();
+      document.removeEventListener('visibilitychange', pauseWhenHidden);
+    };
+  }, []);
 
   useEffect(() => {
     let mounted = true;
@@ -101,16 +138,15 @@ export function SoultCard({ soult }: SoultCardProps) {
   const handleEnded = () => setPlaying(false);
 
   const togglePlay = () => {
-    if (videoRef.current) {
-      if (playing) {
+    if (videoRef.current && isActive) {
+      if (!videoRef.current.paused) {
         videoRef.current.pause();
       } else {
         if (videoRef.current.ended) videoRef.current.currentTime = 0;
-        videoRef.current.play().catch(() => {});
+        videoRef.current.play().then(() => {
+          if (!activeRef.current) videoRef.current?.pause();
+        }).catch(() => setPlaying(false));
       }
-      setPlaying(!playing);
-    } else {
-      setPlaying(!playing);
     }
   };
 
@@ -202,22 +238,33 @@ export function SoultCard({ soult }: SoultCardProps) {
   };
 
   return (
-    <article className="relative w-full h-full bg-black select-none overflow-hidden flex">
+    <article className="relative w-full h-full bg-black lg:bg-transparent select-none overflow-hidden flex lg:gap-4">
 
       <div
-        className="relative flex-1 h-full cursor-pointer overflow-hidden"
+        className="soul-squircle-video relative flex-1 min-w-0 h-full cursor-pointer overflow-hidden bg-black lg:border lg:border-white/10"
         onClick={handleVideoClick}
       >
         <div className="absolute inset-0 bg-neutral-950 -z-10" />
 
         <SecureVideo
           ref={videoRef}
-          src={`${soult.videoUrl}#t=0.001`}
-          poster={soult.thumbnailUrl || undefined}
+          src={soult.videoUrl ? `${soult.videoUrl}#t=0.001` : undefined}
           className="absolute inset-0 w-full h-full object-cover"
           playsInline
           loop
-          preload="metadata"
+          preload="auto"
+          onLoadedData={(event) => {
+            const video = event.currentTarget;
+            if (video.paused && video.currentTime === 0 && Number.isFinite(video.duration) && video.duration > 0) {
+              video.currentTime = Math.min(0.001, video.duration / 2);
+            }
+            setDuration(Number.isFinite(video.duration) ? video.duration : 0);
+          }}
+          onPlay={() => {
+            if (!activeRef.current || document.hidden) { videoRef.current?.pause(); return; }
+            setPlaying(true);
+          }}
+          onPause={() => setPlaying(false)}
           onTimeUpdate={handleTimeUpdate}
           onEnded={handleEnded}
         />
@@ -265,7 +312,7 @@ export function SoultCard({ soult }: SoultCardProps) {
             className="flex items-center gap-2.5 pointer-events-auto cursor-pointer"
             onClick={(e) => { e.stopPropagation(); navigate(`/profile/${soult.username || soult.author.id}`); }}
           >
-            <div className="w-8 h-8 rounded-full overflow-hidden border border-white/20 shrink-0">
+            <div className="soul-squircle w-8 h-8 overflow-hidden border border-white/20 shrink-0">
               {soult.author.avatarUrl ? (
                 <SecureImage src={soult.author.avatarUrl} alt={soult.author.name} className="w-full h-full object-cover object-top" />
               ) : (
@@ -302,22 +349,38 @@ export function SoultCard({ soult }: SoultCardProps) {
             )}
           </div>
 
-          <p className="text-white font-semibold text-sm line-clamp-1 pointer-events-auto cursor-pointer"
-            onClick={(e) => { e.stopPropagation(); navigate(`/profile/${soult.username || soult.author.id}`); }}>
-            {soult.title}
-          </p>
-
-          {soult.description && (
-            <p className="text-white/60 text-xs leading-relaxed line-clamp-2 pointer-events-auto cursor-pointer"
-              onClick={(e) => { e.stopPropagation(); navigate(`/profile/${soult.username || soult.author.id}`); }}>
-              {soult.description}
+          <div
+            id={captionId}
+            className={cn('pointer-events-auto space-y-2', captionExpanded && 'max-h-[35dvh] overflow-y-auto overscroll-contain pr-2')}
+            onClick={event => event.stopPropagation()}
+          >
+            <p ref={titleRef} className={cn('text-white font-semibold text-sm break-words whitespace-pre-wrap', !captionExpanded && 'line-clamp-1')}>
+              {soult.title}
             </p>
+            {soult.description && (
+              <p ref={descriptionRef} className={cn('text-white/60 text-xs leading-relaxed break-words whitespace-pre-wrap', !captionExpanded && 'line-clamp-2')}>
+                {soult.description}
+              </p>
+            )}
+          </div>
+          {(captionOverflows || captionExpanded) && (
+            <button
+              type="button"
+              aria-expanded={captionExpanded}
+              aria-controls={captionId}
+              onClick={event => { event.stopPropagation(); setCaptionExpanded(value => !value); }}
+              className="pointer-events-auto self-start text-xs font-semibold text-white/80 hover:text-white py-2"
+            >
+              {captionExpanded ? 'Ver menos' : 'Ver mais'}
+            </button>
           )}
 
           <span className="text-white/30 text-[10px]">{timeAgo(soult.createdAt)}</span>
         </div>
 
-        <div className="absolute bottom-32 lg:bottom-20 right-3 flex flex-col gap-4 items-center z-20">
+      </div>
+
+        <div className="absolute bottom-32 right-3 flex flex-col gap-4 items-center z-20 lg:static lg:w-16 lg:shrink-0 lg:self-end lg:pb-6">
           <button
             onClick={(e) => { e.stopPropagation(); handleLike(); }}
             className="flex flex-col items-center gap-1"
@@ -365,8 +428,6 @@ export function SoultCard({ soult }: SoultCardProps) {
             <span className="text-white/70 text-[10px] font-medium">Enviar</span>
           </button>
         </div>
-      </div>
-
       {/* Modal / Drawer de Comentários */}
       {commentsOpen && (
         <div

@@ -52,7 +52,7 @@ export function ConnectionsModal({ title, users, loading, onClose }: Connections
                   }}
                   className="flex items-center gap-4 p-3 bg-white/[0.03] border border-white/5 rounded-2xl cursor-pointer hover:bg-white/[0.06] hover:border-white/10 transition-all"
                 >
-                  <div className="w-12 h-12 rounded-full bg-white/5 overflow-hidden shrink-0 flex items-center justify-center">
+                  <div className="soul-squircle w-12 h-12 bg-white/5 overflow-hidden shrink-0 flex items-center justify-center">
                     {user.profilePicture ? (
                       <SecureImage
                         src={user.profilePicture}

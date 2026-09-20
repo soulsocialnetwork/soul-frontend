@@ -1,4 +1,5 @@
 import { lazy, Suspense } from 'react';
+import { ScreenUsageTracker } from './hooks/useScreenUsage';
 import { BrowserRouter, Routes, Route } from 'react-router-dom';
 const InitialPage = lazy(() => import('./pages/Initial'));
 import { AuthProvider } from './context/AuthContext';
@@ -30,6 +31,7 @@ export default function App() {
       }}
     >
       <AuthProvider>
+        <ScreenUsageTracker />
         <Suspense fallback={<div role="status" className="p-8 text-center">Carregando...</div>}><Routes>
           {/* Rotas públicas — se já logado, vai pro feed */}
           <Route element={<PublicRoute />}>

@@ -59,6 +59,10 @@ export const messageService = {
     const res = await api.post(`/messages/conversations/${username}`);
     return mapConversation(res.data);
   },
+  async getConversation(id: string): Promise<Conversation> {
+    const res = await api.get(`/messages/conversations/${encodeURIComponent(id)}`);
+    return mapConversation(res.data);
+  },
 
   async getMessages(convId: string, page = 0, size = 50): Promise<{ content: Message[]; last: boolean }> {
     const res = await api.get(`/messages/conversations/${convId}/msgs`, { params: { page, size } });

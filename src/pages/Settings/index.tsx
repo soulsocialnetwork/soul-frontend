@@ -148,7 +148,7 @@ const SETTINGS_SECTIONS = [
         id: 'privacy',
         icon: ShieldCheck,
         label: 'Privacidade',
-        desc: 'Rastreamento: 0, seus dados são seus',
+        desc: user?.privacyStatus ? 'Perfil privado ativo' : 'Controle quem pode ver seu perfil',
         action: () => setActiveModal('privacy')
       }
     ]
@@ -710,15 +710,44 @@ return ( <div className="min-h-[100dvh] bg-background flex flex-col lg:flex-row 
     >
       <div className="space-y-5">
         {saveError && <p role="alert" className="text-red-400 text-sm">{saveError}</p>}
+        <button
+          type="button"
+          role="switch"
+          aria-checked={Boolean(user?.privacyStatus)}
+          disabled={saving}
+          onClick={async () => {
+            if (!user || saving) return;
+            setSaving(true);
+            setSaveError('');
+            try {
+              await authService.updatePrivacy(!user.privacyStatus);
+              await refreshUser();
+            } catch (error) {
+              setSaveError(getHttpErrorMessage(error));
+            } finally {
+              setSaving(false);
+            }
+          }}
+          className="w-full flex items-center justify-between gap-4 rounded-2xl border border-white/10 bg-white/[0.04] p-4 text-left transition-colors hover:bg-white/[0.07] disabled:opacity-50"
+        >
+          <span>
+            <span className="block text-sm font-semibold text-white">Perfil privado</span>
+            <span className="mt-1 block text-xs leading-relaxed text-textSecondary">Quem quiser seguir você enviará uma solicitação. Só seguidores aprovados poderão ver seus posts e Soults.</span>
+          </span>
+          <span aria-hidden="true" className={cn('relative h-6 w-11 shrink-0 rounded-full transition-colors', user?.privacyStatus ? 'bg-white' : 'bg-white/20')}>
+            <span className={cn('absolute top-1 h-4 w-4 rounded-full transition-transform', user?.privacyStatus ? 'translate-x-6 bg-black' : 'translate-x-1 bg-white')} />
+          </span>
+        </button>
+        <p className="text-xs leading-relaxed text-textSecondary">As solicitações pendentes aparecem na aba Solicitações das notificações.</p>
         <div className="flex flex-col items-center gap-3 py-4">
           <div className="w-16 h-16 rounded-full bg-white/5 border border-white/10 flex items-center justify-center">
             <ShieldCheck className="w-8 h-8 text-white" />
           </div>
 
-          <p className="text-3xl font-extrabold text-white">0</p>
+          <p className="text-lg font-semibold text-white">Você decide quem acompanha você</p>
 
           <p className="text-sm text-textSecondary text-center leading-relaxed max-w-[240px]">
-            Dados de rastreamento coletados sobre você.
+            Seu nome e sua bio continuam visíveis. Posts e Soults ficam disponíveis apenas para seguidores aprovados quando o perfil é privado.
           </p>
         </div>
 

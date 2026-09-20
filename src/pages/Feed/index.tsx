@@ -271,7 +271,7 @@ export default function FeedPage() {
                     <button
                       key={id}
                       onClick={() => handleIntention(route)}
-                      className="w-full flex items-center gap-4 px-5 py-4 bg-transparent border border-white/[0.07] rounded-2xl text-left hover:bg-white/[0.04] hover:border-white/[0.15] active:scale-[0.98] transition-all duration-200 group"
+                      className="soul-squircle-card w-full flex items-center gap-4 px-5 py-4 bg-transparent border border-white/[0.07] text-left hover:bg-white/[0.04] hover:border-white/[0.15] active:scale-[0.98] transition-all duration-200 group"
                     >
                       <Icon
                         className="w-4 h-4 text-zinc-400 shrink-0 group-hover:text-white transition-colors"
@@ -345,7 +345,7 @@ export default function FeedPage() {
                   ) : searchResults.length > 0 ? (
                      searchResults.map(user => (
                        <div key={user.id} onClick={() => navigate(`/profile/${user.username}`)} className="flex items-center gap-3 p-3 hover:bg-white/5 cursor-pointer rounded-xl transition-colors">
-                          <div className="w-8 h-8 rounded-full overflow-hidden bg-white/10 flex items-center justify-center shrink-0">
+                          <div className="soul-squircle w-8 h-8 overflow-hidden bg-white/10 flex items-center justify-center shrink-0">
                             {user.profilePicture ? <SecureImage src={user.profilePicture} className="w-full h-full object-cover" /> : <span className="flex items-center justify-center w-full h-full text-xs font-bold text-white">{user.name.charAt(0)}</span>}
                           </div>
                           <div className="flex-1 min-w-0">

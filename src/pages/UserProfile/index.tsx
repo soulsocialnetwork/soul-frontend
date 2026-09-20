@@ -14,6 +14,7 @@ import {
   Trash2,
   Play,
   Flag,
+  LockKeyhole,
 } from 'lucide-react';
 import { BottomNav } from '../../components/layout/BottomNav';
 import { Sidebar } from '../../components/layout/Sidebar';
@@ -51,13 +52,17 @@ export default function UserProfilePage() {
 
   const [user, setUser] = useState<UserProfile | null>(null);
   const [loadingProfile, setLoadingProfile] = useState(true);
+  const [postsError, setPostsError] = useState('');
+  const [soultsError, setSoultsError] = useState('');
+  const [reloadContent, setReloadContent] = useState(0);
   const [loadingPosts, setLoadingPosts] = useState(false);
   const [loadingSoults, setLoadingSoults] = useState(false);
   const [soults, setSoults] = useState<Soult[]>([]);
   const [activeTab, setActiveTab] = useState<ProfileTab>('posts');
   const [followLoading, setFollowLoading] = useState(false);
   const [sendingMsg, setSendingMsg] = useState(false);
-  const [isFollowing, setIsFollowing] = useState(false);
+  const [followStatus, setFollowStatus] = useState<'NOT_FOLLOWING' | 'PENDING' | 'FOLLOWING'>('NOT_FOLLOWING');
+  const isFollowing = followStatus === 'FOLLOWING';
   const [showAvatarModal, setShowAvatarModal] = useState(false);
   const [deletingSoultId, setDeletingSoultId] = useState<string | null>(null);
   const [feedModal, setFeedModal] = useState<{
@@ -88,7 +93,7 @@ export default function UserProfilePage() {
     let cancelled = false;
     userService.getFollowStatus(username)
       .then(res => {
-        if (!cancelled) setIsFollowing(res.status === 'FOLLOWING' || res.status === 'PENDING');
+        if (!cancelled) setFollowStatus(res.status);
       })
       .catch(() => {});
     return () => { cancelled = true; };
@@ -99,28 +104,28 @@ export default function UserProfilePage() {
     if (!username) return;
     let cancelled = false;
     setLoadingPosts(true);
+    setPostsError('');
     userService.getPostsByUsername(username)
       .then(posts => {
         if (!cancelled) setUser(prev => prev ? { ...prev, posts } : prev);
       })
-      .catch(() => {
-        if (!cancelled) setUser(prev => prev ? { ...prev, posts: [] } : prev);
-      })
+      .catch(error => { if (!cancelled) setPostsError(getHttpErrorMessage(error)); })
       .finally(() => { if (!cancelled) setLoadingPosts(false); });
     return () => { cancelled = true; };
-  }, [username]);
+  }, [username, reloadContent]);
 
   // Load soults when tab switches to soults
   useEffect(() => {
     if (activeTab !== 'soults' || !username) return;
     let cancelled = false;
     setLoadingSoults(true);
+    setSoultsError('');
     soultService.getSoultsByUsername(username)
       .then(data => { if (!cancelled) setSoults(data); })
-      .catch(() => { if (!cancelled) setSoults([]); })
+      .catch(error => { if (!cancelled) setSoultsError(getHttpErrorMessage(error)); })
       .finally(() => { if (!cancelled) setLoadingSoults(false); });
     return () => { cancelled = true; };
-  }, [username, activeTab]);
+  }, [username, activeTab, reloadContent]);
 
   // Keyboard/scroll lock for modals
   useEffect(() => {
@@ -133,6 +138,7 @@ export default function UserProfilePage() {
   }, [feedModal, showAvatarModal]);
 
   const isOwnProfile = currentUser?.username === username;
+  const canViewProfileContent = !user?.privateProfile || isOwnProfile || isFollowing || currentUser?.role === 'ADMIN';
 
   const handleBan = async () => {
     if (!user || banning || user.banned) return;
@@ -152,22 +158,19 @@ export default function UserProfilePage() {
   const handleFollowClick = async () => {
     // Never allow self-follow
     if (!username || followLoading || isOwnProfile) return;
-    const prev = isFollowing;
+    const prev = followStatus;
     setFollowLoading(true);
-    setIsFollowing(!prev);
-    setUser(u => u ? {
-      ...u,
-      followerCount: prev ? Math.max(0, (u.followerCount || 0) - 1) : (u.followerCount || 0) + 1,
-    } : null);
     try {
-      if (prev) await userService.unfollow(username);
-      else await userService.follow(username);
-    } catch {
-      setIsFollowing(prev);
-      setUser(u => u ? {
-        ...u,
-        followerCount: prev ? (u.followerCount || 0) + 1 : Math.max(0, (u.followerCount || 0) - 1),
-      } : null);
+      if (prev === 'NOT_FOLLOWING') await userService.follow(username);
+      else await userService.unfollow(username);
+      const next = prev === 'NOT_FOLLOWING' ? (user?.privateProfile ? 'PENDING' : 'FOLLOWING') : 'NOT_FOLLOWING';
+      setFollowStatus(next);
+      if (prev === 'FOLLOWING' || next === 'FOLLOWING') {
+        setUser(u => u ? { ...u, followerCount: Math.max(0, u.followerCount + (next === 'FOLLOWING' ? 1 : -1)) } : null);
+      }
+      if (next === 'FOLLOWING') setReloadContent(value => value + 1);
+    } catch (error) {
+      setBanError(getHttpErrorMessage(error));
     } finally {
       setFollowLoading(false);
     }
@@ -286,7 +289,7 @@ export default function UserProfilePage() {
               <div className="flex flex-col md:flex-row gap-6 md:gap-8 items-center md:items-start w-full">
                 <div
                   onClick={() => setShowAvatarModal(true)}
-                  className="w-24 h-24 sm:w-28 sm:h-28 md:w-40 md:h-40 rounded-2xl overflow-hidden border border-white/10 p-1 bg-white/5 shrink-0 cursor-pointer active:scale-95 transition-transform"
+                  className="soul-squircle w-24 h-24 sm:w-28 sm:h-28 md:w-40 md:h-40 overflow-hidden border border-white/10 p-1 bg-white/5 shrink-0 cursor-pointer active:scale-95 transition-transform"
                 >
                   {user.avatarUrl ? (
                     <SecureImage src={user.avatarUrl} alt={user.name} className="w-full h-full rounded-2xl object-cover object-top" />
@@ -317,13 +320,15 @@ export default function UserProfilePage() {
                           disabled={followLoading}
                           className={cn(
                             'flex items-center justify-center gap-2 px-5 h-9 rounded-xl text-[13px] font-semibold transition-all active:scale-95 flex-1 md:flex-none disabled:opacity-60',
-                            isFollowing
+                            followStatus !== 'NOT_FOLLOWING'
                               ? 'bg-white/10 text-textPrimary border border-white/10 hover:bg-white/20'
                               : 'bg-white text-black hover:bg-white/90'
                           )}
                         >
                           {followLoading ? (
                             <Loader2 className="w-4 h-4 animate-spin" />
+                          ) : followStatus === 'PENDING' ? (
+                            <><UserCheck className="w-4 h-4" /><span>Solicitação enviada</span></>
                           ) : isFollowing ? (
                             <><UserCheck className="w-4 h-4" /><span>Seguindo</span></>
                           ) : (
@@ -395,6 +400,15 @@ export default function UserProfilePage() {
               </div>
             </div>
 
+            {!canViewProfileContent ? (
+              <div className="rounded-2xl border border-white/10 bg-white/[0.02] px-6 py-12 text-center">
+                <LockKeyhole className="mx-auto h-7 w-7 text-white/60" aria-hidden="true" />
+                <h2 className="mt-4 text-lg font-semibold text-white">Este perfil é privado</h2>
+                <p className="mx-auto mt-2 max-w-sm text-sm leading-relaxed text-textSecondary">
+                  {followStatus === 'PENDING' ? 'Sua solicitação foi enviada. Você poderá ver as publicações quando ela for aceita.' : 'Envie uma solicitação para seguir e ver os posts e Soults deste perfil.'}
+                </p>
+              </div>
+            ) : <>
             {/* Tabs */}
             <div className="flex justify-center border-b border-white/10 gap-8 px-4">
               <button
@@ -425,6 +439,8 @@ export default function UserProfilePage() {
                 <div className="flex justify-center py-12">
                   <Loader2 className="w-6 h-6 text-textSecondary animate-spin" />
                 </div>
+              ) : postsError ? (
+                <div role="alert" className="py-8 text-center space-y-4"><p className="text-sm text-textSecondary">{postsError}</p><button className="glass-pill px-5 py-3 rounded-xl" onClick={() => setReloadContent(value => value + 1)}>Tentar novamente</button></div>
               ) : fullPosts.length === 0 ? (
                 <div className="flex justify-center py-12">
                   <p className="text-sm text-textSecondary">Nenhuma publicação encontrada.</p>
@@ -456,6 +472,8 @@ export default function UserProfilePage() {
                 <div className="flex justify-center py-12">
                   <Loader2 className="w-6 h-6 text-textSecondary animate-spin" />
                 </div>
+              ) : soultsError ? (
+                <div role="alert" className="py-8 text-center space-y-4"><p className="text-sm text-textSecondary">{soultsError}</p><button className="glass-pill px-5 py-3 rounded-xl" onClick={() => setReloadContent(value => value + 1)}>Tentar novamente</button></div>
               ) : soults.length === 0 ? (
                 <div className="flex justify-center py-12">
                   <p className="text-sm text-textSecondary">Nenhum Soult publicado ainda.</p>
@@ -470,7 +488,19 @@ export default function UserProfilePage() {
                       {soult.thumbnailUrl ? (
                         <SecureImage src={soult.thumbnailUrl} alt="Soult" className="w-full h-full object-cover" />
                       ) : soult.videoUrl ? (
-                        <SecureVideo src={`${soult.videoUrl}#t=0.001`} className="w-full h-full object-cover" muted />
+                        <SecureVideo
+                          src={`${soult.videoUrl}#t=0.001`}
+                          className="w-full h-full object-cover"
+                          muted
+                          playsInline
+                          preload="auto"
+                          onLoadedData={event => {
+                            const video = event.currentTarget;
+                            if (video.currentTime === 0 && Number.isFinite(video.duration) && video.duration > 0) {
+                              video.currentTime = Math.min(0.001, video.duration / 2);
+                            }
+                          }}
+                        />
                       ) : (
                         <div className="w-full h-full flex items-center justify-center">
                           <Play className="w-8 h-8 text-white/30" />
@@ -517,6 +547,7 @@ export default function UserProfilePage() {
                 </div>
               )
             )}
+            </>}
           </div>
         </main>
       </div>
@@ -540,10 +571,10 @@ export default function UserProfilePage() {
               src={user.avatarUrl}
               alt="Foto de perfil"
               onClick={e => e.stopPropagation()}
-              className="w-full max-w-[320px] md:max-w-[400px] aspect-square rounded-2xl object-cover shadow-2xl border border-white/10 animate-scale-up"
+              className="soul-squircle w-full max-w-[320px] md:max-w-[400px] aspect-square object-cover shadow-2xl border border-white/10 animate-scale-up"
             />
           ) : (
-            <div className="w-full max-w-[320px] md:max-w-[400px] aspect-square rounded-2xl bg-white/5 flex items-center justify-center text-7xl font-bold text-textSecondary">
+            <div className="soul-squircle w-full max-w-[320px] md:max-w-[400px] aspect-square bg-white/5 flex items-center justify-center text-7xl font-bold text-textSecondary">
               {user.name.charAt(0).toUpperCase()}
             </div>
           )}

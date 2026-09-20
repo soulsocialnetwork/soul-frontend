@@ -89,7 +89,7 @@ export function BottomNav() {
             )}
           >
             <Ghost
-              className={cn('w-[22px] h-[22px] transition-all', pathname === '/soults' && 'drop-shadow-[0_0_6px_rgba(255,255,255,0.4)]')}
+              className="w-[22px] h-[22px] transition-all"
               strokeWidth={pathname === '/soults' ? 2 : 1.75}
             />
           </button>

@@ -54,8 +54,9 @@ export const endpoints = {
   },
   notifications: {
     list: '/notifications',
-    markRead: '/notifications/read-all',
+    markRead: '/notifications/read',
     markOneRead: (id: string) => `/notifications/${id}/read`,
+    unreadCount: '/notifications/unread-count',
   },
 } as const;
 

@@ -49,7 +49,7 @@ export default function AuthPage() {
           email: (data as Parameters<typeof authService.register>[0]).email, 
           password: (data as Parameters<typeof authService.register>[0]).password 
         });
-        navigate('/verify-email');
+        navigate('/feed');
       }
     } catch (error) {
       setAuthError(getHttpErrorMessage(error));
@@ -61,7 +61,7 @@ export default function AuthPage() {
 
 
   return (
-    <div className="min-h-screen h-screen bg-background flex flex-col justify-center items-center p-4 sm:p-8 overflow-hidden">
+    <div className="min-h-screen bg-background flex flex-col justify-center items-center p-4 sm:p-8 overflow-y-auto">
       <div className="w-full max-w-5xl flex flex-col lg:flex-row items-center justify-between gap-8 lg:gap-12">
         
         {/* lado esquerdo com a logo em svg, slogan e soulzinho animado maior */}

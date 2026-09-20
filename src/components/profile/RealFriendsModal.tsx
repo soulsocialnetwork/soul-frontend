@@ -1,5 +1,6 @@
 import { SecureImage } from '../ui/SecureMedia';
 import { X, Users, Link } from 'lucide-react';
+import { useState } from 'react';
 
 interface RealFriendsModalProps {
   username: string;
@@ -9,23 +10,21 @@ interface RealFriendsModalProps {
 // Lightweight QR code generator (no external library)
 // Uses a minimal QR encoding for small URLs via a free external render URL
 function QRCodeDisplay({ value }: { value: string }) {
+  const [imageError, setImageError] = useState(false);
   // Use a QR rendering service that doesn't require install
   const encoded = encodeURIComponent(value);
   const qrUrl = `https://api.qrserver.com/v1/create-qr-code/?data=${encoded}&size=200x200&bgcolor=ffffff&color=000000&margin=0`;
 
   return (
     <div className="p-4 rounded-2xl bg-white">
-      <SecureImage
+      {imageError ? <p className="flex h-[200px] w-[200px] items-center justify-center text-center text-sm text-black/70">QR indisponível. Use “Copiar link” abaixo.</p> : <SecureImage
         src={qrUrl}
         alt="QR Code"
         width={200}
         height={200}
         className="rounded-xl block"
-        onError={(e) => {
-          // fallback: show a canvas-based placeholder
-          (e.target as HTMLImageElement).style.display = 'none';
-        }}
-      />
+        onError={() => setImageError(true)}
+      />}
     </div>
   );
 }
@@ -48,9 +47,9 @@ export function RealFriendsModal({ username, onClose }: RealFriendsModalProps) {
       >
         {/* Header */}
         <div className="relative text-center">
-          <h2 className="text-xl font-bold text-white">Amigos Reais</h2>
+          <h2 className="text-xl font-bold text-white">QR do perfil</h2>
           <p className="text-xs text-zinc-500 mt-1">
-            Mostre este QR Code para adicionar amigos de verdade
+            Mostre este QR Code para alguém abrir seu perfil
           </p>
           <button
             onClick={onClose}
@@ -66,7 +65,7 @@ export function RealFriendsModal({ username, onClose }: RealFriendsModalProps) {
 
           <div className="text-center">
             <p className="text-sm font-semibold text-white">@{username}</p>
-            <p className="text-xs text-zinc-500 mt-0.5">soul.app</p>
+            <p className="text-xs text-zinc-500 mt-0.5">{window.location.host}</p>
           </div>
         </div>
 
@@ -74,9 +73,7 @@ export function RealFriendsModal({ username, onClose }: RealFriendsModalProps) {
         <div className="flex items-start gap-3 p-4 rounded-2xl bg-white/[0.04] border border-white/[0.06]">
           <Users className="w-4 h-4 text-zinc-400 mt-0.5 shrink-0" />
           <p className="text-xs text-zinc-400 leading-relaxed">
-            Quando alguém escanear este QR Code, vocês dois serão adicionados como{' '}
-            <span className="text-white font-semibold">Amigos Reais</span> — uma conexão
-            especial além do seguir normal.
+            Ao escanear, a pessoa abrirá seu perfil. Se ele for privado, precisará enviar uma solicitação para seguir você.
           </p>
         </div>
 

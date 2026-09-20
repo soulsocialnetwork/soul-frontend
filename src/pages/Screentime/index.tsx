@@ -10,27 +10,26 @@ import {
   ChevronDown,
   ChevronUp,
   Clock,
-  Info
+  TrendingUp
 } from 'lucide-react';
 import { useTranslation } from '../../i18n';
 import { ScreenLoader } from '../../components/ui/ScreenLoader';
+import { useAuth } from '../../context/AuthContext';
+import { dayKey, useScreenUsage } from '../../hooks/useScreenUsage';
 
-const WEEK_LABELS = ['D', 'S', 'T', 'Q', 'Q', 'S', 'S'];
-const WEEK_FULL_NAMES = [
-  'Domingo',
-  'Segunda',
-  'Terça',
-  'Quarta',
-  'Quinta',
-  'Sexta',
-  'Sábado',
-];
+const formatMinutes = (total: number) => `${Math.floor(total / 60)}h ${String(total % 60).padStart(2, '0')}m`;
+const dateLabel = (date: Date) => new Intl.DateTimeFormat('pt-BR', { weekday: 'long', day: '2-digit', month: 'short' }).format(date);
 
 export default function ScreentimePage() {
   const [loading, setLoading] = useState(true);
-  const [dailyGoal] = useState(120);
+  const { user } = useAuth();
+  const usage = useScreenUsage(user?.id);
+  const dailyGoal = user?.dailyTimeLimit ?? 120;
+  const focusKey = 'soul:focus:' + user?.id;
+  const [focusDeadline, setFocusDeadline] = useState<number | null>(null);
   const [hoveredBarIndex, setHoveredBarIndex] = useState<number | null>(null);
-  const [showMoreWeekly, setShowMoreWeekly] = useState(false);
+  const [rangeDays, setRangeDays] = useState<7 | 30>(7);
+  const [showHistory, setShowHistory] = useState(false);
   const [focusTime, setFocusTime] = useState('30');
   const [focusTask, setFocusTask] = useState('');
   const [isFocusActive, setIsFocusActive] = useState(false);
@@ -42,10 +41,24 @@ export default function ScreentimePage() {
 
   const { t } = useTranslation('screentime');
 
-  // Valores "mockados" para a UI premium
-  const timeStr = '0h 00m';
-  const goalStr = `${Math.floor(dailyGoal / 60)}h ${dailyGoal % 60}m`;
-  const pct = 0;
+  const today = dayKey();
+  const minutesUsed = Math.floor((usage[today] || 0) / 60000);
+  const timeStr = formatMinutes(minutesUsed);
+  const goalStr = formatMinutes(dailyGoal);
+  const pct = dailyGoal > 0 ? Math.min(1, (usage[today] || 0) / (dailyGoal * 60000)) : 0;
+  const history = Array.from({ length: rangeDays }, (_, index) => {
+    const date = new Date();
+    date.setHours(12, 0, 0, 0);
+    date.setDate(date.getDate() - (rangeDays - 1 - index));
+    const key = dayKey(date);
+    return { key, date, ms: usage[key], minutes: Math.floor((usage[key] || 0) / 60000) };
+  });
+  const completedDays = history.slice(0, -1).filter(day => day.ms !== undefined);
+  const averageMinutes = completedDays.length
+    ? Math.round(completedDays.reduce((sum, day) => sum + (day.ms || 0), 0) / completedDays.length / 60000)
+    : null;
+  const maxHistoryMs = Math.max(dailyGoal * 60000, ...history.map(day => day.ms || 0), 1);
+  const recordedDays = history.filter(day => day.ms !== undefined).length;
   const radius = 46;
   const circumference = 2 * Math.PI * radius;
   const strokeDashoffset = circumference - pct * circumference;
@@ -59,23 +72,44 @@ export default function ScreentimePage() {
   }, []);
 
   useEffect(() => {
-    let interval: ReturnType<typeof setInterval> | undefined;
+    setIsFocusActive(false);
+    setFocusDeadline(null);
+    setFocusCompleted(false);
+    try {
+      const saved = JSON.parse(localStorage.getItem(focusKey) || 'null');
+      if (saved && Number.isFinite(saved.deadline) && typeof saved.task === 'string') {
+        setFocusTask(saved.task);
+        if (saved.deadline > Date.now()) {
+          setFocusDeadline(saved.deadline);
+          setFocusTimeLeft(Math.ceil((saved.deadline - Date.now()) / 1000));
+          setIsFocusActive(true);
+        } else {
+          setFocusCompleted(true);
+          localStorage.removeItem(focusKey);
+        }
+      }
+    } catch { /* Unavailable or invalid local history does not block the page. */ }
+  }, [focusKey]);
 
-    if (isFocusActive && focusTimeLeft > 0) {
-      interval = setInterval(() => {
-        setFocusTimeLeft((prev) => prev - 1);
-      }, 1000);
-    } else if (isFocusActive && focusTimeLeft === 0) {
-      setIsFocusActive(false);
-      setFocusCompleted(true);
-    }
-
-    return () => {
-      if (interval) {
-        clearInterval(interval);
+  useEffect(() => {
+    if (!isFocusActive || focusDeadline === null) return;
+    const tick = () => {
+      const seconds = Math.max(0, Math.ceil((focusDeadline - Date.now()) / 1000));
+      setFocusTimeLeft(seconds);
+      if (seconds === 0) {
+        setIsFocusActive(false);
+        setFocusCompleted(true);
+        try { localStorage.removeItem(focusKey); } catch { /* Finished in memory. */ }
       }
     };
-  }, [isFocusActive, focusTimeLeft]);
+    tick();
+    const interval = window.setInterval(tick, 1000);
+    document.addEventListener('visibilitychange', tick);
+    return () => {
+      clearInterval(interval);
+      document.removeEventListener('visibilitychange', tick);
+    };
+  }, [isFocusActive, focusDeadline, focusKey]);
 
   useEffect(() => {
     let interval: ReturnType<typeof setInterval> | undefined;
@@ -95,12 +129,26 @@ export default function ScreentimePage() {
 
   function startFocus() {
     if (!focusTask.trim()) {
+      setFocusError('Descreva sua intenção para iniciar o foco.');
       return;
     }
 
-    const minutes = parseInt(focusTime, 10);
+    const minutes = Number(focusTime);
+    if (!Number.isInteger(minutes) || minutes < 5 || minutes > 180) {
+      setFocusError('Escolha entre 5 e 180 minutos.');
+      return;
+    }
 
     if (!Number.isNaN(minutes) && minutes > 0) {
+      const deadline = Date.now() + minutes * 60000;
+      try {
+        localStorage.setItem(focusKey, JSON.stringify({ deadline, task: focusTask.trim() }));
+      } catch {
+        setFocusError('Não foi possível salvar a sessão neste navegador.');
+        return;
+      }
+      setFocusError('');
+      setFocusDeadline(deadline);
       setFocusTimeLeft(minutes * 60);
       setIsTryingToExit(false);
       setExitTimer(5);
@@ -168,6 +216,8 @@ export default function ScreentimePage() {
                     setIsFocusActive(false);
                     setIsTryingToExit(false);
                     setFocusTimeLeft(0);
+                    setFocusDeadline(null);
+                    try { localStorage.removeItem(focusKey); } catch { /* Ended in memory. */ }
                   }}
                   className="flex-1 bg-transparent border border-white/20 text-white font-semibold py-3 rounded-xl disabled:opacity-30 transition-colors"
                 >
@@ -255,147 +305,123 @@ export default function ScreentimePage() {
             <ScreenLoader />
           ) : (
             <div className="flex-1 overflow-y-auto no-scrollbar pb-28 lg:pb-12">
-              <div className="w-full max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 pt-6 space-y-6">
+              <div className="w-full max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 pt-7 space-y-5">
                 <div>
-                  <h1 className="text-2xl font-bold tracking-tight text-white">
+                  <h1 className="text-2xl sm:text-3xl font-semibold tracking-tight text-white">
                     {t('title', 'Tempo de Tela')}
                   </h1>
 
-                  <p className="text-sm text-zinc-400 mt-0.5">
-                    Visão geral da sua navegação hoje
+                  <p className="text-sm text-zinc-400 mt-1">
+                    Seu tempo no Soul, dia após dia, neste navegador.
                   </p>
                 </div>
 
 
 
-                {/* Dashboard Grid */}
-                <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                  
-                  {/* Left Column: Stats */}
-                  <div className="space-y-6">
-                    {/* Today Usage */}
-                    <div className="bg-white/[0.02] border border-white/[0.05] rounded-2xl p-6 relative overflow-hidden group">
-                      <div className="absolute top-0 right-0 p-4 opacity-30 group-hover:opacity-100 transition-opacity">
-                        <Info className="w-4 h-4 text-white/40" />
+                <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+                  <div className="space-y-4">
+                    <section className="rounded-2xl border border-white/[0.09] bg-white/[0.04] p-5 sm:p-6" aria-label="Uso de hoje">
+                      <div className="flex items-center justify-between">
+                        <span className="text-xs font-semibold tracking-[0.16em] uppercase text-white/45">Hoje</span>
+                        <Clock className="w-4 h-4 text-white/35" aria-hidden="true" />
                       </div>
-                      
-                      <div className="flex items-center gap-8">
-                        <div className="relative w-32 h-32 flex items-center justify-center shrink-0">
-                          <svg viewBox="0 0 100 100" className="w-full h-full -rotate-90">
-                            <circle cx="50" cy="50" r={radius} fill="none" stroke="rgba(255, 255, 255, 0.03)" strokeWidth="6" />
-                            <circle
-                              cx="50"
-                              cy="50"
-                              r={radius}
-                              fill="none"
-                              stroke="url(#gradient)"
-                              strokeWidth="6"
-                              strokeLinecap="round"
-                              strokeDasharray={circumference}
-                              strokeDashoffset={strokeDashoffset}
-                              className="transition-all duration-1000 ease-out"
-                            />
-                            <defs>
-                              <linearGradient id="gradient" x1="0%" y1="0%" x2="100%" y2="100%">
-                                <stop offset="0%" stopColor="#fff" />
-                                <stop offset="100%" stopColor="#666" />
-                              </linearGradient>
-                            </defs>
+                      <div className="mt-5 flex flex-col sm:flex-row items-center gap-5 sm:gap-7">
+                        <div className="relative w-28 h-28 shrink-0">
+                          <svg viewBox="0 0 100 100" className="h-full w-full -rotate-90" role="img" aria-label={`${Math.round(pct * 100)}% da meta diária`}>
+                            <circle cx="50" cy="50" r={radius} fill="none" stroke="rgba(255,255,255,0.09)" strokeWidth="5" />
+                            <circle cx="50" cy="50" r={radius} fill="none" stroke="#f4f4f5" strokeWidth="5" strokeLinecap="round" strokeDasharray={circumference} strokeDashoffset={strokeDashoffset} className="transition-all duration-500" />
                           </svg>
-                          <div className="absolute inset-0 flex flex-col items-center justify-center">
-                            <Clock className="w-5 h-5 text-white/20 mb-1" />
-                          </div>
+                          <span className="absolute inset-0 flex items-center justify-center text-xl font-semibold tabular-nums text-white">{Math.round(pct * 100)}%</span>
                         </div>
-
-                        <div className="space-y-1">
-                          <p className="text-xs font-semibold tracking-widest text-white/40 uppercase">
-                            Uso de hoje
-                          </p>
-                          <p className="text-4xl font-extrabold text-white tracking-tight tabular-nums">
-                            {timeStr}
-                          </p>
-                          <div className="inline-flex items-center gap-1.5 px-2 py-1 mt-2 rounded-md bg-white/5 border border-white/10">
-                            <span className="text-[10px] text-white/50 uppercase font-bold tracking-wider">Meta</span>
-                            <span className="text-[11px] text-white/90 font-medium">{goalStr}</span>
-                          </div>
+                        <div className="min-w-0 text-center sm:text-left">
+                          <p className="text-sm text-white/50">Tempo no Soul</p>
+                          <p className="mt-1 text-4xl font-semibold tracking-tight tabular-nums text-white">{timeStr}</p>
+                          <p className="mt-3 text-sm text-white/45">Meta diária <span className="font-semibold text-white/75">{goalStr}</span></p>
                         </div>
                       </div>
-                    </div>
+                    </section>
 
-                    {/* Weekly Chart */}
-                    <div className="bg-white/[0.02] border border-white/[0.05] rounded-2xl p-6 transition-all duration-500">
-                      <div className="flex items-center justify-between mb-8">
+                    <section className="rounded-2xl border border-white/[0.09] bg-white/[0.04] p-5 sm:p-6" aria-label="Média diária">
+                      <div className="flex items-center justify-between">
+                        <span className="text-xs font-semibold tracking-[0.16em] uppercase text-white/45">Média diária</span>
+                        <TrendingUp className="w-4 h-4 text-white/35" aria-hidden="true" />
+                      </div>
+                      <p className="mt-3 text-3xl font-semibold tracking-tight tabular-nums text-white">{averageMinutes === null ? '—' : formatMinutes(averageMinutes)}</p>
+                      <p className="mt-2 text-sm leading-relaxed text-white/45">
+                        {completedDays.length
+                          ? `Baseada em ${completedDays.length} ${completedDays.length === 1 ? 'dia completo registrado' : 'dias completos registrados'} nos últimos ${rangeDays} dias.`
+                          : 'Ainda não há dias completos registrados neste período.'}
+                      </p>
+                    </section>
+
+                    <section className="rounded-2xl border border-white/[0.09] bg-white/[0.04] p-5 sm:p-6" aria-label="Histórico de uso">
+                      <div className="flex flex-wrap items-start justify-between gap-4">
                         <div>
-                          <h3 className="text-sm font-semibold text-white/80">
-                            Esta semana
-                          </h3>
-                          <p className="text-xs text-white/40 mt-1">
-                            Seu ritmo nos últimos dias
-                          </p>
+                          <h2 className="text-lg font-semibold tracking-tight text-white">Histórico</h2>
+                          <p className="mt-1 text-xs text-white/40">{recordedDays} {recordedDays === 1 ? 'dia registrado' : 'dias registrados'} neste período</p>
                         </div>
-                        <button
-                          onClick={() => setShowMoreWeekly(!showMoreWeekly)}
-                          className="flex items-center gap-1.5 text-xs font-medium text-white/40 hover:text-white bg-white/5 hover:bg-white/10 px-3 py-1.5 rounded-lg border border-white/[0.05] transition-all"
-                        >
-                          <span>{showMoreWeekly ? 'Ocultar' : 'Detalhes'}</span>
-                          {showMoreWeekly ? <ChevronUp className="w-3.5 h-3.5" /> : <ChevronDown className="w-3.5 h-3.5" />}
-                        </button>
+                        <div className="inline-flex rounded-xl border border-white/[0.08] bg-black/25 p-1" role="group" aria-label="Período do histórico">
+                          {([7, 30] as const).map(days => (
+                            <button key={days} type="button" aria-pressed={rangeDays === days} onClick={() => { setRangeDays(days); setHoveredBarIndex(null); }} className={`rounded-lg px-3 py-1.5 text-xs font-semibold transition-colors ${rangeDays === days ? 'bg-white text-black' : 'text-white/50 hover:text-white'}`}>
+                              {days} dias
+                            </button>
+                          ))}
+                        </div>
                       </div>
 
-                      <div className="flex items-end justify-between gap-2 h-40 px-1">
-                        {WEEK_LABELS.map((label, index) => (
-                          <div
-                            key={index}
-                            className="flex-1 flex flex-col items-center gap-3 h-full justify-end relative group"
+                      <div className="mt-6 flex items-end justify-between gap-3 text-xs">
+                        <span className="truncate capitalize text-white/50">{dateLabel((history[hoveredBarIndex ?? history.length - 1] ?? history[history.length - 1]).date)}</span>
+                        <span className="font-semibold tabular-nums text-white">{(() => {
+                          const day = history[hoveredBarIndex ?? history.length - 1] ?? history[history.length - 1];
+                          return day.ms === undefined ? 'Sem registro' : formatMinutes(day.minutes);
+                        })()}</span>
+                      </div>
+                      <div className="mt-4 flex h-28 items-end gap-1.5 border-b border-white/[0.08] pb-1">
+                        {history.map((day, index) => (
+                          <button
+                            key={day.key}
+                            type="button"
+                            aria-label={`${dateLabel(day.date)}: ${day.ms === undefined ? 'sem registro' : formatMinutes(day.minutes)}`}
                             onMouseEnter={() => setHoveredBarIndex(index)}
                             onMouseLeave={() => setHoveredBarIndex(null)}
+                            onFocus={() => setHoveredBarIndex(index)}
+                            onBlur={() => setHoveredBarIndex(null)}
+                            className="group flex h-full min-w-0 flex-1 items-end rounded-t-md focus-visible:outline focus-visible:outline-1 focus-visible:outline-white/60"
                           >
-                            {hoveredBarIndex === index && (
-                              <div className="absolute -top-10 bg-white text-black text-[11px] font-bold px-2.5 py-1.5 rounded-lg shadow-2xl whitespace-nowrap z-20 animate-fade-in">
-                                Sem dados
-                                <div className="absolute -bottom-1 left-1/2 -translate-x-1/2 border-4 border-transparent border-t-white" />
-                              </div>
-                            )}
-
-                            <div className="w-full max-w-[28px] bg-white/[0.03] rounded-t-md h-full flex items-end overflow-hidden group-hover:bg-white/[0.06] transition-colors relative">
-                              <div
-                                className="w-full rounded-t-md bg-gradient-to-t from-white/10 to-white/30 transition-all duration-500"
-                                style={{ height: '5%' }}
-                              />
-                            </div>
-                            <span className="text-[10px] font-bold text-white/30 group-hover:text-white/80 transition-colors">
-                              {label}
-                            </span>
-                          </div>
+                            <span className={`block w-full rounded-t-md transition-colors ${day.key === today ? 'bg-white' : day.ms === undefined ? 'bg-white/[0.06]' : 'bg-white/35 group-hover:bg-white/60'}`} style={{ height: day.ms === undefined ? '3px' : `${Math.max(3, (day.ms / maxHistoryMs) * 100)}%` }} />
+                          </button>
                         ))}
                       </div>
+                      <div className="mt-2 flex justify-between text-[10px] font-medium text-white/35">
+                        <span className="capitalize">{rangeDays === 7 ? new Intl.DateTimeFormat('pt-BR', { weekday: 'short' }).format(history[0].date) : `${history[0].date.getDate()}/${history[0].date.getMonth() + 1}`}</span>
+                        <span>Hoje</span>
+                      </div>
 
-                      {showMoreWeekly && (
-                        <div className="mt-8 pt-6 border-t border-white/[0.05] space-y-3 animate-fade-in">
-                          <h4 className="text-[10px] font-bold uppercase tracking-widest text-white/30 mb-4">
-                            Média diária
-                          </h4>
-                          <div className="grid grid-cols-2 gap-3">
-                            {WEEK_FULL_NAMES.slice(0, 4).map((day) => (
-                              <div key={day} className="bg-white/[0.02] border border-white/[0.03] p-3 rounded-xl flex justify-between items-center">
-                                <span className="text-xs text-white/60 font-medium">{day}</span>
-                                <span className="text-xs text-white/20">—</span>
-                              </div>
-                            ))}
-                          </div>
-                        </div>
-                      )}
-                    </div>
+                      <button type="button" onClick={() => setShowHistory(value => !value)} aria-expanded={showHistory} className="mt-5 flex w-full items-center justify-between border-t border-white/[0.08] pt-4 text-sm font-medium text-white/65 hover:text-white transition-colors">
+                        Ver dias registrados
+                        {showHistory ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
+                      </button>
+                      {showHistory && <div className="mt-3 max-h-40 overflow-y-auto divide-y divide-white/[0.06]">
+                        {history.filter(day => day.ms !== undefined).reverse().length === 0
+                          ? <p className="py-3 text-sm text-white/40">Nenhum dia registrado ainda.</p>
+                          : history.filter(day => day.ms !== undefined).reverse().map(day => (
+                            <div key={day.key} className="flex items-center justify-between gap-3 py-3 text-sm">
+                              <span className="capitalize text-white/55">{dateLabel(day.date)}</span>
+                              <span className="font-semibold tabular-nums text-white">{formatMinutes(day.minutes)}</span>
+                            </div>
+                          ))}
+                      </div>}
+                    </section>
                   </div>
 
                   {/* Right Column: Focus Mode */}
-                  <div className="bg-white/[0.02] border border-white/[0.05] rounded-2xl p-8 flex flex-col justify-between h-full relative overflow-hidden group">
+                  <div className="bg-white/[0.04] border border-white/[0.09] rounded-2xl p-5 sm:p-6 flex flex-col justify-between lg:self-start relative overflow-hidden">
                     <div className="relative z-10">
                       <div className="flex items-center gap-3 text-white/80 mb-8">
-                        <div className="p-2.5 bg-white/10 rounded-xl backdrop-blur-md">
+                        <div className="p-2.5 bg-white/[0.07] border border-white/[0.08] rounded-2xl">
                           <Moon className="w-5 h-5 text-white" />
                         </div>
-                        <span className="text-sm font-bold tracking-widest uppercase">
+                        <span className="text-sm font-semibold tracking-[0.16em] uppercase">
                           Modo Foco
                         </span>
                       </div>
@@ -458,7 +484,7 @@ export default function ScreentimePage() {
                     <div className="relative z-10 mt-8 pt-8 border-t border-white/[0.05]">
                       <button
                         onClick={startFocus}
-                        className="w-full bg-white text-black font-bold rounded-xl py-4 text-sm flex items-center justify-center gap-2 hover:bg-zinc-200 active:scale-[0.98] transition-all shadow-[0_0_40px_rgba(255,255,255,0.1)] hover:shadow-[0_0_60px_rgba(255,255,255,0.15)]"
+                        className="w-full bg-white text-black font-semibold rounded-xl py-4 text-sm flex items-center justify-center gap-2 hover:bg-zinc-200 active:scale-[0.98] transition-all"
                       >
                         <Play className="w-4 h-4 fill-black" />
                         <span>Iniciar foco</span>

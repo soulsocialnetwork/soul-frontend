@@ -70,6 +70,9 @@ export const authService = {
   async updateScreentime(dailyTimeLimit: number | null) {
     await api.put('/user/me/screentime', { dailyTimeLimit });
   },
+  async updatePrivacy(privateProfile: boolean) {
+    await api.put('/user/me/privacy', { privateProfile });
+  },
   async register(data: RegisterRequestDTO) {
     const response = await api.post(endpoints.user.create, data);
     return response.data;

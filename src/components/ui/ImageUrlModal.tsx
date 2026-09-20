@@ -61,7 +61,7 @@ export function ImageUrlModal({
           {hasValidUrl && (
             <div
               className={`overflow-hidden bg-black/30 border border-white/10 ${
-                circular ? 'rounded-full w-24 h-24 mx-auto' : 'rounded-2xl w-full'
+                circular ? 'soul-squircle w-24 h-24 mx-auto' : 'rounded-2xl w-full'
               }`}
             >
               {imgError ? (

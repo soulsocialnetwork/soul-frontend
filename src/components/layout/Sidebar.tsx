@@ -1,5 +1,5 @@
 import { SecureImage, SecureVideo } from '../ui/SecureMedia';
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { 
   Home, Ghost, Plus, MessageSquare, Clock,
@@ -10,7 +10,7 @@ import { cn } from '../../utils/cn';
 import { useTranslation } from '../../i18n';
 import { NotificationsPanel } from './NotificationsPanel';
 import { useAuth } from '../../context/AuthContext';
-import { userService } from '../../services/userService';
+import { useNotificationCount } from '../../hooks/useNotificationCount';
 
 export function Sidebar() {
   const navigate = useNavigate();
@@ -19,33 +19,7 @@ export function Sidebar() {
   const { user, logout } = useAuth();
 
   const [isNotifOpen, setIsNotifOpen] = useState(false);
-  const [unreadCount, setUnreadCount] = useState(0);
-
-  // Busca contagem de solicitações pendentes
-  useEffect(() => {
-    let cancelled = false;
-
-    const fetchPending = async () => {
-      try {
-        const data = await userService.getFollowRequests(0, 50);
-        if (!cancelled) setUnreadCount(data.content.length);
-      } catch {
-        // silencia
-      }
-    };
-
-    fetchPending();
-    const id = setInterval(fetchPending, 10_000);
-    return () => { cancelled = true; clearInterval(id); };
-  }, []);
-
-  const handleCloseNotif = async () => {
-    setIsNotifOpen(false);
-    try {
-      const data = await userService.getFollowRequests(0, 50);
-      setUnreadCount(data.content.length);
-    } catch { /* silencia */ }
-  };
+  const unreadCount = useNotificationCount();
 
   const mainNavItems = [
     { icon: Home,          label: t('nav.feed'),       path: '/feed' },
@@ -141,7 +115,7 @@ export function Sidebar() {
         <button
           onClick={() => navigate('/profile')}
           title={user?.username ?? 'Perfil'}
-          className="w-12 h-12 rounded-2xl overflow-hidden transition-all hover:scale-105 active:scale-95 border border-white/10 bg-white/5 flex items-center justify-center"
+          className="soul-squircle w-12 h-12 overflow-hidden transition-all hover:scale-105 active:scale-95 border border-white/10 bg-white/5 flex items-center justify-center"
         >
           {avatarUrl ? (
             <SecureImage src={avatarUrl} alt={user?.name} className="w-full h-full object-cover" />
@@ -172,7 +146,7 @@ export function Sidebar() {
         </button>
       </div>
 
-      <NotificationsPanel isOpen={isNotifOpen} onClose={handleCloseNotif} />
+      <NotificationsPanel isOpen={isNotifOpen} onClose={() => setIsNotifOpen(false)} />
     </aside>
   );
 }

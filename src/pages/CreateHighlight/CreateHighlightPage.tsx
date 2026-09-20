@@ -1,5 +1,5 @@
 import { SecureImage, SecureVideo } from '../../components/ui/SecureMedia';
-import { useState, useRef } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Sidebar } from '../../components/layout/Sidebar';
 import { Header } from '../../components/layout/Header';
@@ -7,10 +7,12 @@ import { BottomNav } from '../../components/layout/BottomNav';
 import { Button } from '../../components/ui/Button';
 import { Image, Video, X, ArrowLeft } from 'lucide-react';
 import { cn } from '../../utils/cn';
-import { useAuth } from '../../context/AuthContext';
+import { postService } from '../../services/postService';
+import { api, getHttpErrorMessage } from '../../services/api';
 
 export default function CreateHighlightPage() {
-  const { user } = useAuth();
+  const [file, setFile] = useState<File | null>(null);
+  const [saving, setSaving] = useState(false);
   const navigate = useNavigate();
   const [mediaType, setMediaType] = useState<'image' | 'video'>('image');
   const [highlightTitle, setHighlightTitle] = useState('');
@@ -18,59 +20,37 @@ export default function CreateHighlightPage() {
   const [saveError, setSaveError] = useState('');
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  function compressImage(dataUrl: string, maxDim = 320, quality = 0.6): Promise<string> {
-    return new Promise((resolve) => {
-      const img = new window.Image();
-      img.onload = () => {
-        const scale = Math.min(maxDim / img.width, maxDim / img.height, 1);
-        const canvas = document.createElement('canvas');
-        canvas.width = Math.round(img.width * scale);
-        canvas.height = Math.round(img.height * scale);
-        const ctx = canvas.getContext('2d')!;
-        ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
-        resolve(canvas.toDataURL('image/jpeg', quality));
-      };
-      img.src = dataUrl;
-    });
-  }
+  useEffect(() => {
+    if (!file) { setSelectedMedia(null); return; }
+    const url = URL.createObjectURL(file);
+    setSelectedMedia(url);
+    return () => URL.revokeObjectURL(url);
+  }, [file]);
 
-  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (file) {
-      const reader = new FileReader();
-      reader.onload = async (ev) => {
-        const raw = ev.target?.result as string;
-        if (mediaType === 'image') {
-          const compressed = await compressImage(raw);
-          setSelectedMedia(compressed);
-        } else {
-          setSelectedMedia(raw);
-        }
-      };
-      reader.readAsDataURL(file);
+  const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const next = event.target.files?.[0];
+    event.target.value = '';
+    if (!next) return;
+    if (!next.type.startsWith(mediaType + '/') || next.size > 20 * 1024 * 1024) {
+      setSaveError('Selecione uma mídia do tipo escolhido com até 20 MB.');
+      return;
     }
+    setSaveError('');
+    setFile(next);
   };
 
-  const handleSaveHighlight = () => {
-    if (!highlightTitle.trim() || !selectedMedia) return;
+  const handleSaveHighlight = async () => {
+    if (!highlightTitle.trim() || !file || saving) return;
     setSaveError('');
-
-    const newHighlight = {
-      id: `hl-${Date.now()}`,
-      name: highlightTitle.trim(),
-      cover: selectedMedia,
-      image: selectedMedia,
-      type: mediaType,
-    };
-
-    const key = `@app:highlights_${user?.username || 'guest'}`;
+    setSaving(true);
     try {
-      const existing = JSON.parse(localStorage.getItem(key) || '[]');
-      const updated = [newHighlight, ...existing];
-      localStorage.setItem(key, JSON.stringify(updated));
+      const coverUrl = await postService.uploadMedia(file);
+      await api.post('/highlights', { title: highlightTitle.trim(), coverUrl });
       navigate('/profile');
-    } catch {
-      setSaveError('Espaço insuficiente. Remova destaques antigos e tente novamente.');
+    } catch (error) {
+      setSaveError(getHttpErrorMessage(error));
+    } finally {
+      setSaving(false);
     }
   };
 
@@ -101,7 +81,9 @@ export default function CreateHighlightPage() {
           <div className="flex p-1 bg-white/5 rounded-xl mb-8 w-full max-w-xs">
             <button
               type="button"
-              onClick={() => { setMediaType('image'); setSelectedMedia(null); }}
+              disabled={saving}
+              aria-pressed={mediaType === 'image'}
+              onClick={() => { setMediaType('image'); setFile(null); }}
               className={cn(
                 'flex-1 py-2.5 text-sm font-semibold rounded-lg transition-all duration-200 flex items-center justify-center gap-2',
                 mediaType === 'image' ? 'bg-white/10 text-white' : 'text-textSecondary hover:text-white'
@@ -111,7 +93,9 @@ export default function CreateHighlightPage() {
             </button>
             <button
               type="button"
-              onClick={() => { setMediaType('video'); setSelectedMedia(null); }}
+              disabled={saving}
+              aria-pressed={mediaType === 'video'}
+              onClick={() => { setMediaType('video'); setFile(null); }}
               className={cn(
                 'flex-1 py-2.5 text-sm font-semibold rounded-lg transition-all duration-200 flex items-center justify-center gap-2',
                 mediaType === 'video' ? 'bg-white/10 text-white' : 'text-textSecondary hover:text-white'
@@ -124,6 +108,9 @@ export default function CreateHighlightPage() {
           {/* Nome do destaque */}
           <input
             type="text"
+            aria-label="Nome do destaque"
+            maxLength={30}
+            disabled={saving}
             placeholder="Dê um nome ao seu destaque..."
             value={highlightTitle}
             onChange={(e) => setHighlightTitle(e.target.value)}
@@ -133,7 +120,7 @@ export default function CreateHighlightPage() {
 
           {/* Preview ou zona de upload */}
           {selectedMedia ? (
-            <div className="relative rounded-2xl overflow-hidden bg-black/40 border border-white/10 group">
+            <div className="soul-squircle-card relative overflow-hidden bg-black/40 border border-white/10 group">
               {mediaType === 'image' ? (
                 <SecureImage src={selectedMedia} alt="Preview" className="w-full max-h-[400px] object-cover" />
               ) : (
@@ -141,16 +128,19 @@ export default function CreateHighlightPage() {
               )}
               <button
                 type="button"
-                onClick={() => setSelectedMedia(null)}
+                onClick={() => setFile(null)}
+                aria-label="Remover mídia selecionada"
+                disabled={saving}
                 className="absolute top-3 right-3 p-1.5 bg-black/50 backdrop-blur-md rounded-full text-white opacity-0 group-hover:opacity-100 transition-opacity hover:bg-black/70"
               >
                 <X className="w-5 h-5" />
               </button>
             </div>
           ) : (
-            <div
+            <button type="button"
+              disabled={saving}
               onClick={() => fileInputRef.current?.click()}
-              className="rounded-2xl p-16 flex flex-col items-center justify-center gap-4 cursor-pointer bg-white/[0.02] hover:bg-white/[0.04] transition-all group min-h-[280px]"
+              className="w-full rounded-2xl p-16 flex flex-col items-center justify-center gap-4 cursor-pointer bg-white/[0.02] hover:bg-white/[0.04] transition-all group min-h-[280px]"
             >
               {mediaType === 'image' ? (
                 <Image className="w-8 h-8 text-textSecondary group-hover:text-white transition-colors" />
@@ -160,11 +150,12 @@ export default function CreateHighlightPage() {
               <span className="text-sm font-medium text-textSecondary group-hover:text-white transition-colors">
                 Toque para selecionar {mediaType === 'image' ? 'uma foto' : 'um vídeo'}
               </span>
-            </div>
+            </button>
           )}
 
           <input
             type="file"
+            disabled={saving}
             ref={fileInputRef}
             className="hidden"
             accept={mediaType === 'image' ? 'image/*' : 'video/*'}
@@ -194,12 +185,12 @@ export default function CreateHighlightPage() {
                 variant="primary"
                 className="px-8 py-3.5 rounded-xl font-bold shadow-lg"
                 onClick={handleSaveHighlight}
-                disabled={!highlightTitle.trim() || !selectedMedia}
+                disabled={saving || !highlightTitle.trim() || !file}
               >
-                Salvar
+                {saving ? 'Salvando...' : 'Salvar'}
               </Button>
               {saveError && (
-                <p className="text-red-400/80 text-xs text-center mt-1">{saveError}</p>
+                <p role="alert" className="text-red-400/80 text-xs text-center mt-1">{saveError}</p>
               )}
             </div>
           </div>

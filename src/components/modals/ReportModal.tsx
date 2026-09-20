@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { cn } from '../../utils/cn';
 import { AlertTriangle, Loader2, X } from 'lucide-react';
 import { getHttpErrorMessage } from '../../services/api';
@@ -25,25 +25,41 @@ export function ReportModal({ isOpen, onClose, targetId, targetType }: ReportMod
   const [loading, setLoading] = useState(false);
   const [success, setSuccess] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const generation = useRef(0);
+  const closeTimer = useRef<ReturnType<typeof setTimeout>>();
+
+  useEffect(() => {
+    generation.current++;
+    setSelectedReason('');
+    setLoading(false);
+    setSuccess(false);
+    setError(null);
+    return () => {
+      generation.current++;
+      clearTimeout(closeTimer.current);
+    };
+  }, [isOpen, targetId, targetType]);
 
   if (!isOpen) return null;
 
   const handleSubmit = async () => {
-    if (!selectedReason) return;
+    if (!selectedReason || loading) return;
+    const request = generation.current;
     setLoading(true);
     setError(null);
     try {
       await moderationService.reportItem(targetId, targetType, selectedReason);
+      if (request !== generation.current) return;
       setSuccess(true);
-      setTimeout(() => {
+      closeTimer.current = setTimeout(() => {
         onClose();
         setSuccess(false);
         setSelectedReason('');
       }, 2000);
     } catch (err: unknown) {
-      setError(getHttpErrorMessage(err));
+      if (request === generation.current) setError(getHttpErrorMessage(err));
     } finally {
-      setLoading(false);
+      if (request === generation.current) setLoading(false);
     }
   };
 

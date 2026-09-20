@@ -81,7 +81,7 @@ export function PostList({ posts, loading = false }: PostListProps) {
                 <SecureImage
                   src={post.author.avatarUrl}
                   alt=""
-                  className="w-6 h-6 rounded-full border border-white/20"
+                  className="soul-squircle w-6 h-6 border border-white/20"
                 />
                 <span className="text-xs font-medium truncate drop-shadow-md">
                   {post.author.username}
@@ -161,4 +161,3 @@ export function PostList({ posts, loading = false }: PostListProps) {
     </div>
   );
 }
-
