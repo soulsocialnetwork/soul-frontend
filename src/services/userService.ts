@@ -181,14 +181,6 @@ return response.data;
 
 },
 
-async validateFriendQr(
-qrToken: string
-): Promise<{ success: boolean; friendName?: string }> {
-throw new Error(
-`Validação de QR ainda não possui endpoint no backend: ${qrToken}`
-);
-},
-
 async getFollowRequests(
   page: number = 0,
   size: number = 20

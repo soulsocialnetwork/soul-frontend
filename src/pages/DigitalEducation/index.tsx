@@ -21,7 +21,7 @@ export default function DigitalEducationPage() {
       <main className="max-w-lg mx-auto p-5 pb-20 space-y-8 animate-fade-up">
         
         <div className="space-y-4">
-          <div className="w-12 h-12 rounded-2xl bg-white/5 border border-white/10 flex items-center justify-center mb-6">
+          <div className="w-12 h-12 rounded-2xl soul-glass flex items-center justify-center mb-6">
             <BookOpen className="w-6 h-6 text-white" />
           </div>
           <h2 className="text-3xl font-extrabold leading-tight">O que você consome,<br/>molda quem você é.</h2>
@@ -33,7 +33,7 @@ export default function DigitalEducationPage() {
 
         <div className="space-y-6 mt-10">
           
-          <div className="bg-white/[0.03] border border-white/5 rounded-2xl p-6 space-y-4 relative overflow-hidden">
+          <div className="soul-glass rounded-2xl p-6 space-y-4 relative overflow-hidden">
             <div className="absolute top-0 right-0 p-6 opacity-10">
               <ShieldAlert className="w-24 h-24" />
             </div>
@@ -46,7 +46,7 @@ export default function DigitalEducationPage() {
             </p>
           </div>
 
-          <div className="bg-white/[0.03] border border-white/5 rounded-2xl p-6 space-y-4 relative overflow-hidden">
+          <div className="soul-glass rounded-2xl p-6 space-y-4 relative overflow-hidden">
             <div className="absolute top-0 right-0 p-6 opacity-10">
               <Brain className="w-24 h-24" />
             </div>
@@ -59,7 +59,7 @@ export default function DigitalEducationPage() {
             </p>
           </div>
 
-          <div className="bg-white/[0.03] border border-white/5 rounded-2xl p-6 space-y-4 relative overflow-hidden">
+          <div className="soul-glass rounded-2xl p-6 space-y-4 relative overflow-hidden">
             <div className="absolute top-0 right-0 p-6 opacity-10">
               <Target className="w-24 h-24" />
             </div>

@@ -115,7 +115,7 @@ export function Sidebar() {
         <button
           onClick={() => navigate('/profile')}
           title={user?.username ?? 'Perfil'}
-          className="soul-squircle w-12 h-12 overflow-hidden transition-all hover:scale-105 active:scale-95 border border-white/10 bg-white/5 flex items-center justify-center"
+          className="rounded-lg w-12 h-12 overflow-hidden transition-all hover:scale-105 active:scale-95 bg-neutral-800 flex items-center justify-center"
         >
           {avatarUrl ? (
             <SecureImage src={avatarUrl} alt={user?.name} className="w-full h-full object-cover" />

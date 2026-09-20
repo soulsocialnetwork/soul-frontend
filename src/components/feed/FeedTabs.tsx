@@ -130,7 +130,7 @@ export default function FeedTabs({
             aria-selected={active === tab}
             onClick={() => onChange(tab)}
             className={cn(
-              'flex items-center gap-1.5 px-4 py-2 rounded-full text-sm font-medium whitespace-nowrap border shrink-0 transition-all duration-300 cursor-pointer',
+              'home-filter-pill flex items-center gap-1.5 px-4 py-2 text-sm font-medium whitespace-nowrap border shrink-0 transition-all duration-300 cursor-pointer',
               active === tab
                 ? 'bg-white/[0.08] border-white/20 text-white shadow-sm'
                 : 'bg-transparent border-white/5 text-textSecondary hover:bg-white/[0.04] hover:text-textPrimary'
@@ -164,7 +164,7 @@ export default function FeedTabs({
           type="button"
           onClick={() => setIsCategoryOpen(!isCategoryOpen)}
           className={cn(
-            'flex items-center gap-1.5 px-4 py-2 rounded-full text-sm font-medium whitespace-nowrap border shrink-0 transition-all duration-300 cursor-pointer',
+            'home-filter-pill flex items-center gap-1.5 px-4 py-2 text-sm font-medium whitespace-nowrap border shrink-0 transition-all duration-300 cursor-pointer',
             hasActiveCategories
               ? 'bg-white/[0.08] border-white/20 text-white shadow-sm'
               : 'bg-transparent border-white/5 text-textSecondary hover:bg-white/[0.04] hover:text-textPrimary'
@@ -190,7 +190,7 @@ export default function FeedTabs({
           <button
             type="button"
             onClick={onClearCategories}
-            className="px-3.5 py-2 rounded-full text-sm font-medium border border-white/5 text-textSecondary/60 hover:text-textSecondary hover:bg-white/[0.04] whitespace-nowrap shrink-0 transition-all cursor-pointer"
+            className="home-filter-pill px-3.5 py-2 text-sm font-medium border border-white/5 text-textSecondary/60 hover:text-textSecondary hover:bg-white/[0.04] whitespace-nowrap shrink-0 transition-all cursor-pointer"
           >
             {isBR ? 'Limpar' : 'Clear'}
           </button>

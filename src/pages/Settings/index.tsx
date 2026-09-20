@@ -494,8 +494,12 @@ return ( <div className="min-h-[100dvh] bg-background flex flex-col lg:flex-row 
           </p>
 
           <div
-            className="flex items-center justify-between p-4 rounded-xl bg-white/[0.02] border border-white/5 cursor-pointer hover:bg-white/[0.04] transition-colors"
+            className="flex items-center justify-between p-4 rounded-xl soul-glass cursor-pointer transition-colors"
+            role="switch"
+            tabIndex={0}
+            aria-checked={notifQuietMode}
             onClick={() => setNotifQuietMode(!notifQuietMode)}
+            onKeyDown={(event) => { if (event.key === 'Enter' || event.key === ' ') { event.preventDefault(); setNotifQuietMode(value => !value); } }}
           >
             <div>
               <p className="text-sm font-semibold text-textPrimary">
@@ -557,8 +561,12 @@ return ( <div className="min-h-[100dvh] bg-background flex flex-col lg:flex-row 
           </h4>
 
           <div
-            className="flex items-center justify-between p-4 rounded-xl bg-white/[0.02] border border-white/5 cursor-pointer hover:bg-white/[0.04] transition-colors"
+            className="flex items-center justify-between p-4 rounded-xl soul-glass cursor-pointer transition-colors"
+            role="switch"
+            tabIndex={0}
+            aria-checked={notifPush}
             onClick={() => setNotifPush(!notifPush)}
+            onKeyDown={(event) => { if (event.key === 'Enter' || event.key === ' ') { event.preventDefault(); setNotifPush(value => !value); } }}
           >
             <div>
               <p className="text-sm font-semibold text-textPrimary">
@@ -588,8 +596,12 @@ return ( <div className="min-h-[100dvh] bg-background flex flex-col lg:flex-row 
           </div>
 
           <div
-            className="flex items-center justify-between p-4 rounded-xl bg-white/[0.02] border border-white/5 cursor-pointer hover:bg-white/[0.04] transition-colors"
+            className="flex items-center justify-between p-4 rounded-xl soul-glass cursor-pointer transition-colors"
+            role="switch"
+            tabIndex={0}
+            aria-checked={notifEmail}
             onClick={() => setNotifEmail(!notifEmail)}
+            onKeyDown={(event) => { if (event.key === 'Enter' || event.key === ' ') { event.preventDefault(); setNotifEmail(value => !value); } }}
           >
             <div>
               <p className="text-sm font-semibold text-textPrimary">
@@ -637,7 +649,7 @@ return ( <div className="min-h-[100dvh] bg-background flex flex-col lg:flex-row 
       onClose={() => setActiveModal(null)}
     >
       <div className="space-y-3">
-        <div className="p-5 rounded-xl bg-white/[0.02] border border-white/5 space-y-2">
+        <div className="p-5 rounded-xl soul-glass space-y-2">
           <p className="text-sm font-bold text-textPrimary">
             O que é a plataforma Soul?
           </p>
@@ -648,7 +660,7 @@ return ( <div className="min-h-[100dvh] bg-background flex flex-col lg:flex-row 
           </p>
         </div>
 
-        <div className="p-5 rounded-xl bg-white/[0.02] border border-white/5 space-y-2">
+        <div className="p-5 rounded-xl soul-glass space-y-2">
           <p className="text-sm font-bold text-textPrimary">
             Como reportar um problema?
           </p>
@@ -684,7 +696,7 @@ return ( <div className="min-h-[100dvh] bg-background flex flex-col lg:flex-row 
       <div className="grid grid-cols-2 gap-3">
         <button
           onClick={() => setActiveModal(null)}
-          className="py-3.5 bg-white/5 border border-white/10 text-textPrimary font-bold rounded-xl hover:bg-white/10 active:scale-[0.98] transition-all text-sm"
+          className="py-3.5 soul-glass text-textPrimary font-bold rounded-xl active:scale-[0.98] transition-all text-sm"
         >
           Cancelar
         </button>
@@ -740,7 +752,7 @@ return ( <div className="min-h-[100dvh] bg-background flex flex-col lg:flex-row 
         </button>
         <p className="text-xs leading-relaxed text-textSecondary">As solicitações pendentes aparecem na aba Solicitações das notificações.</p>
         <div className="flex flex-col items-center gap-3 py-4">
-          <div className="w-16 h-16 rounded-full bg-white/5 border border-white/10 flex items-center justify-center">
+          <div className="w-16 h-16 rounded-full soul-glass flex items-center justify-center">
             <ShieldCheck className="w-8 h-8 text-white" />
           </div>
 
@@ -760,7 +772,7 @@ return ( <div className="min-h-[100dvh] bg-background flex flex-col lg:flex-row 
           ].map((item) => (
             <div
               key={item}
-              className="flex items-start gap-3 p-4 rounded-xl bg-white/[0.02] border border-white/5"
+              className="flex items-start gap-3 p-4 rounded-xl soul-glass"
             >
               <Check className="w-4 h-4 text-white shrink-0 mt-0.5" />
 
@@ -795,7 +807,7 @@ return ( <div className="min-h-[100dvh] bg-background flex flex-col lg:flex-row 
     >
       <div className="space-y-5">
         {saveError && <p role="alert" className="text-red-400 text-sm">{saveError}</p>}
-        <div className="p-4 rounded-xl bg-white/[0.02] border border-white/5 space-y-2">
+        <div className="p-4 rounded-xl soul-glass space-y-2">
           <p className="text-[13px] text-textSecondary leading-relaxed">
             Seus dados serão permanentemente removidos dos nossos
             servidores. Esta ação{' '}

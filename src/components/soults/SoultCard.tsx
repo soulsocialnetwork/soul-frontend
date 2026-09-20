@@ -241,7 +241,7 @@ export function SoultCard({ soult, isActive = true }: SoultCardProps) {
     <article className="relative w-full h-full bg-black lg:bg-transparent select-none overflow-hidden flex lg:gap-4">
 
       <div
-        className="soul-squircle-video relative flex-1 min-w-0 h-full cursor-pointer overflow-hidden bg-black lg:border lg:border-white/10"
+        className="lg:rounded-lg relative flex-1 min-w-0 h-full cursor-pointer overflow-hidden bg-black lg:border lg:border-white/10"
         onClick={handleVideoClick}
       >
         <div className="absolute inset-0 bg-neutral-950 -z-10" />
@@ -275,14 +275,6 @@ export function SoultCard({ soult, isActive = true }: SoultCardProps) {
           </div>
         )}
 
-        <div className="absolute top-4 right-4 z-20 pointer-events-none">
-          <div className="bg-black/60 backdrop-blur-md px-2.5 py-1 rounded-lg border border-white/10">
-            <span className="text-white/90 text-[11px] font-semibold tabular-nums">
-              {formatTime(currentTime)} / {formatTime(duration || soult.duration || 0)}
-            </span>
-          </div>
-        </div>
-
         <div
           className={cn(
             'absolute inset-0 flex items-center justify-center transition-opacity duration-300 z-20',
@@ -312,7 +304,7 @@ export function SoultCard({ soult, isActive = true }: SoultCardProps) {
             className="flex items-center gap-2.5 pointer-events-auto cursor-pointer"
             onClick={(e) => { e.stopPropagation(); navigate(`/profile/${soult.username || soult.author.id}`); }}
           >
-            <div className="soul-squircle w-8 h-8 overflow-hidden border border-white/20 shrink-0">
+            <div className="rounded-lg w-8 h-8 overflow-hidden bg-neutral-800 shrink-0">
               {soult.author.avatarUrl ? (
                 <SecureImage src={soult.author.avatarUrl} alt={soult.author.name} className="w-full h-full object-cover object-top" />
               ) : (
@@ -375,7 +367,12 @@ export function SoultCard({ soult, isActive = true }: SoultCardProps) {
             </button>
           )}
 
-          <span className="text-white/30 text-[10px]">{timeAgo(soult.createdAt)}</span>
+          <div className="flex items-end justify-between gap-3">
+            <span className="text-white/30 text-[10px]">{timeAgo(soult.createdAt)}</span>
+            <span className="shrink-0 rounded-lg border border-white/10 bg-black/60 px-2.5 py-1 text-[11px] font-semibold tabular-nums text-white/90 backdrop-blur-md">
+              {formatTime(currentTime)} / {formatTime(duration || soult.duration || 0)}
+            </span>
+          </div>
         </div>
 
       </div>
@@ -468,7 +465,7 @@ export function SoultCard({ soult, isActive = true }: SoultCardProps) {
                     <div className="w-8 h-8 rounded-full bg-white/10 border border-white/10 flex items-center justify-center shrink-0">
                       <span className="text-white font-bold text-xs">{item.author.charAt(0).toUpperCase()}</span>
                     </div>
-                    <div className="flex-1 min-w-0 bg-white/[0.03] border border-white/5 p-3 rounded-2xl">
+                    <div className="flex-1 min-w-0 soul-glass p-3 rounded-2xl">
                       <div className="flex items-center justify-between gap-2 mb-1">
                         <span className="text-xs font-semibold text-white truncate">{item.author}</span>
                         <span className="text-[10px] text-textSecondary">{item.time}</span>
@@ -526,7 +523,7 @@ export function SoultCard({ soult, isActive = true }: SoultCardProps) {
             <div className="grid grid-cols-2 gap-3">
               <button
                 onClick={handleCopyLink}
-                className="flex flex-col items-center gap-3 p-5 rounded-2xl bg-white/[0.03] border border-white/10 hover:bg-white/[0.08] active:scale-95 transition-all group"
+                className="flex flex-col items-center gap-3 p-5 rounded-2xl soul-glass active:scale-95 transition-all group"
               >
                 <div className="w-12 h-12 rounded-full bg-white/10 text-white flex items-center justify-center border border-white/10 group-hover:border-white/30 transition-colors">
                   {copied ? <Check className="w-5 h-5 text-emerald-400" /> : <Copy className="w-5 h-5" />}
@@ -536,7 +533,7 @@ export function SoultCard({ soult, isActive = true }: SoultCardProps) {
 
               <button
                 onClick={handleNativeShare}
-                className="flex flex-col items-center gap-3 p-5 rounded-2xl bg-white/[0.03] border border-white/10 hover:bg-white/[0.08] active:scale-95 transition-all group"
+                className="flex flex-col items-center gap-3 p-5 rounded-2xl soul-glass active:scale-95 transition-all group"
               >
                 <div className="w-12 h-12 rounded-full bg-white/10 text-white flex items-center justify-center border border-white/10 group-hover:border-white/30 transition-colors">
                   <Share2 className="w-5 h-5" />

@@ -53,6 +53,10 @@ O Soul nasce como contraponto a esse modelo.
 - i18next
 - Axios
 
+## Configuração da API e câmera
+
+No desenvolvimento, configure `VITE_API_URL` em `.env.development.local` (por exemplo, `http://localhost:8080`). Para o build de produção, defina `VITE_API_URL` com a URL HTTPS da API antes de executar `npm run build`; o valor é incorporado ao JavaScript gerado. O backend precisa permitir a origem pública do frontend no CORS. A câmera e o scanner de QR exigem HTTPS em produção (ou localhost no desenvolvimento).
+
 ## Equipe
 
 Brendo Reis, Eduardo dos Santos, Felipe Thomaz, Erika Akahoshi, Evilyn Aparecida

@@ -195,7 +195,7 @@ export default function ScreentimePage() {
               Encerrar antes do tempo
             </button>
           ) : (
-            <div className="mt-8 flex flex-col items-center space-y-4 bg-white/[0.03] border border-white/10 p-6 rounded-2xl animate-slide-up">
+            <div className="mt-8 flex flex-col items-center space-y-4 soul-glass p-6 rounded-2xl animate-slide-up">
               <p className="text-sm text-zinc-300">
                 Sua tarefa já foi concluída?
               </p>
@@ -236,7 +236,7 @@ export default function ScreentimePage() {
       <div className="fixed inset-0 z-[100] bg-black flex flex-col items-center justify-center p-6 animate-fade-in">
         <div className="flex flex-col items-center max-w-md w-full text-center space-y-8">
           <div className="relative">
-            <div className="w-24 h-24 rounded-full bg-white/5 border border-white/10 flex items-center justify-center">
+            <div className="w-24 h-24 rounded-full soul-glass flex items-center justify-center">
               <svg
                 width="40"
                 height="40"
@@ -268,7 +268,7 @@ export default function ScreentimePage() {
             </p>
           </div>
 
-          <div className="bg-white/[0.03] border border-white/10 rounded-2xl p-5 w-full space-y-1">
+          <div className="soul-glass rounded-2xl p-5 w-full space-y-1">
             <p className="text-xs text-zinc-500">
               Agora, antes de voltar ao app…
             </p>
@@ -320,7 +320,7 @@ export default function ScreentimePage() {
 
                 <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
                   <div className="space-y-4">
-                    <section className="rounded-2xl border border-white/[0.09] bg-white/[0.04] p-5 sm:p-6" aria-label="Uso de hoje">
+                    <section className="soul-glass rounded-2xl p-5 sm:p-6" aria-label="Uso de hoje">
                       <div className="flex items-center justify-between">
                         <span className="text-xs font-semibold tracking-[0.16em] uppercase text-white/45">Hoje</span>
                         <Clock className="w-4 h-4 text-white/35" aria-hidden="true" />
@@ -341,7 +341,7 @@ export default function ScreentimePage() {
                       </div>
                     </section>
 
-                    <section className="rounded-2xl border border-white/[0.09] bg-white/[0.04] p-5 sm:p-6" aria-label="Média diária">
+                    <section className="soul-glass rounded-2xl p-5 sm:p-6" aria-label="Média diária">
                       <div className="flex items-center justify-between">
                         <span className="text-xs font-semibold tracking-[0.16em] uppercase text-white/45">Média diária</span>
                         <TrendingUp className="w-4 h-4 text-white/35" aria-hidden="true" />
@@ -354,7 +354,7 @@ export default function ScreentimePage() {
                       </p>
                     </section>
 
-                    <section className="rounded-2xl border border-white/[0.09] bg-white/[0.04] p-5 sm:p-6" aria-label="Histórico de uso">
+                    <section className="soul-glass rounded-2xl p-5 sm:p-6" aria-label="Histórico de uso">
                       <div className="flex flex-wrap items-start justify-between gap-4">
                         <div>
                           <h2 className="text-lg font-semibold tracking-tight text-white">Histórico</h2>
@@ -415,7 +415,7 @@ export default function ScreentimePage() {
                   </div>
 
                   {/* Right Column: Focus Mode */}
-                  <div className="bg-white/[0.04] border border-white/[0.09] rounded-2xl p-5 sm:p-6 flex flex-col justify-between lg:self-start relative overflow-hidden">
+                  <div className="soul-glass rounded-2xl p-5 sm:p-6 flex flex-col justify-between lg:self-start relative overflow-hidden">
                     <div className="relative z-10">
                       <div className="flex items-center gap-3 text-white/80 mb-8">
                         <div className="p-2.5 bg-white/[0.07] border border-white/[0.08] rounded-2xl">

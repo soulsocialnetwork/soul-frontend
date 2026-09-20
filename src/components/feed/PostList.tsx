@@ -62,7 +62,7 @@ export function PostList({ posts, loading = false }: PostListProps) {
           <button
             key={post.id}
             onClick={() => setSelectedPost(post)}
-            className="group relative aspect-square rounded-2xl overflow-hidden bg-white/5 border border-white/10 hover:border-white/20 transition-all text-left flex flex-col active:scale-95"
+            className="group relative aspect-square rounded-2xl overflow-hidden soul-glass hover:border-white/20 transition-all text-left flex flex-col active:scale-95"
           >
             {post.imageUrl ? (
               <SecureImage
@@ -81,7 +81,7 @@ export function PostList({ posts, loading = false }: PostListProps) {
                 <SecureImage
                   src={post.author.avatarUrl}
                   alt=""
-                  className="soul-squircle w-6 h-6 border border-white/20"
+                  className="rounded-lg w-6 h-6"
                 />
                 <span className="text-xs font-medium truncate drop-shadow-md">
                   {post.author.username}

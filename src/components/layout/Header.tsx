@@ -46,7 +46,7 @@ export function Header() {
             <button
               onClick={() => navigate('/profile')}
               aria-label="Perfil"
-              className="soul-squircle w-9 h-9 glass-pill flex items-center justify-center transition-all hover:scale-105 active:scale-95 overflow-hidden"
+              className="rounded-lg w-9 h-9 bg-neutral-800 flex items-center justify-center transition-all hover:scale-105 active:scale-95 overflow-hidden"
             >
               {avatarUrl ? (
                 <SecureImage

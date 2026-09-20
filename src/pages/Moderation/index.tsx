@@ -205,14 +205,14 @@ export default function ModerationPage() {
         </div>
       ) : error && posts.length === 0 && accounts.length === 0 ? null : activeTab === 'posts' ? (
         posts.length === 0 ? (
-          <div className="text-center py-20 bg-white/5 border border-white/5 rounded-2xl">
+          <div className="text-center py-20 soul-glass rounded-2xl">
             <EyeOff className="w-8 h-8 text-white/20 mx-auto mb-3" />
             <p className="text-textSecondary font-medium">Nenhum post aguardando revisão.</p>
           </div>
         ) : (
           <div className="space-y-4">
             {posts.map(post => (
-              <div key={post.id} className="bg-white/[0.03] border border-white/5 rounded-2xl p-4 sm:p-5 flex flex-col sm:flex-row gap-5 transition-colors hover:bg-white/[0.05]">
+              <div key={post.id} className="soul-glass rounded-2xl p-4 sm:p-5 flex flex-col sm:flex-row gap-5">
                 {post.imageUrl ? (
                   <div className="w-full sm:w-40 aspect-square sm:aspect-auto sm:h-32 rounded-xl overflow-hidden shrink-0 bg-black/50">
                     <SecureImage src={post.imageUrl} alt="Reported" className="w-full h-full object-cover object-top opacity-80" />
@@ -260,14 +260,14 @@ export default function ModerationPage() {
       ) : (
         // Contas Tab
         accounts.length === 0 ? (
-          <div className="text-center py-20 bg-white/5 border border-white/5 rounded-2xl">
+          <div className="text-center py-20 soul-glass rounded-2xl">
             <ShieldOff className="w-8 h-8 text-white/20 mx-auto mb-3" />
             <p className="text-textSecondary font-medium">{activeTab === 'soults' ? 'Nenhum Soult aguardando revisão.' : 'Nenhuma conta aguardando revisão.'}</p>
           </div>
         ) : (
           <div className="space-y-4">
             {accounts.map(report => (
-              <div key={report.id} className="bg-white/[0.03] border border-white/5 rounded-2xl p-4 sm:p-5 flex flex-col sm:flex-row gap-5 transition-colors hover:bg-white/[0.05]">
+              <div key={report.id} className="soul-glass rounded-2xl p-4 sm:p-5 flex flex-col sm:flex-row gap-5">
                 <div className="flex-1 min-w-0 flex flex-col justify-between">
                   <div>
                     <div className="flex items-center gap-2 mb-2">

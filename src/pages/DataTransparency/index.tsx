@@ -21,7 +21,7 @@ export default function DataTransparencyPage() {
       <main className="max-w-lg mx-auto p-5 pb-20 space-y-8 animate-fade-up">
         
         <div className="text-center py-6 space-y-4">
-          <div className="w-16 h-16 rounded-full bg-white/5 border border-white/10 flex items-center justify-center mx-auto mb-2">
+          <div className="w-16 h-16 rounded-full soul-glass flex items-center justify-center mx-auto mb-2">
             <ShieldCheck className="w-8 h-8 text-white" />
           </div>
           <h2 className="text-2xl font-extrabold">Seus Dados. Suas Regras.</h2>
@@ -32,7 +32,7 @@ export default function DataTransparencyPage() {
 
         <div className="space-y-4">
           
-          <div className="bg-white/5 rounded-2xl p-5 border border-white/10 flex gap-4">
+          <div className="soul-glass rounded-2xl p-5 flex gap-4">
             <EyeOff className="w-6 h-6 text-zinc-400 shrink-0 mt-0.5" />
             <div>
               <h3 className="font-bold mb-1">Zero Algoritmos Preditivos</h3>
@@ -42,7 +42,7 @@ export default function DataTransparencyPage() {
             </div>
           </div>
 
-          <div className="bg-white/5 rounded-2xl p-5 border border-white/10 flex gap-4">
+          <div className="soul-glass rounded-2xl p-5 flex gap-4">
             <Lock className="w-6 h-6 text-zinc-400 shrink-0 mt-0.5" />
             <div>
               <h3 className="font-bold mb-1">Nenhum dado é vendido</h3>
@@ -52,7 +52,7 @@ export default function DataTransparencyPage() {
             </div>
           </div>
 
-          <div className="bg-white/5 rounded-2xl p-5 border border-white/10 flex gap-4">
+          <div className="soul-glass rounded-2xl p-5 flex gap-4">
             <Database className="w-6 h-6 text-zinc-400 shrink-0 mt-0.5" />
             <div>
               <h3 className="font-bold mb-1">O que nós armazenamos</h3>

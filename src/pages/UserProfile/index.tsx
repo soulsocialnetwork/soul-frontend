@@ -230,7 +230,7 @@ export default function UserProfilePage() {
   if (!user) {
     return (
       <div className="min-h-[100dvh] bg-background flex flex-col items-center justify-center text-textPrimary gap-6 p-6 text-center">
-        <div className="w-20 h-20 bg-white/5 rounded-full flex items-center justify-center border border-white/10 shadow-lg">
+        <div className="soul-glass w-20 h-20 rounded-full flex items-center justify-center shadow-lg">
           <X className="w-10 h-10 text-white/50" />
         </div>
         <div>
@@ -285,11 +285,11 @@ export default function UserProfilePage() {
             {banError && <p role="alert" className="p-4 rounded-xl bg-red-500/10 text-red-400">{banError}</p>}
             {user.banned && <p role="status" className="p-4 rounded-xl bg-red-500/10 text-red-400">Esta conta foi banida.</p>}
             {/* Profile Card */}
-            <div className="bg-white/[0.02] border border-white/5 rounded-2xl p-5 sm:p-6 md:p-10">
+            <div className="soul-glass rounded-2xl p-5 sm:p-6 md:p-10">
               <div className="flex flex-col md:flex-row gap-6 md:gap-8 items-center md:items-start w-full">
                 <div
                   onClick={() => setShowAvatarModal(true)}
-                  className="soul-squircle w-24 h-24 sm:w-28 sm:h-28 md:w-40 md:h-40 overflow-hidden border border-white/10 p-1 bg-white/5 shrink-0 cursor-pointer active:scale-95 transition-transform"
+                  className="rounded-lg w-24 h-24 sm:w-28 sm:h-28 md:w-40 md:h-40 overflow-hidden bg-neutral-800 shrink-0 cursor-pointer active:scale-95 transition-transform"
                 >
                   {user.avatarUrl ? (
                     <SecureImage src={user.avatarUrl} alt={user.name} className="w-full h-full rounded-2xl object-cover object-top" />
@@ -321,7 +321,7 @@ export default function UserProfilePage() {
                           className={cn(
                             'flex items-center justify-center gap-2 px-5 h-9 rounded-xl text-[13px] font-semibold transition-all active:scale-95 flex-1 md:flex-none disabled:opacity-60',
                             followStatus !== 'NOT_FOLLOWING'
-                              ? 'bg-white/10 text-textPrimary border border-white/10 hover:bg-white/20'
+                              ? 'soul-glass text-textPrimary'
                               : 'bg-white text-black hover:bg-white/90'
                           )}
                         >
@@ -343,10 +343,10 @@ export default function UserProfilePage() {
                           disabled={sendingMsg || !isFollowing}
                           title={!isFollowing ? 'Você precisa seguir o usuário para enviar mensagem' : 'Enviar mensagem'}
                           className={cn(
-                            'flex items-center justify-center gap-2 px-4 h-9 rounded-xl text-[13px] font-semibold bg-white/[0.06] border border-white/10 text-white transition-all shrink-0',
+                            'flex items-center justify-center gap-2 px-4 h-9 rounded-xl text-[13px] font-semibold soul-glass text-white transition-all shrink-0',
                             !isFollowing || sendingMsg
                               ? 'opacity-50 cursor-not-allowed'
-                              : 'hover:bg-white/10 active:scale-95'
+                              : 'active:scale-95'
                           )}
                         >
                           {sendingMsg ? <Loader2 className="w-4 h-4 animate-spin" /> : <><MessageSquare className="w-4 h-4" /><span className="hidden sm:inline">Mensagem</span></>}
@@ -356,7 +356,7 @@ export default function UserProfilePage() {
                       {!isOwnProfile && (
                         <button
                           onClick={() => setReportTarget({ id: user.id, type: 'ACCOUNT' })}
-                          className="flex items-center justify-center p-2.5 rounded-xl bg-white/[0.06] border border-white/10 text-textSecondary hover:text-white hover:bg-white/10 transition-all shrink-0 active:scale-95"
+                          className="soul-glass flex items-center justify-center p-2.5 rounded-xl text-textSecondary hover:text-white transition-all shrink-0 active:scale-95"
                           title="Denunciar Conta"
                         >
                           <Flag className="w-4 h-4" />
@@ -385,7 +385,7 @@ export default function UserProfilePage() {
                       <span className="text-textSecondary text-xs mt-1">seguindo</span>
                     </div>
                     <div className="flex flex-col items-center md:items-start">
-                      <span className="text-[10px] font-semibold text-textSecondary/60 bg-white/5 border border-white/10 rounded-full px-2 py-0.5 leading-none mb-0.5">em breve</span>
+                      <span className="text-[10px] font-semibold text-textSecondary/60 soul-glass rounded-full px-2 py-0.5 leading-none mb-0.5">em breve</span>
                       <span className="text-textSecondary text-xs mt-1">amigos reais</span>
                     </div>
                   </div>
@@ -401,7 +401,7 @@ export default function UserProfilePage() {
             </div>
 
             {!canViewProfileContent ? (
-              <div className="rounded-2xl border border-white/10 bg-white/[0.02] px-6 py-12 text-center">
+              <div className="soul-glass rounded-2xl px-6 py-12 text-center">
                 <LockKeyhole className="mx-auto h-7 w-7 text-white/60" aria-hidden="true" />
                 <h2 className="mt-4 text-lg font-semibold text-white">Este perfil é privado</h2>
                 <p className="mx-auto mt-2 max-w-sm text-sm leading-relaxed text-textSecondary">
@@ -571,10 +571,10 @@ export default function UserProfilePage() {
               src={user.avatarUrl}
               alt="Foto de perfil"
               onClick={e => e.stopPropagation()}
-              className="soul-squircle w-full max-w-[320px] md:max-w-[400px] aspect-square object-cover shadow-2xl border border-white/10 animate-scale-up"
+              className="rounded-lg w-full max-w-[320px] md:max-w-[400px] aspect-square object-cover shadow-2xl animate-scale-up"
             />
           ) : (
-            <div className="soul-squircle w-full max-w-[320px] md:max-w-[400px] aspect-square bg-white/5 flex items-center justify-center text-7xl font-bold text-textSecondary">
+            <div className="rounded-lg w-full max-w-[320px] md:max-w-[400px] aspect-square bg-white/5 flex items-center justify-center text-7xl font-bold text-textSecondary">
               {user.name.charAt(0).toUpperCase()}
             </div>
           )}

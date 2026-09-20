@@ -271,7 +271,7 @@ export default function FeedPage() {
                     <button
                       key={id}
                       onClick={() => handleIntention(route)}
-                      className="soul-squircle-card w-full flex items-center gap-4 px-5 py-4 bg-transparent border border-white/[0.07] text-left hover:bg-white/[0.04] hover:border-white/[0.15] active:scale-[0.98] transition-all duration-200 group"
+                      className="rounded-lg w-full flex items-center gap-4 px-5 py-4 bg-transparent border border-white/[0.07] text-left hover:bg-white/[0.04] hover:border-white/[0.15] active:scale-[0.98] transition-all duration-200 group"
                     >
                       <Icon
                         className="w-4 h-4 text-zinc-400 shrink-0 group-hover:text-white transition-colors"
@@ -321,7 +321,7 @@ export default function FeedPage() {
 
             {/* Barra de busca */}
             <div className="relative z-20">
-              <div className="flex items-center gap-3 bg-white/[0.03] border border-white/[0.05] p-2 pl-5 rounded-2xl focus-within:bg-white/[0.05] focus-within:border-white/10 transition-all relative z-20">
+              <div className="flex items-center gap-3 soul-glass p-2 pl-5 rounded-2xl focus-within:bg-white/[0.05] focus-within:border-white/10 transition-all relative z-20">
                 <Search className="w-5 h-5 text-textSecondary shrink-0" />
 
                 <input
@@ -345,7 +345,7 @@ export default function FeedPage() {
                   ) : searchResults.length > 0 ? (
                      searchResults.map(user => (
                        <div key={user.id} onClick={() => navigate(`/profile/${user.username}`)} className="flex items-center gap-3 p-3 hover:bg-white/5 cursor-pointer rounded-xl transition-colors">
-                          <div className="soul-squircle w-8 h-8 overflow-hidden bg-white/10 flex items-center justify-center shrink-0">
+                          <div className="rounded-lg w-8 h-8 overflow-hidden bg-neutral-800 flex items-center justify-center shrink-0">
                             {user.profilePicture ? <SecureImage src={user.profilePicture} className="w-full h-full object-cover" /> : <span className="flex items-center justify-center w-full h-full text-xs font-bold text-white">{user.name.charAt(0)}</span>}
                           </div>
                           <div className="flex-1 min-w-0">

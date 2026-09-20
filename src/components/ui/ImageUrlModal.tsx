@@ -55,13 +55,13 @@ export function ImageUrlModal({
               if (e.key === 'Escape') onClose();
             }}
             placeholder="https://..."
-            className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-sm text-white placeholder:text-zinc-500 focus:outline-none focus:border-white/30 transition-colors"
+            className="w-full soul-glass rounded-xl px-4 py-3 text-sm text-white placeholder:text-zinc-500 focus:outline-none focus:border-white/30 transition-colors"
           />
 
           {hasValidUrl && (
             <div
-              className={`overflow-hidden bg-black/30 border border-white/10 ${
-                circular ? 'soul-squircle w-24 h-24 mx-auto' : 'rounded-2xl w-full'
+              className={`overflow-hidden ${
+                circular ? 'rounded-lg w-24 h-24 mx-auto bg-neutral-800' : 'rounded-2xl w-full bg-black/30 border border-white/10'
               }`}
             >
               {imgError ? (
@@ -85,7 +85,7 @@ export function ImageUrlModal({
         <div className="px-6 pb-6 flex gap-3">
           <button
             onClick={onClose}
-            className="flex-1 py-3 text-sm font-semibold text-zinc-400 bg-white/5 border border-white/10 rounded-xl hover:bg-white/10 hover:text-white transition-all"
+            className="flex-1 py-3 text-sm font-semibold text-zinc-400 soul-glass rounded-xl hover:text-white transition-all"
           >
             Cancelar
           </button>

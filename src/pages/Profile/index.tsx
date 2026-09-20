@@ -9,7 +9,11 @@ import { PostCard } from '../../components/feed/PostCard';
 import type { Post } from '../../services/postService';
 import { authService } from '../../services/authService';
 import { api, endpoints, getHttpErrorMessage } from '../../services/api';
-import type { CurrentUserResponse, PagePostResponse, ProfileSummary } from '../../services/api/types';
+import type {
+  CurrentUserResponse,
+  PagePostResponse,
+  ProfileSummary,
+} from '../../services/api/types';
 import { userService } from '../../services/userService';
 import { ConnectionsModal } from '../../components/profile/ConnectionsModal';
 import { RealFriendsModal } from '../../components/profile/RealFriendsModal';
@@ -59,7 +63,6 @@ interface ProfileData {
   avatarUrl: string;
 }
 
-
 const EMPTY_PROFILE: ProfileData = {
   username: '',
   fullName: '',
@@ -100,58 +103,113 @@ export default function ProfilePage() {
   const [highlightError, setHighlightError] = useState('');
   const [deletingHighlight, setDeletingHighlight] = useState(false);
   const [highlightsList, setHighlightsList] = useState<HighlightItem[]>([]);
-  const [profileData, setProfileData] = useState<ProfileData>(EMPTY_PROFILE);
-  const [editForm, setEditForm] = useState<ProfileData>(EMPTY_PROFILE);
+  const [profileData, setProfileData] =
+    useState<ProfileData>(EMPTY_PROFILE);
+  const [editForm, setEditForm] =
+    useState<ProfileData>(EMPTY_PROFILE);
 
   const [showEditModal, setShowEditModal] = useState(false);
   const [isSavingProfile, setIsSavingProfile] = useState(false);
   const [profileSaveError, setProfileSaveError] = useState('');
+
   const [feedModal, setFeedModal] = useState<{
     list: Post[];
     startIndex: number;
   } | null>(null);
+
   const [showAvatarModal, setShowAvatarModal] = useState(false);
-  const [activeHighlightIndex, setActiveHighlightIndex] = useState<number | null>(null);
+
+  const [activeHighlightIndex, setActiveHighlightIndex] =
+    useState<number | null>(null);
 
   const [avatarFilePreview, setAvatarFilePreview] = useState('');
   const [avatarFile, setAvatarFile] = useState<File | null>(null);
-  const [showAvatarPickerModal, setShowAvatarPickerModal] = useState(false);
+
+  const [showAvatarPickerModal, setShowAvatarPickerModal] =
+    useState(false);
+
   const avatarFileInputRef = useRef<HTMLInputElement>(null);
 
   const [followersCount, setFollowersCount] = useState(0);
   const [followingCount, setFollowingCount] = useState(0);
   const [postCount, setPostCount] = useState(0);
-  const [showRealFriendsModal, setShowRealFriendsModal] = useState(false);
 
-  const [connectionsModal, setConnectionsModal] = useState<{ type: 'followers' | 'following', title: string } | null>(null);
-  const [connectionsList, setConnectionsList] = useState<ProfileSummary[]>([]);
-  const [connectionsLoading, setConnectionsLoading] = useState(false);
+  const [showRealFriendsModal, setShowRealFriendsModal] =
+    useState(false);
+
+  const [connectionsModal, setConnectionsModal] = useState<{
+    type: 'followers' | 'following';
+    title: string;
+  } | null>(null);
+
+  const [connectionsList, setConnectionsList] = useState<
+    ProfileSummary[]
+  >([]);
+
+  const [connectionsLoading, setConnectionsLoading] =
+    useState(false);
 
   const [displayPosts, setDisplayPosts] = useState<Post[]>([]);
   const [savedPosts, setSavedPosts] = useState<Post[]>([]);
 
   useEffect(() => {
     let cancelled = false;
+
     const loadSaved = async () => {
       try {
-        const stored = JSON.parse(localStorage.getItem(`soul_saved_posts:${user?.id}`) || '[]');
-        const ids: string[] = Array.isArray(stored) ? stored.map(item => typeof item === 'string' ? item : item.id).filter(id => typeof id === 'string') : [];
-        localStorage.setItem(`soul_saved_posts:${user?.id}`, JSON.stringify(ids));
-        const results = await Promise.allSettled(ids.map(id => postService.getPostById(id)));
-        if (!cancelled) setSavedPosts(results.flatMap(result => result.status === 'fulfilled' ? [result.value] : []));
-      } catch { if (!cancelled) setSavedPosts([]); }
+        const stored = JSON.parse(
+          localStorage.getItem(`soul_saved_posts:${user?.id}`) || '[]'
+        );
+
+        const ids: string[] = Array.isArray(stored)
+          ? stored
+              .map((item) =>
+                typeof item === 'string' ? item : item.id
+              )
+              .filter((id) => typeof id === 'string')
+          : [];
+
+        localStorage.setItem(
+          `soul_saved_posts:${user?.id}`,
+          JSON.stringify(ids)
+        );
+
+        const results = await Promise.allSettled(
+          ids.map((id) => postService.getPostById(id))
+        );
+
+        if (!cancelled) {
+          setSavedPosts(
+            results.flatMap((result) =>
+              result.status === 'fulfilled' ? [result.value] : []
+            )
+          );
+        }
+      } catch {
+        if (!cancelled) {
+          setSavedPosts([]);
+        }
+      }
     };
+
     loadSaved();
+
     window.addEventListener('savedPostsUpdated', loadSaved);
-    return () => { cancelled = true; window.removeEventListener('savedPostsUpdated', loadSaved); };
+
+    return () => {
+      cancelled = true;
+      window.removeEventListener('savedPostsUpdated', loadSaved);
+    };
   }, [user?.id]);
 
   useEffect(() => {
     const loadProfile = async () => {
       setLoading(true);
       setLoadError('');
+
       try {
-        const currentUser: CurrentUserResponse = await authService.getMe();
+        const currentUser: CurrentUserResponse =
+          await authService.getMe();
 
         const profileResponse = await api.get<PublicProfileResponse>(
           endpoints.profiles.byUsername(currentUser.username)
@@ -203,20 +261,59 @@ export default function ProfilePage() {
   useEffect(() => {
     let cancelled = false;
     let legacy: HighlightItem[] = [];
+
     try {
-      const saved = JSON.parse(localStorage.getItem(`@app:highlights_${user?.username || 'guest'}`) || '[]');
-      if (Array.isArray(saved)) legacy = saved.filter(item => typeof item?.id === 'string' && item.id.startsWith('hl-') && typeof item.cover === 'string');
-    } catch { /* Keep server highlights available if local history is invalid. */ }
+      const saved = JSON.parse(
+        localStorage.getItem(
+          `@app:highlights_${user?.username || 'guest'}`
+        ) || '[]'
+      );
+
+      if (Array.isArray(saved)) {
+        legacy = saved.filter(
+          (item) =>
+            typeof item?.id === 'string' &&
+            item.id.startsWith('hl-') &&
+            typeof item.cover === 'string'
+        );
+      }
+    } catch {
+      /* Keep server highlights available if local history is invalid. */
+    }
+
     setHighlightsList(legacy);
-    api.get<{ id: string; title: string; coverUrl: string }[]>('/highlights/me')
+
+    api
+      .get<{ id: string; title: string; coverUrl: string }[]>(
+        '/highlights/me'
+      )
       .then(({ data }) => {
-        if (!cancelled) setHighlightsList([...data.map(item => ({
-          id: item.id, name: item.title, cover: item.coverUrl, image: item.coverUrl,
-          type: /[.](mp4|webm|mov)(?:[?#]|$)/i.test(item.coverUrl) ? 'video' as const : 'image' as const,
-        })), ...legacy]);
+        if (!cancelled) {
+          setHighlightsList([
+            ...data.map((item) => ({
+              id: item.id,
+              name: item.title,
+              cover: item.coverUrl,
+              image: item.coverUrl,
+              type: /[.](mp4|webm|mov)(?:[?#]|$)/i.test(
+                item.coverUrl
+              )
+                ? ('video' as const)
+                : ('image' as const),
+            })),
+            ...legacy,
+          ]);
+        }
       })
-      .catch(error => { if (!cancelled) setHighlightError(getHttpErrorMessage(error)); });
-    return () => { cancelled = true; };
+      .catch((error) => {
+        if (!cancelled) {
+          setHighlightError(getHttpErrorMessage(error));
+        }
+      });
+
+    return () => {
+      cancelled = true;
+    };
   }, [user?.username]);
 
   const handleOpenEditModal = () => {
@@ -228,19 +325,28 @@ export default function ProfilePage() {
     e.preventDefault();
     setProfileSaveError('');
 
-    // Validações frontend
-    if (!editForm.fullName.trim() || editForm.fullName.trim().length < 2) {
-      setProfileSaveError('O nome precisa ter pelo menos 2 caracteres.');
+    if (
+      !editForm.fullName.trim() ||
+      editForm.fullName.trim().length < 2
+    ) {
+      setProfileSaveError(
+        'O nome precisa ter pelo menos 2 caracteres.'
+      );
       return;
     }
+
     if (editForm.bio.length > 160) {
-      setProfileSaveError('A bio pode ter no máximo 160 caracteres.');
+      setProfileSaveError(
+        'A bio pode ter no máximo 160 caracteres.'
+      );
       return;
     }
 
     setIsSavingProfile(true);
+
     try {
       let finalAvatarUrl = editForm.avatarUrl;
+
       if (avatarFile) {
         finalAvatarUrl = await postService.uploadMedia(avatarFile);
       }
@@ -248,18 +354,25 @@ export default function ProfilePage() {
       const payload = {
         name: editForm.fullName.trim(),
         bio: editForm.bio.trim(),
-        profilePicture: finalAvatarUrl || ''
+        profilePicture: finalAvatarUrl || '',
       };
 
       await api.put(endpoints.user.me, payload);
 
-      setProfileData({ ...editForm, fullName: editForm.fullName.trim(), bio: editForm.bio.trim(), avatarUrl: finalAvatarUrl || '' });
+      setProfileData({
+        ...editForm,
+        fullName: editForm.fullName.trim(),
+        bio: editForm.bio.trim(),
+        avatarUrl: finalAvatarUrl || '',
+      });
+
       setAvatarFile(null);
       setShowEditModal(false);
       setProfileSaveError('');
-    } catch (error) {
-      console.error('Erro ao atualizar perfil:', error);
-      setProfileSaveError('Não foi possível salvar. Tente novamente.');
+    } catch {
+      setProfileSaveError(
+        'Não foi possível salvar. Tente novamente.'
+      );
     } finally {
       setIsSavingProfile(false);
     }
@@ -307,20 +420,25 @@ export default function ProfilePage() {
     }
   };
 
-  const handleOpenConnections = async (type: 'followers' | 'following') => {
+  const handleOpenConnections = async (
+    type: 'followers' | 'following'
+  ) => {
     if (!profileData.username) return;
 
     setConnectionsModal({
       type,
-      title: type === 'followers' ? 'Seguidores' : 'Seguindo'
+      title: type === 'followers' ? 'Seguidores' : 'Seguindo',
     });
+
     setConnectionsLoading(true);
     setConnectionsList([]);
 
     try {
-      const res = type === 'followers'
-        ? await userService.getFollowers(profileData.username)
-        : await userService.getFollowing(profileData.username);
+      const res =
+        type === 'followers'
+          ? await userService.getFollowers(profileData.username)
+          : await userService.getFollowing(profileData.username);
+
       setConnectionsList(res.content || []);
     } catch {
       setConnectionsList([]);
@@ -329,17 +447,24 @@ export default function ProfilePage() {
     }
   };
 
-  function handleAvatarFileChange(e: React.ChangeEvent<HTMLInputElement>) {
+  function handleAvatarFileChange(
+    e: React.ChangeEvent<HTMLInputElement>
+  ) {
     const file = e.target.files?.[0];
+
     if (!file) return;
+
     setAvatarFile(file);
+
     const reader = new FileReader();
+
     reader.onload = (ev) => {
       setAvatarFilePreview(ev.target?.result as string);
       setShowAvatarPickerModal(true);
     };
+
     reader.readAsDataURL(file);
-    // Reset input so same file can be re-selected
+
     e.target.value = '';
   }
 
@@ -354,21 +479,35 @@ export default function ProfilePage() {
           {loading ? (
             <ScreenLoader />
           ) : loadError ? (
-            <div role="alert" className="p-8 flex flex-col items-center gap-4 text-center">
-              <h1 className="text-xl font-semibold">Não foi possível carregar seu perfil</h1>
-              <p className="text-sm text-textSecondary">{loadError}</p>
-              <button onClick={() => setReload(value => value + 1)} className="btn-primary-glass px-5 py-3 rounded-xl">Tentar novamente</button>
+            <div
+              role="alert"
+              className="p-8 flex flex-col items-center gap-4 text-center"
+            >
+              <h1 className="text-xl font-semibold">
+                Não foi possível carregar seu perfil
+              </h1>
+
+              <p className="text-sm text-textSecondary">
+                {loadError}
+              </p>
+
+              <button
+                onClick={() =>
+                  setReload((value) => value + 1)
+                }
+                className="rounded-lg btn-primary-glass border border-white/10 px-5 py-3"
+              >
+                Tentar novamente
+              </button>
             </div>
           ) : (
             <div className="flex-1 overflow-y-auto no-scrollbar pb-24 lg:pb-12">
               <div className="w-full max-w-4xl mx-auto pt-4 lg:pt-8 px-4 sm:px-6 space-y-8">
-
                 <div className="w-full max-w-3xl mx-auto pt-2 md:pt-4">
                   <div className="flex flex-col md:flex-row gap-6 md:gap-9 items-center md:items-start">
-
                     <div
                       onClick={() => setShowAvatarModal(true)}
-                      className="soul-squircle w-28 h-28 md:w-40 md:h-40 overflow-hidden border border-white/10 p-1 bg-white/5 shrink-0 cursor-pointer active:scale-95 transition-transform"
+                      className="rounded-lg w-28 h-28 md:w-40 md:h-40 overflow-hidden bg-neutral-800 shrink-0 cursor-pointer active:scale-95 transition-transform"
                     >
                       {profileData.avatarUrl ? (
                         <SecureImage
@@ -395,35 +534,41 @@ export default function ProfilePage() {
                           <span className="font-bold text-lg leading-none">
                             {postCount}
                           </span>
+
                           <span className="text-textSecondary text-xs">
                             posts
                           </span>
                         </div>
 
                         <div
-                          onClick={() => handleOpenConnections('followers')}
+                          onClick={() =>
+                            handleOpenConnections('followers')
+                          }
                           className="flex flex-col items-center md:items-start cursor-pointer hover:opacity-80 active:scale-95 transition-all"
                         >
                           <span className="font-bold text-lg leading-none">
                             {followersCount}
                           </span>
+
                           <span className="text-textSecondary text-xs">
                             seguidores
                           </span>
                         </div>
 
                         <div
-                          onClick={() => handleOpenConnections('following')}
+                          onClick={() =>
+                            handleOpenConnections('following')
+                          }
                           className="flex flex-col items-center md:items-start cursor-pointer hover:opacity-80 active:scale-95 transition-all"
                         >
                           <span className="font-bold text-lg leading-none">
                             {followingCount}
                           </span>
+
                           <span className="text-textSecondary text-xs">
                             seguindo
                           </span>
                         </div>
-
                       </div>
 
                       <div className="space-y-1 text-sm text-textSecondary max-w-md">
@@ -442,15 +587,18 @@ export default function ProfilePage() {
                       <div className="mt-5 flex w-full max-w-sm items-center gap-2">
                         <button
                           onClick={handleOpenEditModal}
-                          className="inline-flex h-10 flex-1 items-center justify-center rounded-xl border border-white/10 bg-white/[0.06] px-4 text-[13px] font-semibold text-white hover:bg-white/[0.11] active:scale-95 transition-all"
+                          className="soul-glass rounded-lg inline-flex h-10 flex-1 items-center justify-center px-4 text-[13px] font-semibold text-white active:scale-95 transition-all"
                         >
                           Editar perfil
                         </button>
+
                         <button
-                          onClick={() => setShowRealFriendsModal(true)}
-                          className="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-white/10 bg-white/[0.06] text-white hover:bg-white/[0.11] active:scale-95 transition-all"
-                          title="Mostrar QR Code do perfil"
-                          aria-label="Mostrar QR Code do perfil"
+                          onClick={() =>
+                            setShowRealFriendsModal(true)
+                          }
+                          className="soul-glass rounded-lg inline-flex h-10 w-10 shrink-0 items-center justify-center text-white active:scale-95 transition-all"
+                          title="Amigos Reais e QR Code"
+                          aria-label="Abrir Amigos Reais e QR Code"
                         >
                           <QrCode className="w-[18px] h-[18px]" />
                         </button>
@@ -458,13 +606,21 @@ export default function ProfilePage() {
                     </div>
                   </div>
 
-                  {highlightError && <p role="alert" className="mt-4 text-sm text-red-300">{highlightError}</p>}
+                  {highlightError && (
+                    <p
+                      role="alert"
+                      className="mt-4 text-sm text-red-300"
+                    >
+                      {highlightError}
+                    </p>
+                  )}
+
                   <div className="relative mt-9 group/highlights">
                     <button
                       type="button"
                       aria-label="Destaques anteriores"
                       onClick={scrollHighlightsLeft}
-                      className="absolute -left-11 top-5 z-20 hidden h-9 w-9 items-center justify-center rounded-xl border border-white/10 bg-[#242424] text-white/75 shadow-sm opacity-0 pointer-events-none transition-all group-hover/highlights:opacity-100 group-hover/highlights:pointer-events-auto focus-visible:opacity-100 focus-visible:pointer-events-auto hover:bg-white/15 hover:text-white active:scale-95 md:flex"
+                      className="rounded-lg absolute -left-11 top-5 z-20 hidden h-9 w-9 items-center justify-center border border-white/10 bg-[#242424] text-white/75 shadow-sm opacity-0 pointer-events-none transition-all group-hover/highlights:opacity-100 group-hover/highlights:pointer-events-auto focus-visible:opacity-100 focus-visible:pointer-events-auto hover:bg-white/15 hover:text-white active:scale-95 md:flex"
                     >
                       <ChevronLeft className="w-5 h-5" />
                     </button>
@@ -475,11 +631,13 @@ export default function ProfilePage() {
                     >
                       <button
                         type="button"
-                        onClick={() => navigate('/highlights/create')}
+                        onClick={() =>
+                          navigate('/highlights/create')
+                        }
                         className="flex flex-col items-center gap-2 cursor-pointer shrink-0 group active:scale-95 transition-transform"
                       >
-                        <div className="soul-squircle h-16 w-16 border border-white/10 bg-white/5 p-1 transition-colors group-hover:bg-white/10 md:h-20 md:w-20">
-                          <div className="soul-squircle flex h-full w-full items-center justify-center bg-white/[0.03]">
+                        <div className="rounded-lg h-16 w-16 overflow-hidden bg-neutral-800 transition-colors group-hover:bg-neutral-700 md:h-20 md:w-20">
+                          <div className="flex h-full w-full items-center justify-center">
                             <Plus className="h-6 w-6 text-white/70 group-hover:text-white md:h-8 md:w-8" />
                           </div>
                         </div>
@@ -489,39 +647,43 @@ export default function ProfilePage() {
                         </span>
                       </button>
 
-                      {highlightsList.map((highlight, index) => (
-                        <div
-                          key={highlight.id}
-                          onClick={() => handleOpenHighlight(index)}
-                          className="flex flex-col items-center gap-2 cursor-pointer shrink-0 active:scale-95 transition-transform"
-                        >
-                          <div className="soul-squircle h-16 w-16 border border-white/10 bg-white/5 p-1 md:h-20 md:w-20">
-                            {highlight.type === 'video' ? (
-                              <SecureVideo
-                                src={`${highlight.cover}#t=0.001`}
-                                className="soul-squircle w-full h-full object-cover pointer-events-none"
-                              />
-                            ) : (
-                              <SecureImage
-                                src={highlight.cover}
-                                alt={highlight.name}
-                                className="soul-squircle w-full h-full object-cover"
-                              />
-                            )}
-                          </div>
+                      {highlightsList.map(
+                        (highlight, index) => (
+                          <div
+                            key={highlight.id}
+                            onClick={() =>
+                              handleOpenHighlight(index)
+                            }
+                            className="flex flex-col items-center gap-2 cursor-pointer shrink-0 active:scale-95 transition-transform"
+                          >
+                            <div className="rounded-lg h-16 w-16 overflow-hidden bg-neutral-800 md:h-20 md:w-20">
+                              {highlight.type === 'video' ? (
+                                <SecureVideo
+                                  src={`${highlight.cover}#t=0.001`}
+                                  className="rounded-lg w-full h-full object-cover pointer-events-none"
+                                />
+                              ) : (
+                                <SecureImage
+                                  src={highlight.cover}
+                                  alt={highlight.name}
+                                  className="rounded-lg w-full h-full object-cover"
+                                />
+                              )}
+                            </div>
 
-                          <span className="text-xs font-semibold text-textSecondary">
-                            {highlight.name}
-                          </span>
-                        </div>
-                      ))}
+                            <span className="text-xs font-semibold text-textSecondary">
+                              {highlight.name}
+                            </span>
+                          </div>
+                        )
+                      )}
                     </div>
 
                     <button
                       type="button"
                       aria-label="Próximos destaques"
                       onClick={scrollHighlightsRight}
-                      className="absolute -right-11 top-5 z-20 hidden h-9 w-9 items-center justify-center rounded-xl border border-white/10 bg-[#242424] text-white/75 shadow-sm opacity-0 pointer-events-none transition-all group-hover/highlights:opacity-100 group-hover/highlights:pointer-events-auto focus-visible:opacity-100 focus-visible:pointer-events-auto hover:bg-white/15 hover:text-white active:scale-95 md:flex"
+                      className="rounded-lg absolute -right-11 top-5 z-20 hidden h-9 w-9 items-center justify-center border border-white/10 bg-[#242424] text-white/75 shadow-sm opacity-0 pointer-events-none transition-all group-hover/highlights:opacity-100 group-hover/highlights:pointer-events-auto focus-visible:opacity-100 focus-visible:pointer-events-auto hover:bg-white/15 hover:text-white active:scale-95 md:flex"
                     >
                       <ChevronRight className="w-5 h-5" />
                     </button>
@@ -558,7 +720,9 @@ export default function ProfilePage() {
 
                 {(() => {
                   const list =
-                    activeTab === 'saved' ? savedPosts : displayPosts;
+                    activeTab === 'saved'
+                      ? savedPosts
+                      : displayPosts;
 
                   return (
                     <div className="grid grid-cols-3 gap-1 md:gap-4">
@@ -614,6 +778,7 @@ export default function ProfilePage() {
         </main>
       </div>
 
+      {/* EDITAR PERFIL */}
       {showEditModal && (
         <div
           className="fixed inset-0 bg-black/90 backdrop-blur-md z-[100] flex items-center justify-center p-4 animate-fade-in"
@@ -630,15 +795,18 @@ export default function ProfilePage() {
 
               <button
                 onClick={() => setShowEditModal(false)}
-                className="absolute -top-1 -right-2 p-1.5 rounded-full text-zinc-500 hover:text-white transition-colors"
+                className="soul-glass rounded-lg absolute -top-1 -right-2 p-1.5 text-zinc-500 hover:text-white transition-colors"
               >
                 <X className="w-5 h-5" />
               </button>
             </div>
 
-            <form onSubmit={handleSaveProfile} className="space-y-6">
+            <form
+              onSubmit={handleSaveProfile}
+              className="space-y-6"
+            >
               <div className="flex flex-col items-center gap-3">
-                <div className="soul-squircle relative w-24 h-24 overflow-hidden border border-white/10 group bg-white/5">
+                <div className="rounded-lg relative w-24 h-24 overflow-hidden group bg-neutral-800">
                   {editForm.avatarUrl ? (
                     <SecureImage
                       src={editForm.avatarUrl}
@@ -658,8 +826,10 @@ export default function ProfilePage() {
 
                 <button
                   type="button"
-                  onClick={() => avatarFileInputRef.current?.click()}
-                  className="text-xs text-white/70 hover:text-white font-medium bg-white/[0.03] border border-white/10 px-3 py-1.5 rounded-full"
+                  onClick={() =>
+                    avatarFileInputRef.current?.click()
+                  }
+                  className="rounded-lg text-xs text-white/70 hover:text-white font-medium soul-glass px-3 py-1.5"
                 >
                   Alterar foto
                 </button>
@@ -674,7 +844,7 @@ export default function ProfilePage() {
                   type="text"
                   value={editForm.username}
                   disabled
-                  className="w-full bg-white/5 border border-white/10 rounded-2xl px-4 py-2.5 text-sm text-textSecondary focus:outline-none cursor-not-allowed"
+                  className="w-full soul-glass rounded-2xl px-4 py-2.5 text-sm text-textSecondary focus:outline-none cursor-not-allowed"
                 />
 
                 <p className="text-[10px] text-textSecondary mt-1.5">
@@ -696,7 +866,7 @@ export default function ProfilePage() {
                       fullName: e.target.value,
                     })
                   }
-                  className="w-full bg-white/5 border border-white/10 rounded-2xl px-4 py-2.5 text-sm text-textPrimary focus:outline-none focus:border-white/30"
+                  className="w-full soul-glass rounded-2xl px-4 py-2.5 text-sm text-textPrimary focus:outline-none focus:border-white/30"
                   required
                 />
               </div>
@@ -709,28 +879,45 @@ export default function ProfilePage() {
                 <textarea
                   value={editForm.bio}
                   onChange={(e) => {
-                    if (e.target.value.length <= 160)
-                      setEditForm({ ...editForm, bio: e.target.value });
+                    if (e.target.value.length <= 160) {
+                      setEditForm({
+                        ...editForm,
+                        bio: e.target.value,
+                      });
+                    }
                   }}
                   rows={3}
-                  className="w-full bg-white/5 border border-white/10 rounded-2xl p-4 text-sm text-textPrimary focus:outline-none focus:border-white/30 resize-none"
+                  className="w-full soul-glass rounded-2xl p-4 text-sm text-textPrimary focus:outline-none focus:border-white/30 resize-none"
                 />
+
                 <div className="flex justify-end mt-1">
-                  <span className={cn('text-[10px] tabular-nums', editForm.bio.length >= 150 ? 'text-amber-400' : 'text-white/20')}>
+                  <span
+                    className={cn(
+                      'text-[10px] tabular-nums',
+                      editForm.bio.length >= 150
+                        ? 'text-amber-400'
+                        : 'text-white/20'
+                    )}
+                  >
                     {editForm.bio.length}/160
                   </span>
                 </div>
               </div>
 
               {profileSaveError && (
-                <p className="text-xs text-red-400 text-center -mt-2">{profileSaveError}</p>
+                <p className="text-xs text-red-400 text-center -mt-2">
+                  {profileSaveError}
+                </p>
               )}
 
               <div className="flex gap-3 pt-2">
                 <button
                   type="button"
-                  onClick={() => { setShowEditModal(false); setProfileSaveError(''); }}
-                  className="flex-1 py-3 bg-white/5 text-textPrimary font-semibold rounded-2xl hover:bg-white/10 transition-colors text-sm"
+                  onClick={() => {
+                    setShowEditModal(false);
+                    setProfileSaveError('');
+                  }}
+                  className="rounded-lg flex-1 py-3 soul-glass text-textPrimary font-semibold transition-colors text-sm"
                 >
                   Cancelar
                 </button>
@@ -738,12 +925,18 @@ export default function ProfilePage() {
                 <button
                   type="submit"
                   disabled={isSavingProfile}
-                  className="flex-1 py-3 bg-white text-black font-semibold rounded-2xl hover:bg-white/90 transition-colors text-sm flex items-center justify-center gap-1.5 disabled:opacity-60"
+                  className="rounded-lg flex-1 py-3 bg-white border border-white/10 text-black font-semibold hover:bg-white/90 transition-colors text-sm flex items-center justify-center gap-1.5 disabled:opacity-60"
                 >
                   {isSavingProfile ? (
-                    <><Loader2 className="w-4 h-4 animate-spin" />Salvando...</>
+                    <>
+                      <Loader2 className="w-4 h-4 animate-spin" />
+                      Salvando...
+                    </>
                   ) : (
-                    <><Check className="w-4 h-4" />Salvar</>
+                    <>
+                      <Check className="w-4 h-4" />
+                      Salvar
+                    </>
                   )}
                 </button>
               </div>
@@ -752,6 +945,7 @@ export default function ProfilePage() {
         </div>
       )}
 
+      {/* VISUALIZADOR DE DESTAQUES */}
       {activeHighlightIndex !== null &&
         highlightsList[activeHighlightIndex] && (
           <div className="fixed inset-0 bg-black/95 backdrop-blur-md z-50 flex items-center justify-center p-4 animate-fade-in">
@@ -770,30 +964,63 @@ export default function ProfilePage() {
                     <button
                       disabled={deletingHighlight}
                       onClick={async () => {
-                        const id = highlightsList[activeHighlightIndex].id;
+                        const id =
+                          highlightsList[
+                            activeHighlightIndex
+                          ].id;
+
                         setDeletingHighlight(true);
                         setHighlightError('');
+
                         try {
                           if (id.startsWith('hl-')) {
-                            localStorage.setItem(`@app:highlights_${user?.username || 'guest'}`, JSON.stringify(highlightsList.filter(item => item.id.startsWith('hl-') && item.id !== id)));
+                            localStorage.setItem(
+                              `@app:highlights_${
+                                user?.username || 'guest'
+                              }`,
+                              JSON.stringify(
+                                highlightsList.filter(
+                                  (item) =>
+                                    item.id.startsWith(
+                                      'hl-'
+                                    ) && item.id !== id
+                                )
+                              )
+                            );
                           } else {
-                            await api.delete('/highlights/' + id);
+                            await api.delete(
+                              '/highlights/' + id
+                            );
                           }
-                          setHighlightsList(items => items.filter(item => item.id !== id));
+
+                          setHighlightsList((items) =>
+                            items.filter(
+                              (item) => item.id !== id
+                            )
+                          );
+
                           setActiveHighlightIndex(null);
                         } catch (error) {
-                          setHighlightError(getHttpErrorMessage(error));
+                          setHighlightError(
+                            getHttpErrorMessage(error)
+                          );
+
                           setActiveHighlightIndex(null);
-                        } finally { setDeletingHighlight(false); }
+                        } finally {
+                          setDeletingHighlight(false);
+                        }
                       }}
-                      className="p-1.5 rounded-full bg-black/40 text-white/60 hover:bg-red-500/80 hover:text-white transition-colors"
+                      className="rounded-lg p-1.5 border border-white/10 bg-black/40 text-white/60 hover:bg-red-500/80 hover:text-white transition-colors"
                       title="Remover destaque"
                     >
                       <Trash2 className="w-4 h-4" />
                     </button>
+
                     <button
-                      onClick={() => setActiveHighlightIndex(null)}
-                      className="p-1.5 rounded-full bg-black/40 text-white hover:bg-black/60 transition-colors"
+                      onClick={() =>
+                        setActiveHighlightIndex(null)
+                      }
+                      className="rounded-lg p-1.5 border border-white/10 bg-black/40 text-white hover:bg-black/60 transition-colors"
                     >
                       <X className="w-4 h-4" />
                     </button>
@@ -801,17 +1028,24 @@ export default function ProfilePage() {
                 </div>
               </div>
 
-              {highlightsList[activeHighlightIndex].type === 'video' ? (
+              {highlightsList[activeHighlightIndex].type ===
+              'video' ? (
                 <SecureVideo
-                  src={`${highlightsList[activeHighlightIndex].image}#t=0.001`}
+                  src={`${
+                    highlightsList[activeHighlightIndex].image
+                  }#t=0.001`}
                   controls
                   autoPlay
                   className="absolute inset-0 w-full h-full object-cover z-0"
                 />
               ) : (
                 <SecureImage
-                  src={highlightsList[activeHighlightIndex].image}
-                  alt="Conteúdo do destaque"
+                  src={
+                    highlightsList[activeHighlightIndex].image
+                  }
+                  alt={
+                    highlightsList[activeHighlightIndex].name
+                  }
                   className="absolute inset-0 w-full h-full object-cover z-0"
                 />
               )}
@@ -819,7 +1053,7 @@ export default function ProfilePage() {
               <button
                 onClick={handlePrevHighlight}
                 disabled={activeHighlightIndex === 0}
-                className="absolute left-2 top-1/2 -translate-y-1/2 p-2 rounded-full bg-black/40 text-white hover:bg-black/60 disabled:opacity-0 z-10 transition-opacity"
+                className="rounded-lg absolute left-2 top-1/2 -translate-y-1/2 p-2 border border-white/10 bg-black/40 text-white hover:bg-black/60 disabled:opacity-0 z-10 transition-opacity"
               >
                 <ChevronLeft className="w-5 h-5" />
               </button>
@@ -827,9 +1061,10 @@ export default function ProfilePage() {
               <button
                 onClick={handleNextHighlight}
                 disabled={
-                  activeHighlightIndex === highlightsList.length - 1
+                  activeHighlightIndex ===
+                  highlightsList.length - 1
                 }
-                className="absolute right-2 top-1/2 -translate-y-1/2 p-2 rounded-full bg-black/40 text-white hover:bg-black/60 disabled:opacity-0 z-10 transition-opacity"
+                className="rounded-lg absolute right-2 top-1/2 -translate-y-1/2 p-2 border border-white/10 bg-black/40 text-white hover:bg-black/60 disabled:opacity-0 z-10 transition-opacity"
               >
                 <ChevronRight className="w-5 h-5" />
               </button>
@@ -837,6 +1072,7 @@ export default function ProfilePage() {
           </div>
         )}
 
+      {/* FEED MODAL */}
       {feedModal && (
         <div className="fixed inset-0 bg-black/90 backdrop-blur-md z-50 flex flex-col animate-fade-in">
           <div className="sticky top-0 z-20 bg-black/60 backdrop-blur-lg border-b border-white/10 px-4 py-3 flex items-center justify-between">
@@ -848,7 +1084,7 @@ export default function ProfilePage() {
 
             <button
               onClick={() => setFeedModal(null)}
-              className="p-1.5 rounded-full bg-white/10 text-white hover:bg-white/20 transition-colors"
+              className="soul-glass rounded-lg p-1.5 text-white transition-colors"
             >
               <X className="w-5 h-5" />
             </button>
@@ -858,7 +1094,12 @@ export default function ProfilePage() {
             <div className="max-w-lg mx-auto space-y-6">
               {feedModal.list
                 .slice(feedModal.startIndex)
-                .concat(feedModal.list.slice(0, feedModal.startIndex))
+                .concat(
+                  feedModal.list.slice(
+                    0,
+                    feedModal.startIndex
+                  )
+                )
                 .map((post, index) => (
                   <PostCard
                     key={post.id}
@@ -871,6 +1112,7 @@ export default function ProfilePage() {
         </div>
       )}
 
+      {/* AVATAR EXPANDIDO */}
       {showAvatarModal && (
         <div
           className="fixed inset-0 z-[100] bg-black/90 backdrop-blur-md flex items-center justify-center p-4 animate-fade-in"
@@ -878,7 +1120,7 @@ export default function ProfilePage() {
         >
           <button
             onClick={() => setShowAvatarModal(false)}
-            className="absolute top-6 right-6 md:top-8 md:right-8 p-2.5 rounded-full bg-white/10 hover:bg-white/20 text-white transition-colors z-10"
+            className="soul-glass rounded-lg absolute top-6 right-6 md:top-8 md:right-8 p-2.5 text-white transition-colors z-10"
           >
             <X className="w-6 h-6" />
           </button>
@@ -888,10 +1130,10 @@ export default function ProfilePage() {
               src={profileData.avatarUrl}
               alt="Foto de perfil expandida"
               onClick={(e) => e.stopPropagation()}
-              className="soul-squircle w-full max-w-[320px] md:max-w-[400px] aspect-square object-cover shadow-2xl border border-white/10 animate-scale-up"
+              className="rounded-lg w-full max-w-[320px] md:max-w-[400px] aspect-square object-cover shadow-2xl animate-scale-up"
             />
           ) : (
-            <div className="soul-squircle w-full max-w-[320px] md:max-w-[400px] aspect-square bg-neutral-900 border border-white/10 flex items-center justify-center">
+            <div className="rounded-lg w-full max-w-[320px] md:max-w-[400px] aspect-square bg-neutral-900 flex items-center justify-center">
               <Camera className="w-12 h-12 text-textSecondary" />
             </div>
           )}
@@ -914,7 +1156,6 @@ export default function ProfilePage() {
         />
       )}
 
-      {/* Hidden file input */}
       <input
         ref={avatarFileInputRef}
         type="file"
@@ -923,20 +1164,28 @@ export default function ProfilePage() {
         onChange={handleAvatarFileChange}
       />
 
+      {/* SELETOR DE AVATAR */}
       {showAvatarPickerModal && (
         <div
           className="fixed inset-0 z-[200] bg-black/90 backdrop-blur-md flex items-center justify-center p-4 animate-fade-in"
-          onClick={() => setShowAvatarPickerModal(false)}
+          onClick={() =>
+            setShowAvatarPickerModal(false)
+          }
         >
           <div
             className="w-full max-w-sm flex flex-col gap-8 animate-scale-up"
             onClick={(e) => e.stopPropagation()}
           >
             <div className="relative text-center space-y-3">
-              <h3 className="text-xl font-bold text-white">Foto de perfil</h3>
+              <h3 className="text-xl font-bold text-white">
+                Foto de perfil
+              </h3>
+
               <button
-                onClick={() => setShowAvatarPickerModal(false)}
-                className="absolute -top-1 -right-2 p-1.5 rounded-full text-zinc-500 hover:text-white transition-colors"
+                onClick={() =>
+                  setShowAvatarPickerModal(false)
+                }
+                className="soul-glass rounded-lg absolute -top-1 -right-2 p-1.5 text-zinc-500 hover:text-white transition-colors"
               >
                 <X className="w-5 h-5" />
               </button>
@@ -947,31 +1196,42 @@ export default function ProfilePage() {
                 <SecureImage
                   src={avatarFilePreview}
                   alt="Preview"
-                  className="soul-squircle w-28 h-28 object-cover border border-white/10"
+                  className="rounded-lg w-28 h-28 object-cover"
                 />
               ) : (
-                <div className="soul-squircle w-28 h-28 bg-white/5 border border-white/10 flex items-center justify-center">
+                <div className="rounded-lg w-28 h-28 bg-neutral-800 flex items-center justify-center">
                   <Camera className="w-8 h-8 text-zinc-500" />
                 </div>
               )}
-              <p className="text-xs text-zinc-400 text-center">Esta foto será usada como sua foto de perfil.</p>
+
+              <p className="text-xs text-zinc-400 text-center">
+                Esta foto será usada como sua foto de
+                perfil.
+              </p>
             </div>
 
             <div className="flex flex-col gap-3">
               <button
                 onClick={() => {
                   if (avatarFilePreview) {
-                    setEditForm(prev => ({ ...prev, avatarUrl: avatarFilePreview }));
+                    setEditForm((prev) => ({
+                      ...prev,
+                      avatarUrl: avatarFilePreview,
+                    }));
                   }
+
                   setShowAvatarPickerModal(false);
                 }}
-                className="w-full py-3.5 bg-white text-black font-bold rounded-xl transition-all hover:bg-zinc-100 active:scale-[0.98]"
+                className="rounded-lg w-full py-3.5 bg-white border border-white/10 text-black font-bold transition-all hover:bg-zinc-100 active:scale-[0.98]"
               >
                 Confirmar
               </button>
+
               <button
-                onClick={() => setShowAvatarPickerModal(false)}
-                className="w-full py-3.5 bg-transparent border border-white/10 text-zinc-400 font-semibold rounded-xl hover:border-white/20 hover:text-white transition-all"
+                onClick={() =>
+                  setShowAvatarPickerModal(false)
+                }
+                className="rounded-lg w-full py-3.5 bg-transparent border border-white/10 text-zinc-400 font-semibold hover:border-white/20 hover:text-white transition-all"
               >
                 Cancelar
               </button>

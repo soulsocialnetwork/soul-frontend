@@ -50,9 +50,17 @@ export function ConnectionsModal({ title, users, loading, onClose }: Connections
                     onClose();
                     navigate(`/profile/${user.username}`);
                   }}
-                  className="flex items-center gap-4 p-3 bg-white/[0.03] border border-white/5 rounded-2xl cursor-pointer hover:bg-white/[0.06] hover:border-white/10 transition-all"
+                  onKeyDown={(event) => {
+                    if (event.key !== 'Enter' && event.key !== ' ') return;
+                    event.preventDefault();
+                    onClose();
+                    navigate(`/profile/${user.username}`);
+                  }}
+                  role="button"
+                  tabIndex={0}
+                  className="flex items-center gap-4 p-3 soul-glass rounded-2xl cursor-pointer transition-all"
                 >
-                  <div className="soul-squircle w-12 h-12 bg-white/5 overflow-hidden shrink-0 flex items-center justify-center">
+                  <div className="rounded-lg w-12 h-12 bg-neutral-800 overflow-hidden shrink-0 flex items-center justify-center">
                     {user.profilePicture ? (
                       <SecureImage
                         src={user.profilePicture}

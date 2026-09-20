@@ -298,7 +298,7 @@ export function NotificationsPanel({
                     className="flex items-center gap-3 sm:gap-4 group p-2 -mx-2 rounded-2xl hover:bg-white/5 transition-colors cursor-pointer"
                     onClick={() => handleOpenProfile(req.follower.username)}
                   >
-                    <div className="soul-squircle w-10 h-10 sm:w-11 sm:h-11 overflow-hidden shrink-0 bg-white/10 flex items-center justify-center">
+                    <div className="rounded-lg w-10 h-10 sm:w-11 sm:h-11 overflow-hidden shrink-0 bg-neutral-800 flex items-center justify-center">
                       {req.follower.profilePicture ? (
                         <SecureImage
                           src={req.follower.profilePicture}
@@ -369,7 +369,7 @@ export function NotificationsPanel({
                     onClick={() => { void openNotification(notif); }}
                   >
                     <div className="relative shrink-0">
-                      <div className="soul-squircle w-10 h-10 sm:w-11 sm:h-11 overflow-hidden shrink-0 bg-white/10 flex items-center justify-center">
+                      <div className="rounded-lg w-10 h-10 sm:w-11 sm:h-11 overflow-hidden shrink-0 bg-neutral-800 flex items-center justify-center">
                         {notif.triggerAvatarUrl ? (
                           <SecureImage
                             src={notif.triggerAvatarUrl}

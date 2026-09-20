@@ -38,8 +38,8 @@ export function CustomSelect({ value, placeholder, options, onChange, className 
         onClick={() => setOpen((o) => !o)}
         className={cn(
           'flex h-12 w-full items-center justify-between rounded-2xl px-4 text-sm transition-all duration-200',
-          'bg-white/5 border border-white/10 backdrop-blur-md',
-          'hover:bg-white/8 hover:border-white/20',
+          'soul-glass',
+          'hover:border-white/20',
           open && 'border-white/25 bg-white/8',
           !value ? 'text-white/40' : 'text-textPrimary'
         )}

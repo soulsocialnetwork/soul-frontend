@@ -5,10 +5,12 @@ import { Sidebar } from '../../components/layout/Sidebar';
 import { Header } from '../../components/layout/Header';
 import { BottomNav } from '../../components/layout/BottomNav';
 import { Button } from '../../components/ui/Button';
-import { Image, Video, X, ArrowLeft } from 'lucide-react';
+import { CameraCapture } from '../../components/ui/CameraCapture';
+import { Camera, Image, Video, X, ArrowLeft } from 'lucide-react';
 import { cn } from '../../utils/cn';
 import { postService } from '../../services/postService';
 import { api, getHttpErrorMessage } from '../../services/api';
+import { validateUploadFile } from '../../utils/mediaValidation';
 
 export default function CreateHighlightPage() {
   const [file, setFile] = useState<File | null>(null);
@@ -18,6 +20,7 @@ export default function CreateHighlightPage() {
   const [highlightTitle, setHighlightTitle] = useState('');
   const [selectedMedia, setSelectedMedia] = useState<string | null>(null);
   const [saveError, setSaveError] = useState('');
+  const [cameraOpen, setCameraOpen] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
@@ -31,12 +34,18 @@ export default function CreateHighlightPage() {
     const next = event.target.files?.[0];
     event.target.value = '';
     if (!next) return;
-    if (!next.type.startsWith(mediaType + '/') || next.size > 20 * 1024 * 1024) {
-      setSaveError('Selecione uma mídia do tipo escolhido com até 20 MB.');
-      return;
-    }
+    const validationError = validateUploadFile(next, mediaType, 20);
+    if (validationError) { setSaveError(validationError); return; }
     setSaveError('');
     setFile(next);
+  };
+
+  const handleCameraCapture = (captured: File) => {
+    setCameraOpen(false);
+    const validationError = validateUploadFile(captured, mediaType, 20);
+    if (validationError) { setSaveError(validationError); return; }
+    setSaveError('');
+    setFile(captured);
   };
 
   const handleSaveHighlight = async () => {
@@ -120,7 +129,7 @@ export default function CreateHighlightPage() {
 
           {/* Preview ou zona de upload */}
           {selectedMedia ? (
-            <div className="soul-squircle-card relative overflow-hidden bg-black/40 border border-white/10 group">
+            <div className="rounded-lg relative overflow-hidden bg-black/40 border border-white/10 group">
               {mediaType === 'image' ? (
                 <SecureImage src={selectedMedia} alt="Preview" className="w-full max-h-[400px] object-cover" />
               ) : (
@@ -158,7 +167,7 @@ export default function CreateHighlightPage() {
             disabled={saving}
             ref={fileInputRef}
             className="hidden"
-            accept={mediaType === 'image' ? 'image/*' : 'video/*'}
+            accept={mediaType === 'image' ? 'image/png,image/jpeg,image/gif,image/webp' : 'video/mp4,video/webm'}
             onChange={handleFileChange}
           />
 
@@ -171,6 +180,9 @@ export default function CreateHighlightPage() {
               title="Trocar mídia"
             >
               {mediaType === 'image' ? <Image className="w-5 h-5" /> : <Video className="w-5 h-5" />}
+            </button>
+            <button type="button" disabled={saving} onClick={() => setCameraOpen(true)} className="flex h-10 w-10 items-center justify-center rounded-lg text-zinc-400 transition-colors hover:bg-white/5 hover:text-white" title={mediaType === 'image' ? 'Tirar foto' : 'Gravar vídeo'} aria-label={mediaType === 'image' ? 'Tirar foto pela câmera' : 'Gravar vídeo pela câmera'}>
+              <Camera className="w-5 h-5" />
             </button>
 
             <div className="flex items-center gap-3">
@@ -199,6 +211,7 @@ export default function CreateHighlightPage() {
       </div>
 
       <BottomNav />
+      {cameraOpen && <CameraCapture mode={mediaType === 'image' ? 'photo' : 'video'} maxMegabytes={20} onCapture={handleCameraCapture} onClose={() => setCameraOpen(false)} />}
     </div>
   );
 }

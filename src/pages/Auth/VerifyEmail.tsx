@@ -22,7 +22,7 @@ export default function VerifyEmailPage() {
     <div className="min-h-screen bg-background flex items-center justify-center p-6">
       <div className="w-full max-w-sm text-center space-y-8">
         <div className="flex justify-center">
-          <div className="w-20 h-20 rounded-2xl bg-white/5 border border-white/10 flex items-center justify-center">
+          <div className="w-20 h-20 rounded-2xl soul-glass flex items-center justify-center">
             {status === 'loading' && <Loader2 className="w-8 h-8 text-white/50 animate-spin" />}
             {status === 'success' && <CheckCircle className="w-8 h-8 text-white" />}
             {status === 'error' && <XCircle className="w-8 h-8 text-white/50" />}

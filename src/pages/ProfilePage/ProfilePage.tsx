@@ -52,9 +52,9 @@ export default function ProfilePage() {
               <div className="w-full max-w-4xl mx-auto pt-4 lg:pt-8 px-4 sm:px-6 space-y-8">
 
                 {/* Perfil Header */}
-                <div className="bg-white/[0.02] border border-white/5 rounded-2xl p-6 md:p-10">
+                <div className="soul-glass rounded-2xl p-6 md:p-10">
                   <div className="flex flex-col md:flex-row gap-8 items-center md:items-start">
-                    <div className="soul-squircle w-28 h-28 md:w-40 md:h-40 overflow-hidden border border-white/10 p-1 bg-white/5 shrink-0">
+                    <div className="rounded-lg w-28 h-28 md:w-40 md:h-40 overflow-hidden bg-neutral-800 shrink-0">
                       <SecureImage src={profileData.avatarUrl} alt="Avatar" className="w-full h-full rounded-2xl object-cover" />
                     </div>
 
@@ -87,8 +87,8 @@ export default function ProfilePage() {
                         onClick={() => navigate('/highlights/create')}
                         className="flex flex-col items-center gap-2 cursor-pointer shrink-0 group"
                       >
-                        <div className="soul-squircle h-16 w-16 border border-white/10 bg-white/5 p-1 transition-colors group-hover:bg-white/10 md:h-20 md:w-20">
-                          <div className="soul-squircle flex h-full w-full items-center justify-center bg-white/[0.03]">
+                        <div className="rounded-lg h-16 w-16 overflow-hidden bg-neutral-800 transition-colors group-hover:bg-neutral-700 md:h-20 md:w-20">
+                          <div className="flex h-full w-full items-center justify-center">
                             <Plus className="h-8 w-8 text-white" />
                           </div>
                         </div>
@@ -102,11 +102,11 @@ export default function ProfilePage() {
                           onClick={() => setActiveHighlightIndex(index)}
                           className="flex flex-col items-center gap-2 cursor-pointer shrink-0"
                         >
-                          <div className="soul-squircle h-16 w-16 border border-white/10 bg-white/5 p-1 md:h-20 md:w-20">
+                          <div className="rounded-lg h-16 w-16 overflow-hidden bg-neutral-800 md:h-20 md:w-20">
                             {h.type === 'video' ? (
-                              <SecureVideo src={h.cover} className="soul-squircle w-full h-full object-cover" />
+                              <SecureVideo src={h.cover} className="rounded-lg w-full h-full object-cover" />
                             ) : (
-                              <SecureImage src={h.cover} alt={h.name} className="soul-squircle w-full h-full object-cover" />
+                              <SecureImage src={h.cover} alt={h.name} className="rounded-lg w-full h-full object-cover" />
                             )}
                           </div>
                           <span className="text-xs font-semibold text-textSecondary">{h.name}</span>

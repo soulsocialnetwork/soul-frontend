@@ -1,5 +1,3 @@
-import plugin from 'tailwindcss/plugin';
-
 /** @type {import('tailwindcss').Config} */
 export default {
   content: [
@@ -21,20 +19,17 @@ export default {
       fontFamily: {
         sans: ['"Open Sans"', 'sans-serif'],
       },
+      borderRadius: {
+        DEFAULT: 'var(--soul-radius)',
+        sm: 'var(--soul-radius)',
+        md: 'var(--soul-radius)',
+        lg: 'var(--soul-radius)',
+        xl: 'var(--soul-radius)',
+        '2xl': 'var(--soul-radius)',
+        '3xl': 'var(--soul-radius)',
+        full: 'var(--soul-radius)',
+      },
     },
   },
-  plugins: [
-    plugin(function({ addBase }) {
-      addBase({
-        // Remove totalmente outlines, rings e seleções visuais de clique no projeto todo
-        '*, *::before, *::after': {
-          '-webkit-tap-highlight-color': 'transparent',
-        },
-        '*:focus, *:focus-visible, *:focus-within, *:active': {
-          'outline': 'none !important',
-          'box-shadow': 'none !important',
-        },
-      });
-    }),
-  ],
+  plugins: [],
 }

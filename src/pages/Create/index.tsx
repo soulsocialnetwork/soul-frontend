@@ -4,8 +4,9 @@ import { Sidebar } from '../../components/layout/Sidebar';
 import { Header } from '../../components/layout/Header';
 import { BottomNav } from '../../components/layout/BottomNav';
 import { Button } from '../../components/ui/Button';
+import { CameraCapture } from '../../components/ui/CameraCapture';
 import {
-  Image, X, Tag, ChevronDown,
+  Camera, Image, X, Tag, ChevronDown,
   Book, Palette, MessageSquare, HandHeart,
   Leaf, Music, Smile, Plane, Utensils,
   BookOpen, Heart, Laptop, Trophy,
@@ -19,6 +20,7 @@ import { postService } from '../../services/postService';
 import { soultService } from '../../services/soultService';
 import { getHttpErrorMessage } from '../../services/api';
 import { useAuth } from '../../context/AuthContext';
+import { validateUploadFile } from '../../utils/mediaValidation';
 
 const ALL_CATEGORIES = [
   { id: 'knowledge', label: 'Conhecimento', icon: <Book className="w-5 h-5 text-white" /> },
@@ -64,6 +66,7 @@ export default function CreatePage() {
   const [confirmTimer, setConfirmTimer] = useState(3);
   const [isPublishing, setIsPublishing] = useState(false);
   const [publishError, setPublishError] = useState('');
+  const [cameraMode, setCameraMode] = useState<'photo' | 'video' | null>(null);
 
   const navigate = useNavigate();
   const { t } = useTranslation('common');
@@ -81,22 +84,39 @@ export default function CreatePage() {
   function handleMediaFileChange(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0];
     if (!file) return;
+    const validationError = validateUploadFile(file, 'any', 50);
+    if (validationError) { setPublishError(validationError); e.target.value = ''; return; }
+    setPublishError('');
     setMediaFile(file);
-    const reader = new FileReader();
-    reader.onload = (ev) => setMediaPreview(ev.target?.result as string);
-    reader.readAsDataURL(file);
+    setMediaPreview(URL.createObjectURL(file));
     e.target.value = '';
   }
 
   function handleSoultFileChange(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0];
     if (!file) return;
+    const validationError = validateUploadFile(file, 'video', 50);
+    if (validationError) { setPublishError(validationError); e.target.value = ''; return; }
+    setPublishError('');
     setSoultFile(file);
-    const reader = new FileReader();
-    reader.onload = (ev) => setSoultVideo(ev.target?.result as string);
-    reader.readAsDataURL(file);
+    setSoultVideo(URL.createObjectURL(file));
     e.target.value = '';
   }
+
+  useEffect(() => () => { if (mediaPreview) URL.revokeObjectURL(mediaPreview); }, [mediaPreview]);
+  useEffect(() => () => { if (soultVideo) URL.revokeObjectURL(soultVideo); }, [soultVideo]);
+
+  const handleCameraCapture = (file: File) => {
+    setPublishError('');
+    if (cameraMode === 'photo') {
+      setMediaFile(file);
+      setMediaPreview(URL.createObjectURL(file));
+    } else {
+      setSoultFile(file);
+      setSoultVideo(URL.createObjectURL(file));
+    }
+    setCameraMode(null);
+  };
 
   const handleRequestPublish = () => {
     setIsConfirming(true);
@@ -160,7 +180,7 @@ export default function CreatePage() {
         <main className="flex-1 overflow-y-auto p-4 sm:p-6 lg:p-8 max-w-3xl mx-auto w-full animate-fade-up pb-28 lg:pb-8">
 
           {/* Mode switcher */}
-          <div className="flex p-1 bg-white/[0.03] border border-white/[0.05] rounded-xl mb-8 w-full max-w-xs">
+          <div className="flex p-1 soul-glass rounded-xl mb-8 w-full max-w-xs">
             <button
               onClick={() => handleModeChange('post')}
               className={cn(
@@ -187,7 +207,7 @@ export default function CreatePage() {
           {mode === 'post' && (
             <div className="flex-1 flex flex-col relative">
               <div className="flex gap-4 flex-1">
-                <div className="soul-squircle w-11 h-11 flex-shrink-0 overflow-hidden bg-white/5 border border-white/10 mt-1 flex items-center justify-center text-white/50">
+                <div className="rounded-lg w-11 h-11 flex-shrink-0 overflow-hidden bg-neutral-800 mt-1 flex items-center justify-center text-white/50">
                   {user?.profilePicture ? (
                     <SecureImage src={user.profilePicture} alt={user?.name || 'Avatar'} className="w-full h-full object-cover" />
                   ) : (
@@ -220,13 +240,13 @@ export default function CreatePage() {
 
                   {mediaPreview && (
                     <div className="relative mt-4 rounded-2xl overflow-hidden bg-black/40 border border-white/10 group">
-                      {mediaPreview.startsWith('data:video') || mediaPreview.match(/\.(mp4|webm|ogg)$/i) ? (
+                      {mediaFile?.type.startsWith('video/') ? (
                         <SecureVideo src={mediaPreview} className="w-full max-h-[400px] object-cover" controls />
                       ) : (
                         <SecureImage src={mediaPreview} alt="Preview" className="w-full max-h-[400px] object-cover" />
                       )}
                       <button
-                        onClick={() => setMediaPreview(null)}
+                        onClick={() => { setMediaPreview(null); setMediaFile(null); }}
                         className="absolute top-3 right-3 p-1.5 bg-black/50 backdrop-blur-md rounded-full text-white opacity-0 group-hover:opacity-100 transition-opacity hover:bg-black/70"
                       >
                         <X className="w-5 h-5" />
@@ -260,6 +280,9 @@ export default function CreatePage() {
                   >
                     <Image className="w-5 h-5" />
                   </button>
+                  <button type="button" onClick={() => setCameraMode('photo')} className="flex h-10 w-10 items-center justify-center rounded-lg text-zinc-400 transition-colors hover:bg-white/5 hover:text-white" title="Tirar foto" aria-label="Tirar foto pela câmera">
+                    <Camera className="w-5 h-5" />
+                  </button>
                 </div>
 
                 <Button
@@ -272,7 +295,7 @@ export default function CreatePage() {
                 </Button>
               </div>
 
-              <input ref={mediaFileInputRef} type="file" accept="image/*,video/*" className="hidden" onChange={handleMediaFileChange} />
+              <input ref={mediaFileInputRef} type="file" accept="image/png,image/jpeg,image/gif,image/webp,video/mp4,video/webm" className="hidden" onChange={handleMediaFileChange} />
             </div>
           )}
 
@@ -281,7 +304,7 @@ export default function CreatePage() {
             <div className="flex-1 flex flex-col relative">
               <div className="flex gap-4 flex-1">
                 {/* Avatar */}
-                <div className="soul-squircle w-11 h-11 flex-shrink-0 overflow-hidden bg-white/5 border border-white/10 mt-1 flex items-center justify-center text-white/50">
+                <div className="rounded-lg w-11 h-11 flex-shrink-0 overflow-hidden bg-neutral-800 mt-1 flex items-center justify-center text-white/50">
                   {user?.profilePicture ? (
                     <SecureImage src={user.profilePicture} alt={user?.name || 'Avatar'} className="w-full h-full object-cover" />
                   ) : (
@@ -307,7 +330,7 @@ export default function CreatePage() {
                         playsInline
                       />
                       <button
-                        onClick={() => setSoultVideo(null)}
+                        onClick={() => { setSoultVideo(null); setSoultFile(null); }}
                         className="absolute top-3 right-3 p-1.5 bg-black/50 backdrop-blur-md rounded-full text-white opacity-0 group-hover:opacity-100 transition-opacity hover:bg-black/70"
                       >
                         <X className="w-4 h-4" />
@@ -341,6 +364,9 @@ export default function CreatePage() {
                   >
                     <Video className="w-5 h-5" />
                   </button>
+                  <button type="button" onClick={() => setCameraMode('video')} className="flex h-10 w-10 items-center justify-center rounded-lg text-zinc-400 transition-colors hover:bg-white/5 hover:text-white" title="Gravar vídeo" aria-label="Gravar vídeo pela câmera">
+                    <Camera className="w-5 h-5" />
+                  </button>
                 </div>
 
                 <Button
@@ -353,13 +379,17 @@ export default function CreatePage() {
                 </Button>
               </div>
 
-              <input ref={soultFileInputRef} type="file" accept="video/*" className="hidden" onChange={handleSoultFileChange} />
+              <input ref={soultFileInputRef} type="file" accept="video/mp4,video/webm" className="hidden" onChange={handleSoultFileChange} />
             </div>
           )}
+
+          {publishError && <p role="alert" className="mt-4 text-center text-sm text-red-400">{publishError}</p>}
 
         </main>
       </div>
       <BottomNav />
+
+      {cameraMode && <CameraCapture mode={cameraMode} onCapture={handleCameraCapture} onClose={() => setCameraMode(null)} />}
 
       {/* Modal de Categorias (apenas para Post) */}
       {showCategoryModal && (
@@ -408,7 +438,7 @@ export default function CreatePage() {
         <div className="fixed inset-0 z-[100] bg-black/90 backdrop-blur-md flex items-center justify-center p-6 animate-fade-in">
           <div className="w-full max-w-sm text-center space-y-8">
             <div className="space-y-3">
-              <div className="w-16 h-16 rounded-2xl bg-white/5 border border-white/10 flex items-center justify-center mx-auto">
+              <div className="w-16 h-16 rounded-2xl soul-glass flex items-center justify-center mx-auto">
                 {mode === 'soult' ? (
                   <Video className="w-7 h-7 text-zinc-300" />
                 ) : (
@@ -429,7 +459,7 @@ export default function CreatePage() {
             </div>
 
             {mode === 'post' && selectedCategory && (
-              <div className="bg-white/[0.03] border border-white/10 rounded-2xl p-4">
+              <div className="soul-glass rounded-2xl p-4">
                 <p className="text-xs text-zinc-500 mb-1">Categoria selecionada</p>
                 <p className="text-sm font-semibold text-white">{selectedCategory.label}</p>
               </div>
