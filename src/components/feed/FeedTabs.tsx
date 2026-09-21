@@ -1,17 +1,7 @@
 import { useState, useRef, useEffect } from 'react';
 import { cn } from '../../utils/cn';
 import { Heart, ChevronDown, HandHeart } from 'lucide-react';
-import {
-  Trees,
-  Palette,
-  BookOpen,
-  CookingPot,
-  Dumbbell,
-  Music4,
-  Brain,
-  Plane,
-  Laptop,
-} from 'lucide-react';
+import { SOUL_CATEGORIES, type CategoryId } from '../../constants/categories';
 
 const TAB_KEYS = ['house', 'friends', 'education', 'bem'] as const;
 export type FeedTab = typeof TAB_KEYS[number];
@@ -20,55 +10,8 @@ const isBR =
   typeof navigator !== 'undefined' &&
   navigator.language.startsWith('pt');
 
-export const CATEGORIES = [
-  {
-    id: 'natureza',
-    label: isBR ? 'Natureza' : 'Nature',
-    icon: Trees,
-  },
-  {
-    id: 'arte',
-    label: isBR ? 'Arte' : 'Art',
-    icon: Palette,
-  },
-  {
-    id: 'leitura',
-    label: isBR ? 'Leitura' : 'Reading',
-    icon: BookOpen,
-  },
-  {
-    id: 'culinaria',
-    label: isBR ? 'Culinária' : 'Cooking',
-    icon: CookingPot,
-  },
-  {
-    id: 'movimento',
-    label: isBR ? 'Movimento' : 'Movement',
-    icon: Dumbbell,
-  },
-  {
-    id: 'musica',
-    label: isBR ? 'Música' : 'Music',
-    icon: Music4,
-  },
-  {
-    id: 'reflexao',
-    label: isBR ? 'Reflexão' : 'Reflection',
-    icon: Brain,
-  },
-  {
-    id: 'viagem',
-    label: isBR ? 'Viagem' : 'Travel',
-    icon: Plane,
-  },
-  {
-    id: 'tecnologia',
-    label: isBR ? 'Tecnologia' : 'Technology',
-    icon: Laptop,
-  },
-] as const;
-
-export type CategoryId = typeof CATEGORIES[number]['id'];
+export { type CategoryId } from '../../constants/categories';
+export const CATEGORIES = SOUL_CATEGORIES;
 
 interface FeedTabsProps {
   active: FeedTab;

@@ -63,6 +63,7 @@ export default function PostDetailPage() {
               <PostCard
                 post={post}
                 onDelete={() => navigate(-1)}
+                allowMediaFullscreen
               />
             )}
           </div>

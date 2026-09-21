@@ -6,11 +6,9 @@ import { BottomNav } from '../../components/layout/BottomNav';
 import {
 User,
 Shield,
-Globe,
 ChevronRight,
 LogOut,
 X,
-Check,
 Trash2,
 ShieldCheck,
 Loader2,
@@ -18,7 +16,6 @@ Eye,
 EyeOff
 } from 'lucide-react';
 import { cn } from '../../utils/cn';
-import { useTranslation } from '../../i18n';
 import { ScreenLoader } from '../../components/ui/ScreenLoader';
 import { authService } from '../../services/authService';
 import { getHttpErrorMessage } from '../../services/api';
@@ -28,7 +25,6 @@ type ModalType =
 | 'profile'
 | 'security'
 | 'notifications'
-| 'language'
 | 'help'
 | 'logout'
 | 'privacy'
@@ -37,7 +33,6 @@ type ModalType =
 
 export default function SettingsPage() {
 const [loading, setLoading] = useState(true);
-const { i18n } = useTranslation();
 const [activeModal, setActiveModal] = useState<ModalType>(null);
 const { user, logout, refreshUser } = useAuth();
 const navigate = useNavigate();
@@ -68,10 +63,6 @@ return () => {
 
 }, [activeModal]);
 
-const [language, setLanguage] = useState(
-i18n?.language || 'pt-BR'
-);
-
 const [name, setName] = useState(user?.name || 'Usuário Soul');
 
 const [bio, setBio] = useState(
@@ -96,33 +87,10 @@ const [passwordError, setPasswordError]     = useState('');
 const [passwordSuccess, setPasswordSuccess] = useState(false);
 const [isChangingPassword, setIsChangingPassword] = useState(false);
 
-const handleLanguageChange = (langCode: string) => {
-setLanguage(langCode);
-
-if (i18n?.changeLanguage) {
-  i18n.changeLanguage(langCode);
-}
-
-setActiveModal(null);
-
-
-};
-
-const getLanguageLabel = (code: string) => {
-switch (code) {
-case 'en':
-return 'English (US)';
-case 'es':
-return 'Español';
-default:
-return 'Português (Brasil)';
-}
-};
-
 const SETTINGS_SECTIONS = [
   {
     id: 'account',
-    title: 'Minha Conta',
+    title: 'Conta',
     items: [
       {
         id: 'profile',
@@ -154,15 +122,28 @@ const SETTINGS_SECTIONS = [
     ]
   },
   {
-    id: 'preferences',
-    title: 'Preferências',
+    id: 'notifications',
+    title: 'Notificações',
     items: [
       {
-        id: 'language',
-        icon: Globe,
-        label: 'Idioma',
-        desc: getLanguageLabel(language),
-        action: () => setActiveModal('language')
+        id: 'notifications',
+        icon: Shield,
+        label: 'Notificações',
+        desc: 'Push, e-mail e modo silencioso',
+        action: () => setActiveModal('notifications')
+      }
+    ]
+  },
+  {
+    id: 'session',
+    title: 'Conta e sessão',
+    items: [
+      {
+        id: 'logout',
+        icon: LogOut,
+        label: 'Sair da conta',
+        desc: 'Encerrar sessão neste dispositivo',
+        action: () => setActiveModal('logout')
       }
     ]
   }
@@ -241,35 +222,9 @@ return ( <div className="min-h-[100dvh] bg-background flex flex-col lg:flex-row 
 
               <div
                 className="pt-2 animate-fade-up"
-                style={{ animationDelay: '250ms' }}
-              >
-                <button
-                  onClick={() => setActiveModal('logout')}
-                  className="w-full bg-red-500/[0.03] border border-red-500/10 rounded-2xl p-4 sm:p-5 flex items-center gap-4 text-left transition-colors hover:bg-red-500/10 active:bg-red-500/20 group"
-                >
-                  <div className="w-10 h-10 sm:w-11 sm:h-11 rounded-xl bg-red-500/10 flex items-center justify-center shrink-0 group-hover:scale-105 transition-transform">
-                    <LogOut
-                      className="w-5 h-5 text-red-400"
-                      strokeWidth={1.75}
-                    />
-                  </div>
-
-                  <div className="flex-1 min-w-0">
-                    <p className="text-[14px] sm:text-[15px] font-semibold text-red-400">
-                      Sair da conta
-                    </p>
-
-                    <p className="text-xs text-red-400/70 mt-0.5 truncate">
-                      Encerrar sessão neste dispositivo
-                    </p>
-                  </div>
-                </button>
-              </div>
-
-              <div
-                className="pt-2 animate-fade-up"
                 style={{ animationDelay: '300ms' }}
               >
+                <h2 className="mb-3 ml-1 text-[13px] font-semibold uppercase tracking-widest text-red-300/70">Zona de perigo</h2>
                 <button
                   onClick={() => {
                     setDeleteConfirmText('');
@@ -305,38 +260,6 @@ return ( <div className="min-h-[100dvh] bg-background flex flex-col lg:flex-row 
   </div>
 
   <BottomNav />
-
-  {activeModal === 'language' && (
-    <ModalWrapper
-      title="Selecione o Idioma"
-      onClose={() => setActiveModal(null)}
-    >
-      <div className="space-y-2">
-        {[
-          { code: 'pt-BR', label: 'Português (Brasil)' },
-          { code: 'en', label: 'English (US)' },
-          { code: 'es', label: 'Español' }
-        ].map((lang) => (
-          <button
-            key={lang.code}
-            onClick={() => handleLanguageChange(lang.code)}
-            className={cn(
-              'w-full flex items-center justify-between p-4 rounded-xl transition-all border',
-              language === lang.code
-                ? 'bg-white/10 border-white/20 text-white font-semibold'
-                : 'bg-white/[0.02] border-transparent text-textSecondary hover:bg-white/5 hover:text-white'
-            )}
-          >
-            <span className="text-sm">{lang.label}</span>
-
-            {language === lang.code && (
-              <Check className="w-4 h-4 text-white" />
-            )}
-          </button>
-        ))}
-      </div>
-    </ModalWrapper>
-  )}
 
   {activeModal === 'profile' && (
     <ModalWrapper
@@ -751,51 +674,6 @@ return ( <div className="min-h-[100dvh] bg-background flex flex-col lg:flex-row 
           </span>
         </button>
         <p className="text-xs leading-relaxed text-textSecondary">As solicitações pendentes aparecem na aba Solicitações das notificações.</p>
-        <div className="flex flex-col items-center gap-3 py-4">
-          <div className="w-16 h-16 rounded-full soul-glass flex items-center justify-center">
-            <ShieldCheck className="w-8 h-8 text-white" />
-          </div>
-
-          <p className="text-lg font-semibold text-white">Você decide quem acompanha você</p>
-
-          <p className="text-sm text-textSecondary text-center leading-relaxed max-w-[240px]">
-            Seu nome e sua bio continuam visíveis. Posts e Soults ficam disponíveis apenas para seguidores aprovados quando o perfil é privado.
-          </p>
-        </div>
-
-        <div className="space-y-3">
-          {[
-            'Nenhum algoritmo preditivo analisa seu comportamento.',
-            'Nenhum dado é vendido ou compartilhado com terceiros.',
-            'Seu feed é 100% cronológico, sem personalização oculta.',
-            'Só armazenamos o necessário para o app funcionar.'
-          ].map((item) => (
-            <div
-              key={item}
-              className="flex items-start gap-3 p-4 rounded-xl soul-glass"
-            >
-              <Check className="w-4 h-4 text-white shrink-0 mt-0.5" />
-
-              <p className="text-[13px] text-textSecondary leading-relaxed">
-                {item}
-              </p>
-            </div>
-          ))}
-        </div>
-
-        <div className="flex items-center gap-3 p-4 rounded-xl bg-white/[0.02] border border-dashed border-white/10">
-          <p className="text-[12px] text-textSecondary/70 text-center leading-relaxed">
-            Recibos de leitura ("Visto"): seus contatos não sabem se você
-            leu a mensagem por padrão.
-          </p>
-        </div>
-
-        <button
-          onClick={() => setActiveModal(null)}
-          className="w-full py-3.5 bg-white text-black font-bold rounded-xl hover:bg-white/90 active:scale-[0.98] transition-all text-sm"
-        >
-          Entendido
-        </button>
       </div>
     </ModalWrapper>
   )}

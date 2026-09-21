@@ -142,7 +142,51 @@
   -webkit-tap-highlight-color: transparent;
 }
 
+@media (hover: hover) and (pointer: fine) {
+  .soulzinho-cursor-active,
+  .soulzinho-cursor-active * {
+    cursor: none !important;
+  }
+
+  .soulzinho-cursor {
+    position: fixed;
+    top: 0;
+    left: 0;
+    z-index: 2147483647;
+    width: 42px;
+    height: 42px;
+    pointer-events: none;
+    opacity: 0;
+    transform-origin: center;
+    transition: opacity 180ms ease;
+    filter: drop-shadow(0 5px 10px rgba(0, 0, 0, 0.28));
+    will-change: transform;
+  }
+
+  .soulzinho-cursor.is-visible {
+    opacity: 1;
+  }
+
+  .soulzinho-cursor img {
+    width: 100%;
+    height: 100%;
+    object-fit: contain;
+    animation: soulzinho-cursor-breathe 2.4s cubic-bezier(0.45, 0, 0.55, 1) infinite;
+  }
+
+  @keyframes soulzinho-cursor-breathe {
+    50% { transform: scale(1.055) translateY(-2px) rotate(1deg); }
+  }
+}
+
 *:focus-visible {
-  outline: 2px solid rgba(255, 255, 255, 0.7) !important;
-  outline-offset: 2px !important;
+  outline: 1px solid rgba(255, 255, 255, 0.32);
+  outline-offset: 2px;
+}
+
+input:focus-visible,
+textarea:focus-visible,
+select:focus-visible {
+  border-color: rgba(255, 255, 255, 0.16) !important;
+  box-shadow: 0 0 0 2px rgba(255, 255, 255, 0.055) !important;
 }

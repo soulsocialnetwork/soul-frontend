@@ -46,16 +46,16 @@ const FEED_INTENTIONS = [
   },
 ];
 
-const CATEGORY_KEYWORDS: Record<CategoryId, string[]> = {
-  natureza: ['plant', 'jardim', 'natureza', 'trilha', 'floresta', 'flores', 'substrato'],
-  arte: ['arte', 'pintura', 'desenho', 'design', 'paleta', 'criatividade', 'macramê'],
-  leitura: ['livro', 'leitura', 'ler', 'página', 'capítulo', 'literatura'],
-  culinaria: ['pão', 'receita', 'cozinhar', 'risoto', 'cozinha', 'comida', 'ingrediente'],
-  movimento: ['correr', 'pedalar', 'caminhada', 'bicicleta', 'exercício', 'treino', 'trilha'],
-  musica: ['música', 'canção', 'tocar', 'playlist', 'instrumento', 'ritmo'],
-  reflexao: ['silêncio', 'presença', 'consciência', 'slow', 'pausa', 'desacelerar', 'meditar', 'respirar'],
-  viagem: ['viagem', 'cidade', 'país', 'voo', 'destino', 'passagem'],
-  tecnologia: ['tech', 'código', 'app', 'programar', 'software', 'digital', 'computador'],
+const LEGACY_CATEGORY_KEYWORDS: Partial<Record<CategoryId, string[]>> = {
+  nature: ['plant', 'jardim', 'natureza', 'trilha', 'floresta', 'flores', 'substrato'],
+  art: ['arte', 'pintura', 'desenho', 'design', 'paleta', 'criatividade', 'macramê'],
+  books: ['livro', 'leitura', 'ler', 'página', 'capítulo', 'literatura'],
+  food: ['pão', 'receita', 'cozinhar', 'risoto', 'cozinha', 'comida', 'ingrediente'],
+  wellness: ['correr', 'pedalar', 'caminhada', 'bicicleta', 'exercício', 'treino', 'trilha'],
+  music: ['música', 'canção', 'tocar', 'playlist', 'instrumento', 'ritmo'],
+  reflection: ['silêncio', 'presença', 'consciência', 'slow', 'pausa', 'desacelerar', 'meditar', 'respirar'],
+  travel: ['viagem', 'cidade', 'país', 'voo', 'destino', 'passagem'],
+  technology: ['tech', 'código', 'app', 'programar', 'software', 'digital', 'computador'],
 };
 
 const BEM_KEYWORDS = ['bem', 'ajud', 'doa', 'voluntári', 'solidari', 'caridade'];
@@ -77,6 +77,9 @@ export default function FeedPage() {
   
   const [intentionState, setIntentionState] = useState<'check' | 'show' | 'done'>('check');
   const [activeCategories, setActiveCategories] = useState<CategoryId[]>([]);
+  const [realFriendIds, setRealFriendIds] = useState<Set<string>>(new Set());
+
+  useEffect(() => { void userService.getRealFriendIds().then(ids => setRealFriendIds(new Set(ids))).catch(() => setRealFriendIds(new Set())); }, []);
 
   const { t } = useTranslation('feed');
 
@@ -216,7 +219,7 @@ export default function FeedPage() {
     }
 
     // Filtros por Aba Principal
-    if (activeTab === 'friends' && post.author.verified) {
+    if (activeTab === 'friends' && !realFriendIds.has(post.author.id)) {
       return false;
     }
 
@@ -238,7 +241,7 @@ export default function FeedPage() {
     }
 
     return activeCategories.some((category) =>
-      CATEGORY_KEYWORDS[category]?.some((keyword) => text.includes(keyword))
+      post.category === category || LEGACY_CATEGORY_KEYWORDS[category]?.some((keyword) => text.includes(keyword))
     );
   };
 

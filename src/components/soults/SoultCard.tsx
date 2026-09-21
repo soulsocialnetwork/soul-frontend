@@ -65,7 +65,7 @@ export function SoultCard({ soult, isActive = true }: SoultCardProps) {
 
   const [playing, setPlaying] = useState(false);
   const [liked, setLiked] = useState(soult.hasLiked || false);
-  const [saved, setSaved] = useState(false);
+  const [saved, setSaved] = useState(soult.saved || false);
   const [isFollowing, setIsFollowing] = useState(false);
   const [showHeartAnim, setShowHeartAnim] = useState(false);
   const lastTapRef = useRef<number>(0);
@@ -169,6 +169,18 @@ export function SoultCard({ soult, isActive = true }: SoultCardProps) {
       if (next) await soultService.likeSoult(soult.id);
     } catch {
       setLiked(!next);
+    }
+  };
+
+  const handleSaveToggle = async () => {
+    const nextSaved = !saved;
+    setSaved(nextSaved);
+    try {
+      if (nextSaved) await soultService.saveSoult(soult.id);
+      else await soultService.unsaveSoult(soult.id);
+      window.dispatchEvent(new Event('savedSoultsUpdated'));
+    } catch {
+      setSaved(!nextSaved);
     }
   };
 
@@ -278,12 +290,12 @@ export function SoultCard({ soult, isActive = true }: SoultCardProps) {
         <div
           className={cn(
             'absolute inset-0 flex items-center justify-center transition-opacity duration-300 z-20',
-            playing ? 'opacity-0 pointer-events-none' : 'opacity-100 bg-black/10'
+            playing ? 'opacity-0 pointer-events-none' : 'opacity-100 bg-black/25'
           )}
         >
-          <div className="w-14 h-14 rounded-full bg-white/15 backdrop-blur-sm border border-white/20 flex items-center justify-center">
-            <Play className="w-5 h-5 text-white ml-0.5 fill-white stroke-none" />
-          </div>
+          <span className="flex h-10 w-10 items-center justify-center rounded-lg bg-black/20 text-white shadow-sm">
+            <Play className="ml-0.5 h-4 w-4 fill-white stroke-none" aria-hidden="true" />
+          </span>
         </div>
 
         {/* Barra de progresso branca e interativa */}
@@ -354,6 +366,7 @@ export function SoultCard({ soult, isActive = true }: SoultCardProps) {
                 {soult.description}
               </p>
             )}
+            {soult.category && <span className="block text-xs font-medium text-white/50">#{soult.category}</span>}
           </div>
           {(captionOverflows || captionExpanded) && (
             <button
@@ -369,7 +382,7 @@ export function SoultCard({ soult, isActive = true }: SoultCardProps) {
 
           <div className="flex items-end justify-between gap-3">
             <span className="text-white/30 text-[10px]">{timeAgo(soult.createdAt)}</span>
-            <span className="shrink-0 rounded-lg border border-white/10 bg-black/60 px-2.5 py-1 text-[11px] font-semibold tabular-nums text-white/90 backdrop-blur-md">
+            <span className="shrink-0 text-[11px] font-semibold tabular-nums text-white/90 drop-shadow-sm">
               {formatTime(currentTime)} / {formatTime(duration || soult.duration || 0)}
             </span>
           </div>
@@ -402,7 +415,7 @@ export function SoultCard({ soult, isActive = true }: SoultCardProps) {
           </button>
 
           <button
-            onClick={(e) => { e.stopPropagation(); setSaved((s) => !s); }}
+            onClick={(e) => { e.stopPropagation(); void handleSaveToggle(); }}
             className="flex flex-col items-center gap-1"
           >
             <div className="w-10 h-10 rounded-xl bg-black/40 flex items-center justify-center border border-white/10 active:scale-90 transition-transform">
@@ -432,63 +445,54 @@ export function SoultCard({ soult, isActive = true }: SoultCardProps) {
           onClick={() => setCommentsOpen(false)}
         >
           <div
-            className="w-full lg:max-w-md h-[70vh] lg:h-[550px] bg-background border-t lg:border border-white/10 rounded-t-3xl lg:rounded-3xl flex flex-col shadow-2xl overflow-hidden animate-slide-up"
+            className="w-full max-w-lg mx-auto h-[60vh] bg-neutral-900/95 backdrop-blur-xl border-t border-white/10 rounded-t-3xl p-4 flex flex-col justify-between shadow-2xl animate-slide-up"
             onClick={(e) => e.stopPropagation()}
           >
-            <div className="flex items-center justify-between p-4 sm:p-5 border-b border-white/[0.08] bg-white/[0.02]">
-              <div className="flex items-center gap-2">
-                <MessageCircle className="w-5 h-5 text-white" />
-                <h3 className="text-base font-bold text-white">
-                  Comentários {commentsList.length > 0 && `(${commentsList.length})`}
-                </h3>
-              </div>
+            <div className="flex items-center justify-between pb-3 border-b border-white/10">
+              <span className="text-sm font-semibold text-textPrimary tracking-wide">
+                Comentários ({commentsList.length})
+              </span>
               <button
                 onClick={() => setCommentsOpen(false)}
-                className="p-1.5 rounded-full text-textSecondary hover:text-white hover:bg-white/10 transition-colors"
+                className="p-1 rounded-full text-textSecondary hover:text-white hover:bg-white/10 transition-colors"
               >
                 <X className="w-5 h-5" />
               </button>
             </div>
 
-            <div className="flex-1 overflow-y-auto p-4 sm:p-5 space-y-4 no-scrollbar">
+            <div className="flex-1 overflow-y-auto py-3 space-y-4">
               {commentsList.length === 0 ? (
-                <div className="text-center py-12 flex flex-col items-center">
-                  <div className="w-12 h-12 rounded-full bg-white/5 flex items-center justify-center text-textSecondary mb-3 border border-white/10">
-                    <MessageCircle className="w-6 h-6 opacity-40" />
-                  </div>
-                  <p className="text-sm font-medium text-white/80">Nenhum comentário ainda</p>
-                  <p className="text-xs text-textSecondary mt-1">Seja o primeiro a deixar uma mensagem!</p>
-                </div>
+                <div className="flex justify-center py-4"><span className="text-xs text-textSecondary">Nenhum comentário.</span></div>
               ) : (
                 commentsList.map((item) => (
-                  <div key={item.id} className="flex gap-3 items-start group">
-                    <div className="w-8 h-8 rounded-full bg-white/10 border border-white/10 flex items-center justify-center shrink-0">
+                  <div key={item.id} className="flex gap-3 items-start">
+                    <div className="w-8 h-8 rounded-lg border border-white/15 bg-neutral-800 flex items-center justify-center shrink-0">
                       <span className="text-white font-bold text-xs">{item.author.charAt(0).toUpperCase()}</span>
                     </div>
-                    <div className="flex-1 min-w-0 soul-glass p-3 rounded-2xl">
-                      <div className="flex items-center justify-between gap-2 mb-1">
-                        <span className="text-xs font-semibold text-white truncate">{item.author}</span>
-                        <span className="text-[10px] text-textSecondary">{item.time}</span>
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-2">
+                        <span className="text-textPrimary font-semibold text-xs truncate">{item.author}</span>
+                        <span className="text-textSecondary text-[10px]">{item.time}</span>
                       </div>
-                      <p className="text-xs text-textPrimary/90 leading-relaxed break-words">{item.text}</p>
+                      <p className="text-textPrimary/80 text-xs mt-0.5 leading-relaxed break-words">{item.text}</p>
                     </div>
                   </div>
                 ))
               )}
             </div>
 
-            <form onSubmit={handleAddComment} className="p-3 sm:p-4 border-t border-white/[0.08] bg-white/[0.02] flex items-center gap-2">
+            <form onSubmit={handleAddComment} className="pt-2 border-t border-white/10 flex items-center gap-2">
               <input
                 type="text"
                 placeholder="Escreva um comentário..."
                 value={newComment}
                 onChange={(e) => setNewComment(e.target.value)}
-                className="flex-1 bg-white/[0.06] border border-white/10 rounded-xl px-4 py-2.5 text-xs text-white placeholder-textSecondary focus:outline-none focus:border-white/30 transition-all"
+                className="flex-1 soul-glass rounded-2xl px-4 py-2.5 text-xs text-textPrimary placeholder-textSecondary focus:outline-none transition-colors"
               />
               <button
                 type="submit"
                 disabled={!newComment.trim()}
-                className="w-10 h-10 rounded-xl bg-white text-black flex items-center justify-center disabled:opacity-30 hover:bg-white/90 active:scale-95 transition-all shrink-0 font-semibold"
+                className="w-9 h-9 rounded-2xl bg-white text-black flex items-center justify-center disabled:opacity-30 disabled:cursor-not-allowed hover:bg-white/90 transition-colors shrink-0 font-bold"
               >
                 <Send className="w-4 h-4" />
               </button>

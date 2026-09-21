@@ -61,6 +61,8 @@ export default function UserProfilePage() {
   const [activeTab, setActiveTab] = useState<ProfileTab>('posts');
   const [followLoading, setFollowLoading] = useState(false);
   const [sendingMsg, setSendingMsg] = useState(false);
+  const [invitingFriend, setInvitingFriend] = useState(false);
+  const [realFriendStatus, setRealFriendStatus] = useState<'NONE' | 'SENT' | 'RECEIVED' | 'FRIENDS'>('NONE');
   const [followStatus, setFollowStatus] = useState<'NOT_FOLLOWING' | 'PENDING' | 'FOLLOWING'>('NOT_FOLLOWING');
   const isFollowing = followStatus === 'FOLLOWING';
   const [showAvatarModal, setShowAvatarModal] = useState(false);
@@ -86,6 +88,8 @@ export default function UserProfilePage() {
       .finally(() => { if (!cancelled) setLoadingProfile(false); });
     return () => { cancelled = true; };
   }, [username]);
+
+  useEffect(() => { if (username) void userService.getRealFriendStatus(username).then(setRealFriendStatus).catch(() => setRealFriendStatus('NONE')); }, [username]);
 
   // Load follow status
   useEffect(() => {
@@ -316,6 +320,23 @@ export default function UserProfilePage() {
                       {/* Só exibe o botão Seguir se não for o próprio perfil */}
                       {!isOwnProfile && (
                         <button
+                          onClick={async () => {
+                            if (!username || invitingFriend) return;
+                            setInvitingFriend(true);
+                            try { await userService.inviteRealFriend(username); setRealFriendStatus('SENT'); }
+                            catch (error) { setPostsError(getHttpErrorMessage(error)); }
+                            finally { setInvitingFriend(false); }
+                          }}
+                          disabled={!isFollowing || invitingFriend || realFriendStatus !== 'NONE'}
+                          title="Ambos precisam se seguir para enviar o convite"
+                          className={cn('flex items-center justify-center gap-2 px-4 h-9 rounded-xl text-[13px] font-semibold soul-glass text-white transition-all shrink-0', !isFollowing || invitingFriend ? 'opacity-50 cursor-not-allowed' : 'active:scale-95')}
+                        >
+                          {invitingFriend ? <Loader2 className="w-4 h-4 animate-spin" /> : realFriendStatus === 'FRIENDS' ? <><UserCheck className="w-4 h-4" /><span className="hidden sm:inline">Amigos reais</span></> : realFriendStatus === 'SENT' ? <><UserCheck className="w-4 h-4" /><span className="hidden sm:inline">Convite enviado</span></> : realFriendStatus === 'RECEIVED' ? <><UserCheck className="w-4 h-4" /><span className="hidden sm:inline">Convite recebido</span></> : <><UserPlus className="w-4 h-4" /><span className="hidden sm:inline">Tornar amigos reais</span></>}
+                        </button>
+                      )}
+
+                      {!isOwnProfile && (
+                        <button
                           onClick={handleFollowClick}
                           disabled={followLoading}
                           className={cn(
@@ -385,7 +406,7 @@ export default function UserProfilePage() {
                       <span className="text-textSecondary text-xs mt-1">seguindo</span>
                     </div>
                     <div className="flex flex-col items-center md:items-start">
-                      <span className="text-[10px] font-semibold text-textSecondary/60 soul-glass rounded-full px-2 py-0.5 leading-none mb-0.5">em breve</span>
+                      <span className="font-bold text-base sm:text-lg leading-none">{user.friendsCount || 0}</span>
                       <span className="text-textSecondary text-xs mt-1">amigos reais</span>
                     </div>
                   </div>

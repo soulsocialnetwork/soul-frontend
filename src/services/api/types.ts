@@ -60,6 +60,8 @@ privateProfile: boolean;
 postCount: number;
 followerCount: number;
 followingCount: number;
+realFriendsCount: number;
+verified: boolean;
 }
 
 export interface ProfileSummary {

@@ -18,8 +18,10 @@ import { userService } from '../../services/userService';
 import { ConnectionsModal } from '../../components/profile/ConnectionsModal';
 import { RealFriendsModal } from '../../components/profile/RealFriendsModal';
 import { postService } from '../../services/postService';
+import { soultService, type Soult } from '../../services/soultService';
 import {
   Grid,
+  Film,
   Bookmark,
   Plus,
   X,
@@ -30,6 +32,7 @@ import {
   Trash2,
   QrCode,
   Loader2,
+  BadgeCheck,
 } from 'lucide-react';
 import { cn } from '../../utils/cn';
 import { ScreenLoader } from '../../components/ui/ScreenLoader';
@@ -54,6 +57,7 @@ interface PublicProfileResponse {
   postCount: number;
   followerCount: number;
   followingCount: number;
+  realFriendsCount: number;
 }
 
 interface ProfileData {
@@ -80,7 +84,7 @@ function convertPostResponseToPost(
       name: postResponse.name,
       username: postResponse.username,
       avatarUrl: postResponse.profilePicture || undefined,
-      verified: false,
+      verified: postResponse.verified,
     },
     content: postResponse.content,
     imageUrl: postResponse.imageUrl || undefined,
@@ -97,7 +101,7 @@ export default function ProfilePage() {
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState('');
   const [reload, setReload] = useState(0);
-  const [activeTab, setActiveTab] = useState<'posts' | 'saved'>('posts');
+  const [activeTab, setActiveTab] = useState<'posts' | 'soults' | 'saved'>('posts');
   const highlightsRef = useRef<HTMLDivElement>(null);
 
   const [highlightError, setHighlightError] = useState('');
@@ -132,6 +136,7 @@ export default function ProfilePage() {
 
   const [followersCount, setFollowersCount] = useState(0);
   const [followingCount, setFollowingCount] = useState(0);
+  const [realFriendsCount, setRealFriendsCount] = useState(0);
   const [postCount, setPostCount] = useState(0);
 
   const [showRealFriendsModal, setShowRealFriendsModal] =
@@ -151,6 +156,32 @@ export default function ProfilePage() {
 
   const [displayPosts, setDisplayPosts] = useState<Post[]>([]);
   const [savedPosts, setSavedPosts] = useState<Post[]>([]);
+  const [savedSoults, setSavedSoults] = useState<Soult[]>([]);
+  const [profileSoults, setProfileSoults] = useState<Soult[]>([]);
+
+  useEffect(() => {
+    if (!profileData.username) return;
+    let cancelled = false;
+    void soultService.getSoultsByUsername(profileData.username)
+      .then((items) => { if (!cancelled) setProfileSoults(items); })
+      .catch(() => { if (!cancelled) setProfileSoults([]); });
+    return () => { cancelled = true; };
+  }, [profileData.username]);
+
+  useEffect(() => {
+    let cancelled = false;
+    const loadSavedSoults = () => {
+      void soultService.getSavedSoults()
+        .then((items) => { if (!cancelled) setSavedSoults(items); })
+        .catch(() => { if (!cancelled) setSavedSoults([]); });
+    };
+    loadSavedSoults();
+    window.addEventListener('savedSoultsUpdated', loadSavedSoults);
+    return () => {
+      cancelled = true;
+      window.removeEventListener('savedSoultsUpdated', loadSavedSoults);
+    };
+  }, [user?.id]);
 
   useEffect(() => {
     let cancelled = false;
@@ -233,6 +264,7 @@ export default function ProfilePage() {
 
         setFollowersCount(profile.followerCount);
         setFollowingCount(profile.followingCount);
+        setRealFriendsCount(profile.realFriendsCount);
         setPostCount(profile.postCount);
 
         const postsResponse = await api.get<PagePostResponse>(
@@ -507,16 +539,16 @@ export default function ProfilePage() {
                   <div className="flex flex-col md:flex-row gap-6 md:gap-9 items-center md:items-start">
                     <div
                       onClick={() => setShowAvatarModal(true)}
-                      className="rounded-lg w-28 h-28 md:w-40 md:h-40 overflow-hidden bg-neutral-800 shrink-0 cursor-pointer active:scale-95 transition-transform"
+                      className="rounded-lg border border-white/15 w-28 h-28 md:w-40 md:h-40 overflow-hidden bg-neutral-800 shrink-0 cursor-pointer active:scale-95 transition-transform"
                     >
                       {profileData.avatarUrl ? (
                         <SecureImage
                           src={profileData.avatarUrl}
                           alt="Avatar"
-                          className="w-full h-full rounded-2xl object-cover"
+                          className="w-full h-full rounded-lg object-cover"
                         />
                       ) : (
-                        <div className="w-full h-full rounded-2xl flex items-center justify-center text-textSecondary">
+                        <div className="w-full h-full rounded-lg flex items-center justify-center text-textSecondary">
                           <Camera className="w-8 h-8" />
                         </div>
                       )}
@@ -524,9 +556,12 @@ export default function ProfilePage() {
 
                     <div className="flex-1 flex flex-col items-center md:items-start text-center md:text-left w-full">
                       <div className="mb-4 w-full">
-                        <h1 className="text-2xl font-bold tracking-tight">
-                          {profileData.username || 'Perfil'}
-                        </h1>
+                        <div className="flex items-center justify-center md:justify-start gap-2">
+                          <h1 className="text-2xl font-bold tracking-tight">
+                            {profileData.username || 'Perfil'}
+                          </h1>
+                          {user?.role === 'ADMIN' && <BadgeCheck aria-label="Perfil verificado" className="w-5 h-5 text-accent shrink-0" strokeWidth={2.5} />}
+                        </div>
                       </div>
 
                       <div className="flex gap-6 mb-4 text-sm">
@@ -569,6 +604,19 @@ export default function ProfilePage() {
                             seguindo
                           </span>
                         </div>
+
+                        <button
+                          type="button"
+                          onClick={() => setShowRealFriendsModal(true)}
+                          className="flex flex-col items-center text-left transition-opacity hover:opacity-80 active:scale-95 md:items-start"
+                        >
+                          <span className="text-lg font-bold leading-none">
+                            {realFriendsCount}
+                          </span>
+                          <span className="text-xs text-textSecondary">
+                            Amigos Reais
+                          </span>
+                        </button>
                       </div>
 
                       <div className="space-y-1 text-sm text-textSecondary max-w-md">
@@ -636,7 +684,7 @@ export default function ProfilePage() {
                         }
                         className="flex flex-col items-center gap-2 cursor-pointer shrink-0 group active:scale-95 transition-transform"
                       >
-                        <div className="rounded-lg h-16 w-16 overflow-hidden bg-neutral-800 transition-colors group-hover:bg-neutral-700 md:h-20 md:w-20">
+                        <div className="rounded-lg border border-white/15 h-16 w-16 overflow-hidden bg-neutral-800 transition-colors group-hover:bg-neutral-700 md:h-20 md:w-20">
                           <div className="flex h-full w-full items-center justify-center">
                             <Plus className="h-6 w-6 text-white/70 group-hover:text-white md:h-8 md:w-8" />
                           </div>
@@ -656,7 +704,7 @@ export default function ProfilePage() {
                             }
                             className="flex flex-col items-center gap-2 cursor-pointer shrink-0 active:scale-95 transition-transform"
                           >
-                            <div className="rounded-lg h-16 w-16 overflow-hidden bg-neutral-800 md:h-20 md:w-20">
+                            <div className="rounded-lg border border-white/15 h-16 w-16 overflow-hidden bg-neutral-800 md:h-20 md:w-20">
                               {highlight.type === 'video' ? (
                                 <SecureVideo
                                   src={`${highlight.cover}#t=0.001`}
@@ -705,6 +753,19 @@ export default function ProfilePage() {
                   </button>
 
                   <button
+                    onClick={() => setActiveTab('soults')}
+                    className={cn(
+                      'pb-4 flex items-center gap-2 text-xs sm:text-sm font-semibold uppercase tracking-widest border-b-2 transition-colors relative top-[1px]',
+                      activeTab === 'soults'
+                        ? 'border-white text-white'
+                        : 'border-transparent text-textSecondary'
+                    )}
+                  >
+                    <Film className="w-4 h-4" />
+                    <span>Soults</span>
+                  </button>
+
+                  <button
                     onClick={() => setActiveTab('saved')}
                     className={cn(
                       'pb-4 flex items-center gap-2 text-xs sm:text-sm font-semibold uppercase tracking-widest border-b-2 transition-colors relative top-[1px]',
@@ -719,22 +780,23 @@ export default function ProfilePage() {
                 </div>
 
                 {(() => {
-                  const list =
-                    activeTab === 'saved'
-                      ? savedPosts
-                      : displayPosts;
+                  const list = activeTab === 'saved'
+                    ? savedPosts
+                    : activeTab === 'posts'
+                      ? displayPosts
+                      : [];
+                  const soults = activeTab === 'saved'
+                    ? savedSoults
+                    : activeTab === 'soults'
+                      ? profileSoults
+                      : [];
 
                   return (
                     <div className="grid grid-cols-3 gap-1 md:gap-4">
                       {list.map((post, index) => (
                         <div
                           key={post.id}
-                          onClick={() =>
-                            setFeedModal({
-                              list,
-                              startIndex: index,
-                            })
-                          }
+                          onClick={() => navigate(`/post/${post.id}`)}
                           className="aspect-square bg-white/5 md:rounded-2xl overflow-hidden cursor-pointer active:scale-95 transition-transform flex items-center justify-center relative group"
                         >
                           {post.imageUrl ? (
@@ -762,11 +824,35 @@ export default function ProfilePage() {
                         </div>
                       ))}
 
-                      {list.length === 0 && (
+                      {soults.map((soult) => (
+                        <button
+                          key={`soult-${soult.id}`}
+                          type="button"
+                          onClick={() => navigate(`/soults?video=${soult.id}`)}
+                          className="aspect-square bg-white/5 md:rounded-2xl overflow-hidden cursor-pointer active:scale-95 transition-transform relative group"
+                          aria-label={`Abrir Soult salvo: ${soult.title}`}
+                        >
+                          {soult.thumbnailUrl ? (
+                            <SecureImage src={soult.thumbnailUrl} alt={soult.title} className="h-full w-full object-cover" />
+                          ) : (
+                            <SecureVideo src={soult.videoUrl} className="h-full w-full object-cover" muted />
+                          )}
+                          <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/75 to-transparent px-2 pb-2 pt-8 text-left">
+                            <span className="line-clamp-1 text-xs font-semibold text-white">{soult.title}</span>
+                          </div>
+                          <div className="absolute top-2 right-2 w-6 h-6 bg-black/50 rounded-full flex items-center justify-center">
+                            <Bookmark className="w-3 h-3 text-white" fill="white" />
+                          </div>
+                        </button>
+                      ))}
+
+                      {list.length === 0 && soults.length === 0 && (
                         <div className="col-span-3 py-20 text-center text-textSecondary text-sm">
                           {activeTab === 'saved'
-                            ? 'Nenhum post salvo ainda.'
-                            : 'Nenhum post ainda.'}
+                            ? 'Nenhum item salvo ainda.'
+                            : activeTab === 'soults'
+                              ? 'Nenhum Soult ainda.'
+                              : 'Nenhum post ainda.'}
                         </div>
                       )}
                     </div>

@@ -54,7 +54,7 @@ export default function ProfilePage() {
                 {/* Perfil Header */}
                 <div className="soul-glass rounded-2xl p-6 md:p-10">
                   <div className="flex flex-col md:flex-row gap-8 items-center md:items-start">
-                    <div className="rounded-lg w-28 h-28 md:w-40 md:h-40 overflow-hidden bg-neutral-800 shrink-0">
+                    <div className="rounded-lg border border-white/15 w-28 h-28 md:w-40 md:h-40 overflow-hidden bg-neutral-800 shrink-0">
                       <SecureImage src={profileData.avatarUrl} alt="Avatar" className="w-full h-full rounded-2xl object-cover" />
                     </div>
 
@@ -87,7 +87,7 @@ export default function ProfilePage() {
                         onClick={() => navigate('/highlights/create')}
                         className="flex flex-col items-center gap-2 cursor-pointer shrink-0 group"
                       >
-                        <div className="rounded-lg h-16 w-16 overflow-hidden bg-neutral-800 transition-colors group-hover:bg-neutral-700 md:h-20 md:w-20">
+                        <div className="rounded-lg border border-white/15 h-16 w-16 overflow-hidden bg-neutral-800 transition-colors group-hover:bg-neutral-700 md:h-20 md:w-20">
                           <div className="flex h-full w-full items-center justify-center">
                             <Plus className="h-8 w-8 text-white" />
                           </div>
@@ -102,7 +102,7 @@ export default function ProfilePage() {
                           onClick={() => setActiveHighlightIndex(index)}
                           className="flex flex-col items-center gap-2 cursor-pointer shrink-0"
                         >
-                          <div className="rounded-lg h-16 w-16 overflow-hidden bg-neutral-800 md:h-20 md:w-20">
+                          <div className="rounded-lg border border-white/15 h-16 w-16 overflow-hidden bg-neutral-800 md:h-20 md:w-20">
                             {h.type === 'video' ? (
                               <SecureVideo src={h.cover} className="rounded-lg w-full h-full object-cover" />
                             ) : (

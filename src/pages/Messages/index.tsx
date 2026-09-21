@@ -4,7 +4,7 @@ import { useState, useRef, useEffect, useCallback } from 'react';
 import { Sidebar } from '../../components/layout/Sidebar';
 import { Header } from '../../components/layout/Header';
 import { BottomNav } from '../../components/layout/BottomNav';
-import { Search, Send, ArrowLeft, MoreHorizontal, Plus, X, Loader2, User, CheckCheck, Check } from 'lucide-react';
+import { Search, Send, ArrowLeft, MoreHorizontal, Plus, X, Loader2, User, CheckCheck, Check, Flag, ShieldBan, Trash2, Eraser } from 'lucide-react';
 import { cn } from '../../utils/cn';
 import { messageService, type Conversation, type Message } from '../../services/messageService';
 import { userService } from '../../services/userService';
@@ -12,6 +12,7 @@ import { useAuth } from '../../context/AuthContext';
 import { useSearchParams } from 'react-router-dom';
 import { notifyNotificationsUpdated } from '../../services/notificationService';
 import type { ProfileSummary } from '../../services/api/types';
+import { moderationService } from '../../services/moderationService';
 
 function MessageStatus({ readAt }: { readAt: string | null }) {
   if (!readAt) return <Check className="w-3 h-3 text-black/40" />;
@@ -53,6 +54,9 @@ export default function MessagesPage() {
   const [newConvSearch, setNewConvSearch] = useState('');
   const [searchResults, setSearchResults] = useState<ProfileSummary[]>([]);
   const [searchingUsers, setSearchingUsers] = useState(false);
+  const [conversationMenuOpen, setConversationMenuOpen] = useState(false);
+  const [confirmAction, setConfirmAction] = useState<'block' | 'report' | 'clear' | 'delete' | null>(null);
+  const [actionLoading, setActionLoading] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
   const loadConversations = useCallback(async () => {
@@ -211,6 +215,41 @@ export default function MessagesPage() {
     if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); handleSend(); }
   };
 
+  const runConversationAction = async () => {
+    if (!selected || !confirmAction || actionLoading) return;
+    const action = confirmAction;
+    setActionLoading(true);
+    setMessageError('');
+    try {
+      if (action === 'clear') {
+        await messageService.clearMessages(selected.id);
+        setMessages([]);
+        setHasOlder(false);
+      } else if (action === 'delete') {
+        await messageService.hideConversation(selected.id);
+        setConversations(previous => previous.filter(conversation => conversation.id !== selected.id));
+        activeConversation.current = null;
+        setSelected(null);
+        setMessages([]);
+        setShowMobileChat(false);
+      } else if (action === 'block') {
+        await messageService.blockConversationParticipant(selected.id);
+        setConversations(previous => previous.filter(conversation => conversation.id !== selected.id));
+        activeConversation.current = null;
+        setSelected(null);
+        setMessages([]);
+        setShowMobileChat(false);
+      } else {
+        await moderationService.reportItem(selected.otherUserId, 'ACCOUNT', 'Denúncia enviada pela conversa direta.');
+      }
+      setConfirmAction(null);
+    } catch (error) {
+      setMessageError(getHttpErrorMessage(error));
+    } finally {
+      setActionLoading(false);
+    }
+  };
+
   useEffect(() => {
     if (loadingOlder) return;
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -346,9 +385,34 @@ export default function MessagesPage() {
                     <p className="text-sm font-semibold text-white leading-none">{selected.otherName}</p>
                     <p className="text-xs text-white/35 mt-0.5">@{selected.otherUsername}</p>
                   </div>
-                  <button className="p-2 rounded-xl hover:bg-white/[0.05] text-white/40 hover:text-white/70 transition-all">
+                  <button
+                    type="button"
+                    aria-label="Opções da conversa"
+                    aria-expanded={conversationMenuOpen}
+                    onClick={() => setConversationMenuOpen(open => !open)}
+                    className="p-2 rounded-xl hover:bg-white/[0.05] text-white/40 hover:text-white/70 transition-all"
+                  >
                     <MoreHorizontal className="w-4 h-4" strokeWidth={1.75} />
                   </button>
+                  {conversationMenuOpen && (
+                    <div className="absolute right-4 top-[7.25rem] z-30 w-52 rounded-lg border border-white/10 bg-neutral-900 p-1 shadow-2xl">
+                      {[
+                        { id: 'block' as const, label: 'Bloquear', icon: ShieldBan, danger: true },
+                        { id: 'report' as const, label: 'Denunciar', icon: Flag, danger: true },
+                        { id: 'clear' as const, label: 'Limpar mensagens', icon: Eraser, danger: false },
+                        { id: 'delete' as const, label: 'Apagar conversa', icon: Trash2, danger: true },
+                      ].map(({ id, label, icon: Icon, danger }) => (
+                        <button
+                          key={id}
+                          type="button"
+                          onClick={() => { setConversationMenuOpen(false); setConfirmAction(id); }}
+                          className={cn('flex w-full items-center gap-2 rounded-md px-3 py-2.5 text-left text-sm transition-colors hover:bg-white/10', danger ? 'text-red-300' : 'text-white/80')}
+                        >
+                          <Icon className="h-4 w-4" />{label}
+                        </button>
+                      ))}
+                    </div>
+                  )}
                 </div>
 
                 <div className="flex-1 overflow-y-auto no-scrollbar px-4 py-4 space-y-2">
@@ -465,6 +529,31 @@ export default function MessagesPage() {
                   <p className="text-center text-sm text-white/30 py-4">Nenhum usuário encontrado</p>
                 ) : null}
               </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {confirmAction && selected && (
+        <div className="fixed inset-0 z-[250] flex items-center justify-center bg-black/80 p-4 backdrop-blur-sm" role="dialog" aria-modal="true" aria-label="Confirmar ação da conversa">
+          <div className="w-full max-w-sm rounded-lg border border-white/10 bg-neutral-900 p-5 shadow-2xl">
+            <h2 className="text-base font-semibold text-white">
+              {confirmAction === 'clear' ? 'Limpar mensagens?' : confirmAction === 'delete' ? 'Apagar conversa?' : confirmAction === 'block' ? `Bloquear @${selected.otherUsername}?` : `Denunciar @${selected.otherUsername}?`}
+            </h2>
+            <p className="mt-2 text-sm leading-relaxed text-white/60">
+              {confirmAction === 'clear'
+                ? 'O histórico será ocultado somente para você. A conversa permanecerá vazia na sua lista.'
+                : confirmAction === 'delete'
+                  ? 'A conversa sairá apenas da sua lista. O histórico da outra pessoa não será apagado e ela poderá reaparecer com uma nova mensagem.'
+                  : confirmAction === 'block'
+                    ? 'Você não poderá mais trocar mensagens com esta pessoa. A conversa será removida apenas da sua lista.'
+                    : 'A denúncia será enviada para a moderação. Você poderá revisar a conta antes de confirmar.'}
+            </p>
+            <div className="mt-5 flex justify-end gap-2">
+              <button type="button" disabled={actionLoading} onClick={() => setConfirmAction(null)} className="soul-glass rounded-lg px-4 py-2 text-sm text-white">Cancelar</button>
+              <button type="button" disabled={actionLoading} onClick={runConversationAction} className="rounded-lg bg-red-500 px-4 py-2 text-sm font-semibold text-white disabled:opacity-50">
+                {actionLoading ? 'Processando...' : confirmAction === 'report' ? 'Enviar denúncia' : 'Confirmar'}
+              </button>
             </div>
           </div>
         </div>

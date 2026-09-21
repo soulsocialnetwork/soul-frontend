@@ -66,9 +66,10 @@ interface PostCardProps {
   post: Post;
   index?: number;
   onDelete?: (id: string) => void;
+  allowMediaFullscreen?: boolean;
 }
 
-export function PostCard({ post, index = 0, onDelete }: PostCardProps) {
+export function PostCard({ post, index = 0, onDelete, allowMediaFullscreen = false }: PostCardProps) {
   const { t } = useTranslation('feed');
   const navigate = useNavigate();
   const { user } = useAuth();
@@ -391,8 +392,10 @@ export function PostCard({ post, index = 0, onDelete }: PostCardProps) {
               alt="Post media"
               className="w-full aspect-[3/4] lg:aspect-video object-cover object-top"
               onClick={(e) => {
-                e.stopPropagation();
-                setLightboxOpen(true);
+                if (allowMediaFullscreen) {
+                  e.stopPropagation();
+                  setLightboxOpen(true);
+                }
               }}
             />
           ) : (

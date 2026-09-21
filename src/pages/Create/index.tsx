@@ -5,14 +5,7 @@ import { Header } from '../../components/layout/Header';
 import { BottomNav } from '../../components/layout/BottomNav';
 import { Button } from '../../components/ui/Button';
 import { CameraCapture } from '../../components/ui/CameraCapture';
-import {
-  Camera, Image, X, Tag, ChevronDown,
-  Book, Palette, MessageSquare, HandHeart,
-  Leaf, Music, Smile, Plane, Utensils,
-  BookOpen, Heart, Laptop, Trophy,
-  Users, Sun, Archive, Globe,
-  Video, User
-} from 'lucide-react';
+import { Camera, Image, X, Tag, ChevronDown, Video, User } from 'lucide-react';
 import { cn } from '../../utils/cn';
 import { useNavigate } from 'react-router-dom';
 import { useTranslation } from '../../i18n';
@@ -21,27 +14,7 @@ import { soultService } from '../../services/soultService';
 import { getHttpErrorMessage } from '../../services/api';
 import { useAuth } from '../../context/AuthContext';
 import { validateUploadFile } from '../../utils/mediaValidation';
-
-const ALL_CATEGORIES = [
-  { id: 'knowledge', label: 'Conhecimento', icon: <Book className="w-5 h-5 text-white" /> },
-  { id: 'art', label: 'Arte & Criatividade', icon: <Palette className="w-5 h-5 text-white" /> },
-  { id: 'reflection', label: 'Reflexão', icon: <MessageSquare className="w-5 h-5 text-white" /> },
-  { id: 'help', label: 'Dúvida & Ajuda', icon: <HandHeart className="w-5 h-5 text-white" /> },
-  { id: 'nature', label: 'Natureza', icon: <Leaf className="w-5 h-5 text-white" /> },
-  { id: 'music', label: 'Música', icon: <Music className="w-5 h-5 text-white" /> },
-  { id: 'wellness', label: 'Bem-estar', icon: <Smile className="w-5 h-5 text-white" /> },
-  { id: 'travel', label: 'Viagem', icon: <Plane className="w-5 h-5 text-white" /> },
-  { id: 'food', label: 'Gastronomia', icon: <Utensils className="w-5 h-5 text-white" /> },
-  { id: 'books', label: 'Livros & Leitura', icon: <BookOpen className="w-5 h-5 text-white" /> },
-  { id: 'gratitude', label: 'Gratidão', icon: <Heart className="w-5 h-5 text-white" /> },
-  { id: 'humor', label: 'Humor', icon: <Smile className="w-5 h-5 text-white" /> },
-  { id: 'technology', label: 'Tecnologia', icon: <Laptop className="w-5 h-5 text-white" /> },
-  { id: 'sports', label: 'Esportes', icon: <Trophy className="w-5 h-5 text-white" /> },
-  { id: 'community', label: 'Comunidade', icon: <Users className="w-5 h-5 text-white" /> },
-  { id: 'moment', label: 'Momento do Dia', icon: <Sun className="w-5 h-5 text-white" /> },
-  { id: 'memory', label: 'Memória', icon: <Archive className="w-5 h-5 text-white" /> },
-  { id: 'cause', label: 'Causa Social', icon: <Globe className="w-5 h-5 text-white" /> },
-];
+import { SOUL_CATEGORIES } from '../../constants/categories';
 
 type CreateMode = 'post' | 'soult';
 
@@ -166,7 +139,7 @@ export default function CreatePage() {
     }
   };
 
-  const selectedCategory = ALL_CATEGORIES.find(c => c.id === intention);
+  const selectedCategory = SOUL_CATEGORIES.find(c => c.id === intention);
 
   const canPublishPost = (content.trim().length > 0 || mediaPreview) && !!intention;
   const canPublishSoult = !!soultVideo && !!intention;
@@ -413,21 +386,24 @@ export default function CreatePage() {
             </div>
 
             <div className="grid grid-cols-2 gap-2 max-h-[60vh] overflow-y-auto no-scrollbar">
-              {ALL_CATEGORIES.map((cat) => (
-                <button
-                  key={cat.id}
-                  onClick={() => { setIntention(cat.id); setShowCategoryModal(false); }}
-                  className={cn(
-                    'flex flex-col items-center justify-center gap-2 p-4 rounded-2xl border transition-all duration-200 active:scale-95',
-                    intention === cat.id
-                      ? 'bg-white/15 border-white/25 text-white'
-                      : 'bg-white/5 border-white/5 text-zinc-400 hover:bg-white/10 hover:text-white hover:border-white/10'
-                  )}
-                >
-                  <span className="flex items-center justify-center mb-1">{cat.icon}</span>
-                  <span className="text-xs font-semibold leading-tight">{cat.label}</span>
-                </button>
-              ))}
+              {SOUL_CATEGORIES.map((category) => {
+                const CategoryIcon = category.icon;
+                return (
+                  <button
+                    key={category.id}
+                    onClick={() => { setIntention(category.id); setShowCategoryModal(false); }}
+                    className={cn(
+                      'flex flex-col items-center justify-center gap-2 p-4 rounded-2xl border transition-all duration-200 active:scale-95',
+                      intention === category.id
+                        ? 'bg-white/15 border-white/25 text-white'
+                        : 'bg-white/5 border-white/5 text-zinc-400 hover:bg-white/10 hover:text-white hover:border-white/10'
+                    )}
+                  >
+                    <span className="flex items-center justify-center mb-1"><CategoryIcon className="w-5 h-5" /></span>
+                    <span className="text-xs font-semibold leading-tight">{category.label}</span>
+                  </button>
+                );
+              })}
             </div>
           </div>
         </div>

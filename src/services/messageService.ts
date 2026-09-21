@@ -1,4 +1,5 @@
 import { api } from './api';
+import { isLastPage } from './api/page';
 
 export interface Conversation {
   id: string;
@@ -51,7 +52,7 @@ export const messageService = {
     const data = res.data;
     return {
       content: (data.content ?? []).map(mapConversation),
-      last: data.last ?? true,
+      last: isLastPage(data),
     };
   },
 
@@ -69,12 +70,21 @@ export const messageService = {
     const data = res.data;
     return {
       content: (data.content ?? []).map(mapMessage),
-      last: data.last ?? true,
+      last: isLastPage(data),
     };
   },
 
   async sendMessage(convId: string, content: string): Promise<Message> {
     const res = await api.post(`/messages/conversations/${convId}/msgs`, { content });
     return mapMessage(res.data);
+  },
+  async clearMessages(convId: string): Promise<void> {
+    await api.delete(`/messages/conversations/${encodeURIComponent(convId)}/messages`);
+  },
+  async hideConversation(convId: string): Promise<void> {
+    await api.delete(`/messages/conversations/${encodeURIComponent(convId)}`);
+  },
+  async blockConversationParticipant(convId: string): Promise<void> {
+    await api.post(`/messages/conversations/${encodeURIComponent(convId)}/block`);
   },
 };

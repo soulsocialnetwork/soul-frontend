@@ -10,6 +10,7 @@ export interface SoultItem {
   viewsCount: number;
   likesCount: number;
   hasLiked: boolean;
+  saved: boolean;
   createdAt: string;
   userId: string;
   username: string;
@@ -36,12 +37,14 @@ export interface Soult {
   id: string;
   title: string;
   description: string;
+  category?: string;
   videoUrl?: string;
   thumbnailUrl: string;
   duration: number;
   likesCount: number;
   commentsCount: number;
   hasLiked?: boolean;
+  saved?: boolean;
   userId?: string;
   username?: string;
   author: SoultAuthor;
@@ -53,13 +56,15 @@ function mapRawToSoult(s: any): Soult {
   return {
     id: s.id,
     title: s.caption || 'Sem legenda',
-    description: s.category || '',
+    description: '',
+    category: s.category || undefined,
     videoUrl: s.videoUrl,
     thumbnailUrl: s.thumbnailUrl || '',
     duration: s.duration || 0,
     likesCount: s.likesCount || 0,
     commentsCount: 0,
     hasLiked: s.hasLiked || false,
+    saved: s.saved || false,
     userId: s.userId,
     username: s.username,
     author: {
@@ -110,6 +115,19 @@ export const soultService = {
 
   async unlikeSoult(id: string): Promise<void> {
     await api.delete(`/soults/${id}/like`);
+  },
+
+  async getSavedSoults(page = 0, size = 20): Promise<Soult[]> {
+    const res = await api.get<{ content: unknown[] }>('/soults/saved', { params: { page, size } });
+    return (res.data.content ?? []).map(mapRawToSoult);
+  },
+
+  async saveSoult(id: string): Promise<void> {
+    await api.post(`/soults/${encodeURIComponent(id)}/save`);
+  },
+
+  async unsaveSoult(id: string): Promise<void> {
+    await api.delete(`/soults/${encodeURIComponent(id)}/save`);
   },
 
   formatDuration(seconds: number): string {

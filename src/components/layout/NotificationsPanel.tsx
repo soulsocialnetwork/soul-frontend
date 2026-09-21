@@ -23,6 +23,7 @@ export function NotificationsPanel({
 
   const [activeTab, setActiveTab] = useState<TabType>('all');
   const [requests, setRequests] = useState<FollowRequestResponse[]>([]);
+  const [realFriendRequests, setRealFriendRequests] = useState<{ id: string; username: string; name: string }[]>([]);
   const [notifications, setNotifications] = useState<NotificationResponse[]>([]);
   
   const [isLoading, setIsLoading] = useState(false);
@@ -46,6 +47,7 @@ export function NotificationsPanel({
         userService.getFollowRequests(0, 50),
         notificationService.getNotifications(0, 50),
       ]);
+      const realFriendResult = await userService.getRealFriendRequests().catch(() => []);
       if (cancelled) return;
       if (requestsResult.status === 'fulfilled') {
         setRequests(previous => requestPages.current === 1 ? requestsResult.value.content : [
@@ -61,6 +63,7 @@ export function NotificationsPanel({
         ]);
         if (notificationPages.current === 1) setHasMoreNotifications(!notificationsResult.value.last);
       }
+      setRealFriendRequests(realFriendResult);
       setError(requestsResult.status === 'rejected' && notificationsResult.status === 'rejected'
         ? 'Não foi possível carregar as notificações. Tente novamente.'
         : requestsResult.status === 'rejected'
@@ -173,6 +176,16 @@ export function NotificationsPanel({
     }
   };
 
+  const acceptRealFriend = async (id: string) => {
+    setProcessingId(id);
+    try {
+      await userService.acceptRealFriendRequest(id);
+      setRealFriendRequests(previous => previous.filter(request => request.id !== id));
+      notifyNotificationsUpdated();
+    } catch (cause) { setError(getHttpErrorMessage(cause)); }
+    finally { setProcessingId(null); }
+  };
+
   const getNotificationIcon = (type: NotificationResponse['type']) => {
     switch (type) {
       case 'LIKE': return <Heart className="w-4 h-4 text-red-500 fill-red-500" />;
@@ -276,6 +289,18 @@ export function NotificationsPanel({
 
         <div className="flex-1 overflow-y-auto no-scrollbar p-4 sm:p-6">
           {error && <div role="alert" className="mb-4 rounded-xl border border-red-500/20 bg-red-500/10 p-3 text-sm text-red-300">{error} <button onClick={() => setRefreshKey(value => value + 1)} className="underline font-semibold">Tentar novamente</button></div>}
+          {activeTab === 'all' && realFriendRequests.length > 0 && (
+            <div className="mb-5 space-y-2">
+              <p className="px-1 text-xs font-semibold uppercase tracking-wider text-textSecondary">Amigos Reais</p>
+              {realFriendRequests.map(request => (
+                <div key={request.id} className="flex items-center gap-3 rounded-xl border border-white/10 bg-white/[0.03] p-3">
+                  <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-white/10"><UserPlus className="h-4 w-4" /></div>
+                  <p className="min-w-0 flex-1 text-xs text-textPrimary"><strong>{request.name}</strong> quer ser seu Amigo Real.</p>
+                  <button type="button" disabled={processingId === request.id} onClick={() => void acceptRealFriend(request.id)} className="rounded-lg bg-white px-3 py-2 text-xs font-semibold text-black disabled:opacity-50">{processingId === request.id ? '...' : 'Aceitar'}</button>
+                </div>
+              ))}
+            </div>
+          )}
           {isLoading ? (
             <div className="flex items-center justify-center py-12 text-textSecondary">
               <Loader2 className="w-6 h-6 animate-spin" />

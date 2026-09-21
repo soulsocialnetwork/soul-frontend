@@ -3,6 +3,7 @@ import { ScreenUsageTracker } from './hooks/useScreenUsage';
 import { BrowserRouter, Routes, Route } from 'react-router-dom';
 const InitialPage = lazy(() => import('./pages/Initial'));
 import { AuthProvider } from './context/AuthContext';
+import { SoulzinhoCursor } from './components/ui/SoulzinhoCursor';
 const AuthPage = lazy(() => import('./pages/Auth'));
 const FeedPage = lazy(() => import('./pages/Feed'));
 const SoulsPage = lazy(() => import('./pages/Soults'));
@@ -31,6 +32,7 @@ export default function App() {
       }}
     >
       <AuthProvider>
+        <SoulzinhoCursor />
         <ScreenUsageTracker />
         <Suspense fallback={<div role="status" className="p-8 text-center">Carregando...</div>}><Routes>
           {/* Rotas públicas — se já logado, vai pro feed */}

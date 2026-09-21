@@ -42,10 +42,10 @@ name: profile.name,
 username: profile.username,
 avatarUrl: profile.profilePicture || '',
 bio: profile.bio || '',
-verified: false,
+verified: profile.verified,
 connectionsCount: profile.followerCount,
 followerCount: profile.followerCount,
-friendsCount: 0,
+friendsCount: profile.realFriendsCount,
 postsCount: profile.postCount,
 posts: [],
 privateProfile: profile.privateProfile,
@@ -117,6 +117,34 @@ const response = await api.get<FollowRelationshipResponse>(
 return response.data;
 
 
+},
+
+async inviteRealFriend(username: string): Promise<void> {
+  await api.post(`/profiles/${encodeURIComponent(username)}/real-friends`);
+},
+
+async getRealFriendStatus(username: string): Promise<'NONE' | 'SENT' | 'RECEIVED' | 'FRIENDS'> {
+  const response = await api.get<{ status: 'NONE' | 'SENT' | 'RECEIVED' | 'FRIENDS' }>(`/profiles/${encodeURIComponent(username)}/real-friends/status`);
+  return response.data.status;
+},
+
+async getRealFriendRequests(): Promise<{ id: string; username: string; name: string }[]> {
+  const response = await api.get<{ id: string; username: string; name: string }[]>('/profiles/me/real-friends/requests');
+  return response.data;
+},
+
+async acceptRealFriendRequest(id: string): Promise<void> {
+  await api.post(`/profiles/me/real-friends/requests/${encodeURIComponent(id)}/accept`);
+},
+
+async getRealFriendIds(): Promise<string[]> {
+  const response = await api.get<{ id: string }[]>('/profiles/me/real-friends');
+  return response.data.map(friend => friend.id);
+},
+
+async getRealFriends(): Promise<{ id: string; username: string; name: string }[]> {
+  const response = await api.get<{ id: string; username: string; name: string }[]>('/profiles/me/real-friends');
+  return response.data;
 },
 
 async getFollowers(

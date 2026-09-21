@@ -22,7 +22,12 @@ export function RealFriendsModal({ username, onClose }: RealFriendsModalProps) {
   const [loading, setLoading] = useState(false);
   const [following, setFollowing] = useState(false);
   const [error, setError] = useState('');
-  const [copied, setCopied] = useState(false);
+  const [requests, setRequests] = useState<{ id: string; username: string; name: string }[]>([]);
+  const [friends, setFriends] = useState<{ id: string; username: string; name: string }[]>([]);
+  const [showQr, setShowQr] = useState(false);
+
+  useEffect(() => { void userService.getRealFriendRequests().then(setRequests).catch(() => setRequests([])); }, []);
+  useEffect(() => { void userService.getRealFriends().then(setFriends).catch(() => setFriends([])); }, []);
 
   useEffect(() => {
     let cancelled = false;
@@ -39,14 +44,6 @@ export function RealFriendsModal({ username, onClose }: RealFriendsModalProps) {
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [onClose, scannerOpen]);
-
-  const copyLink = async () => {
-    try {
-      await navigator.clipboard.writeText(profileUrl);
-      setCopied(true);
-      setError('');
-    } catch { setError('Não foi possível copiar o link.'); }
-  };
 
   const resolveUsername = async (scannedUsername: string) => {
     setScannerOpen(false);
@@ -90,6 +87,14 @@ export function RealFriendsModal({ username, onClose }: RealFriendsModalProps) {
     } finally { setFollowing(false); }
   };
 
+  const inviteFound = async () => {
+    if (!found) return;
+    setFollowing(true); setError('');
+    try { await userService.inviteRealFriend(found.username); setError('Convite enviado. A pessoa precisa aceitar para virar Amigo Real.'); }
+    catch (cause) { setError(getHttpErrorMessage(cause)); }
+    finally { setFollowing(false); }
+  };
+
   return (
     <div className="fixed inset-0 z-[200] flex items-center justify-center bg-black/90 p-4 backdrop-blur-md" onClick={onClose} role="presentation">
       <div className="w-full max-w-sm rounded-lg border border-white/10 bg-neutral-900 p-5 shadow-2xl" role="dialog" aria-modal="true" aria-label="Amigos Reais" onClick={event => event.stopPropagation()}>
@@ -98,17 +103,20 @@ export function RealFriendsModal({ username, onClose }: RealFriendsModalProps) {
           <button type="button" autoFocus onClick={onClose} aria-label="Fechar Amigos Reais" className="rounded-lg p-2 text-zinc-400 hover:bg-white/10 hover:text-white"><X size={19} /></button>
         </div>
 
-        <div className="flex flex-col items-center gap-3">
+        {!showQr && <div className="space-y-2">
+          {friends.length ? friends.map(friend => <button type="button" key={friend.id} onClick={() => { onClose(); navigate(`/profile/${friend.username}`); }} className="flex w-full items-center gap-3 rounded-lg p-3 text-left hover:bg-white/5"><div className="flex h-10 w-10 items-center justify-center rounded-lg bg-white/10 font-semibold">{friend.name.charAt(0)}</div><div><p className="text-sm font-semibold text-white">{friend.name}</p><p className="text-xs text-zinc-400">@{friend.username}</p></div></button>) : <p className="py-6 text-center text-sm text-zinc-400">Nenhum Amigo Real ainda.</p>}
+        </div>}
+        {showQr && <div className="flex flex-col items-center gap-3">
           <div className="rounded-lg bg-white p-4">
             {qrImage ? <img src={qrImage} alt={`QR do perfil @${username}`} width={200} height={200} className="block" />
               : <div className="flex h-[200px] w-[200px] items-center justify-center text-center text-sm text-black/70">QR indisponível</div>}
           </div>
           <p className="text-sm font-semibold text-white">@{username}</p>
           <p className="text-center text-xs text-zinc-400">O QR contém apenas o link público do perfil. Contas privadas exigem solicitação para seguir.</p>
-        </div>
+        </div>}
 
         <div className="mt-5 flex gap-2">
-          <button type="button" onClick={copyLink} className="soul-glass flex h-11 flex-1 items-center justify-center gap-2 rounded-lg text-sm font-semibold text-white"><Link size={16} />{copied ? 'Copiado' : 'Copiar link'}</button>
+          <button type="button" onClick={() => setShowQr(value => !value)} className="soul-glass flex h-11 flex-1 items-center justify-center gap-2 rounded-lg text-sm font-semibold text-white"><Link size={16} />{showQr ? 'Ver amigos' : 'Meu QR Code'}</button>
           <button type="button" disabled={loading || following} onClick={() => { setError(''); setScannerOpen(true); }} className="soul-glass flex h-11 flex-1 items-center justify-center gap-2 rounded-lg text-sm font-semibold text-white disabled:opacity-50"><Camera size={16} />Escanear QR</button>
         </div>
 
@@ -123,7 +131,9 @@ export function RealFriendsModal({ username, onClose }: RealFriendsModalProps) {
             <button type="button" onClick={() => { onClose(); navigate(`/profile/${encodeURIComponent(found.username)}`); }} className="soul-glass flex-1 rounded-lg px-3 py-2 text-sm font-semibold text-white">Ver perfil</button>
             <button type="button" disabled={followStatus !== 'NOT_FOLLOWING' || following || found.banned} onClick={followFound} className="flex flex-1 items-center justify-center gap-1.5 rounded-lg bg-white px-3 py-2 text-sm font-semibold text-black disabled:opacity-50"><UserPlus size={15} />{following ? 'Enviando...' : followStatus === 'PENDING' ? 'Solicitado' : followStatus === 'FOLLOWING' ? 'Seguindo' : 'Seguir'}</button>
           </div>
+          <button type="button" disabled={followStatus !== 'FOLLOWING' || following || found.banned} onClick={inviteFound} className="mt-2 flex w-full items-center justify-center gap-1.5 rounded-lg soul-glass px-3 py-2 text-sm font-semibold text-white disabled:opacity-50"><UserPlus size={15} />Tornar amigos reais</button>
         </div>}
+        {requests.length > 0 && <div className="mt-5 space-y-2 border-t border-white/10 pt-4"><p className="text-xs font-semibold text-white">Convites recebidos</p>{requests.map(request => <div key={request.id} className="flex items-center justify-between gap-2 text-sm"><span className="truncate text-zinc-300">{request.name} · @{request.username}</span><button type="button" onClick={async () => { try { await userService.acceptRealFriendRequest(request.id); setRequests(items => items.filter(item => item.id !== request.id)); } catch (cause) { setError(getHttpErrorMessage(cause)); } }} className="rounded-lg bg-white px-3 py-1.5 text-xs font-semibold text-black">Aceitar</button></div>)}</div>}
       </div>
       {scannerOpen && <QrScanner onUsername={resolveUsername} onClose={() => setScannerOpen(false)} />}
     </div>

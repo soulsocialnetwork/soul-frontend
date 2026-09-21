@@ -1,4 +1,5 @@
 import { api, endpoints } from './api';
+import { isLastPage, totalPageCount } from './api/page';
 import type {
   PostResponse,
   PostRequest,
@@ -89,8 +90,8 @@ export const postService = {
 
     return {
       posts: response.data.content.map(convertPostResponseToPost),
-      isLast: response.data.last,
-      totalPages: response.data.totalPages,
+      isLast: isLastPage(response.data),
+      totalPages: totalPageCount(response.data),
     };
   },
 
@@ -127,8 +128,8 @@ export const postService = {
 
     return {
       posts: response.data.content.map(convertPostResponseToPost),
-      isLast: response.data.last,
-      totalPages: response.data.totalPages,
+      isLast: isLastPage(response.data),
+      totalPages: totalPageCount(response.data),
     };
   },
 
