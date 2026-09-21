@@ -21,6 +21,7 @@ interface ReportResponse {
   createdAt: string;
 }
 
+// oferece ao administrador triagem de denúncias e revisão de contas e conteúdos
 export default function ModerationPage() {
   const loadRequest = useRef(0);
   const [activeTab, setActiveTab] = useState<Tab>('posts');
@@ -258,7 +259,6 @@ export default function ModerationPage() {
           </div>
         )
       ) : (
-        // Contas Tab
         accounts.length === 0 ? (
           <div className="text-center py-20 soul-glass rounded-2xl">
             <ShieldOff className="w-8 h-8 text-white/20 mx-auto mb-3" />

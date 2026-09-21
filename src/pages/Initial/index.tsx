@@ -12,7 +12,6 @@ export default function InitialPage() {
     <div className="min-h-screen bg-background flex flex-col justify-between items-center p-6 sm:p-8 lg:p-12 overflow-x-hidden">
       <div className="w-full max-w-5xl my-auto flex flex-col lg:flex-row items-center justify-between gap-8 lg:gap-12 py-8">
         
-        {/* lado esquerdo com os textos principais e o soulzinho animado */}
         <div className="flex-1 flex flex-col items-center lg:items-start text-center lg:text-left z-10">
           <h1 className="text-3xl sm:text-4xl lg:text-5xl font-extrabold tracking-tight text-white leading-tight">
             {t('headline1')}<br />
@@ -23,7 +22,6 @@ export default function InitialPage() {
             {t('headline3')}
           </h1>
 
-          {/* animação do mascote rodando em loop com tamanho maior */}
           <div className="w-full flex items-center justify-center lg:justify-start mt-6 lg:mt-8">
             <SecureVideo 
               src={soulzinhoWebm} 
@@ -36,7 +34,6 @@ export default function InitialPage() {
           </div>
         </div>
 
-        {/* botões de ação para entrar ou criar conta */}
         <div className="w-full max-w-sm flex flex-col justify-center gap-3 z-10">
           <Button 
             variant="primary" 

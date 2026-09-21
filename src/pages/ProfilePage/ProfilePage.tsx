@@ -31,7 +31,7 @@ export default function ProfilePage() {
       try {
         const parsed = JSON.parse(saved);
         setHighlightsList(parsed);
-      } catch { /* ignora */ }
+      } catch { }
     }
     const timer = setTimeout(() => setLoading(false), 300);
     return () => clearTimeout(timer);
@@ -51,7 +51,6 @@ export default function ProfilePage() {
             <div className="flex-1 overflow-y-auto no-scrollbar pb-24 lg:pb-12">
               <div className="w-full max-w-4xl mx-auto pt-4 lg:pt-8 px-4 sm:px-6 space-y-8">
 
-                {/* Perfil Header */}
                 <div className="soul-glass rounded-2xl p-6 md:p-10">
                   <div className="flex flex-col md:flex-row gap-8 items-center md:items-start">
                     <div className="rounded-lg border border-white/15 w-28 h-28 md:w-40 md:h-40 overflow-hidden bg-neutral-800 shrink-0">
@@ -73,7 +72,6 @@ export default function ProfilePage() {
                     </div>
                   </div>
 
-                  {/* CARROSSEL DE DESTAQUES */}
                   <div className="mt-10">
                     <div className="flex items-center justify-between mb-3">
                       <span className="text-xs font-bold text-textSecondary uppercase tracking-wider">Destaques</span>
@@ -81,7 +79,6 @@ export default function ProfilePage() {
 
                     <div className="flex gap-4 overflow-x-auto pb-2 no-scrollbar">
                       
-                      {/* BOTAO NAVEGAR PARA A PAGINA DE NOVO DESTAQUE */}
                       <button
                         type="button"
                         onClick={() => navigate('/highlights/create')}
@@ -95,7 +92,6 @@ export default function ProfilePage() {
                         <span className="text-xs font-semibold text-textSecondary group-hover:text-white">Novo</span>
                       </button>
 
-                      {/* LISTA DE DESTAQUES SALVOS */}
                       {highlightsList.map((h, index) => (
                         <div
                           key={h.id}
@@ -118,7 +114,6 @@ export default function ProfilePage() {
 
                 </div>
 
-                {/* Grade de Posts */}
                 <div className="grid grid-cols-3 gap-1 md:gap-4">
                   {([] as Post[]).map((post, index) => (
                     <div
@@ -137,7 +132,6 @@ export default function ProfilePage() {
         </main>
       </div>
 
-      {/* MODAL VISUALIZAR DESTAQUE */}
       {activeHighlightIndex !== null && (
         <div className="fixed inset-0 bg-black/90 backdrop-blur-md z-[99999] flex items-center justify-center p-4">
           <div className="relative w-full max-w-sm h-[75vh] bg-zinc-900 border border-white/10 rounded-2xl overflow-hidden flex flex-col justify-between p-4">
@@ -172,7 +166,6 @@ export default function ProfilePage() {
         </div>
       )}
 
-      {/* Feed Modal */}
       {feedModal && (
         <div className="fixed inset-0 bg-black/90 backdrop-blur-md z-50 flex flex-col">
           <div className="sticky top-0 z-20 bg-black/60 border-b border-white/10 px-4 py-3 flex items-center justify-between">

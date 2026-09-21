@@ -12,6 +12,7 @@ import type { FollowRelationshipResponse } from '../../services/api/types';
 type RealFriendsModalProps = { username: string; onClose: () => void };
 type FollowStatus = FollowRelationshipResponse['status'];
 
+// lista amigos reais e conduz convites que dependem de seguimento mútuo
 export function RealFriendsModal({ username, onClose }: RealFriendsModalProps) {
   const navigate = useNavigate();
   const profileUrl = `${window.location.origin}/profile/${encodeURIComponent(username)}`;
@@ -76,9 +77,8 @@ export function RealFriendsModal({ username, onClose }: RealFriendsModalProps) {
       await userService.follow(found.username);
       setFollowStatus(found.privateProfile ? 'PENDING' : 'FOLLOWING');
       try { setFollowStatus((await userService.getFollowStatus(found.username)).status); }
-      catch { /* The follow succeeded; keep the non-repeatable local state. */ }
+      catch { }
     } catch (cause) {
-      // Another tab may have already created the relationship.
       try {
         const relationship = await userService.getFollowStatus(found.username);
         setFollowStatus(relationship.status);

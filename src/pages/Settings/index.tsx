@@ -78,7 +78,6 @@ const [quietModeEnd, setQuietModeEnd] = useState(user?.quietModeEnd ?? '08:00');
 const [deleteConfirmText, setDeleteConfirmText] = useState('');
 const [isDeletingAccount, setIsDeletingAccount] = useState(false);
 
-// Segurança — troca de senha
 const [currentPassword, setCurrentPassword] = useState('');
 const [newPassword, setNewPassword]         = useState('');
 const [confirmPassword, setConfirmPassword] = useState('');

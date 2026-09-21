@@ -47,7 +47,6 @@ export const authService = {
         await api.post(endpoints.user.logout, body);
       }
     } catch {
-      // Always finish local logout, even when the server is unreachable.
     } finally {
       tokenStorage.clearSession();
     }

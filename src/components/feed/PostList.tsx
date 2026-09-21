@@ -56,7 +56,6 @@ export function PostList({ posts, loading = false }: PostListProps) {
         </p>
       </div>
 
-      {/* Grid de Seleção Consciente */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4 px-4 flex-1 content-start">
         {currentPosts.map((post) => (
           <button
@@ -96,7 +95,6 @@ export function PostList({ posts, loading = false }: PostListProps) {
         ))}
       </div>
 
-      {/* Paginação Horizontal (Estilo Livro) */}
       <div className="flex items-center justify-between px-6 mt-8">
         <button
           onClick={() => setCurrentPage((p) => Math.max(0, p - 1))}
@@ -133,7 +131,6 @@ export function PostList({ posts, loading = false }: PostListProps) {
         </div>
       )}
 
-      {/* Modal de Leitura com Foco */}
       {selectedPost && (
         <div
           className="fixed inset-0 z-[100] bg-black/95 flex flex-col animate-fade-in overflow-y-auto"

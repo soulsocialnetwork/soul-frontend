@@ -1,4 +1,3 @@
-/** QR codes identify a public profile URL; they never contain a session token. */
 export function parseProfileQr(value: string, origin: string): string | null {
   try {
     const url = new URL(value);

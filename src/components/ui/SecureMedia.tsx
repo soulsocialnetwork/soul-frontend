@@ -11,7 +11,7 @@ function useMedia(src?: string) {
       if ([window.location.origin, backend.origin].includes(parsed.origin) && /^(\/api)?\/media\/files\//.test(parsed.pathname)) {
         protectedUrl = parsed.pathname.replace(/^\/api/, '');
       }
-    } catch { /* Local object/data URLs and public assets need no API request. */ }
+    } catch { }
   }
   useEffect(() => {
     if (!protectedUrl) return;
@@ -28,6 +28,7 @@ function useMedia(src?: string) {
   }, [src, protectedUrl]);
   return protectedUrl ? (resolved.source === src ? resolved.url || undefined : undefined) : src;
 }
+// carrega mídias privadas da api com autenticação e libera urls temporárias após o uso
 export const SecureImage = forwardRef<HTMLImageElement, ImgHTMLAttributes<HTMLImageElement>>(({ src, ...props }, ref) => {
   const url = useMedia(src);
   return <img {...props} ref={ref} src={url} />;

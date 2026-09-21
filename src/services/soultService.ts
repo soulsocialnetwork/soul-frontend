@@ -18,7 +18,6 @@ export interface SoultItem {
   profilePicture: string | null;
 }
 
-// Legacy type used by SoultList component
 export interface SoultAuthor {
   id: string;
   name: string;
@@ -77,6 +76,7 @@ function mapRawToSoult(s: any): Soult {
   };
 }
 
+// concentra leitura, publicação e interações persistidas dos soults
 export const soultService = {
   async getSoult(id: string): Promise<Soult> {
     const res = await api.get(`/soults/${encodeURIComponent(id)}`);

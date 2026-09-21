@@ -50,6 +50,7 @@ interface Comment {
   time: string;
 }
 
+// controla reprodução, interações, comentários e compartilhamento de um soult
 export function SoultCard({ soult, isActive = true }: SoultCardProps) {
   const navigate = useNavigate();
   const { user: currentUser } = useAuth();
@@ -298,7 +299,6 @@ export function SoultCard({ soult, isActive = true }: SoultCardProps) {
           </span>
         </div>
 
-        {/* Barra de progresso branca e interativa */}
         <div
           className="absolute bottom-0 left-0 right-0 h-3 group z-30 cursor-pointer flex items-end"
           onClick={handleProgressClick}
@@ -333,7 +333,6 @@ export function SoultCard({ soult, isActive = true }: SoultCardProps) {
               )}
             </div>
 
-            {/* Só mostra o botão Seguir se não for o próprio usuário */}
             {!isOwn && (
               <button
                 onClick={handleFollowToggle}
@@ -438,7 +437,6 @@ export function SoultCard({ soult, isActive = true }: SoultCardProps) {
             <span className="text-white/70 text-[10px] font-medium">Enviar</span>
           </button>
         </div>
-      {/* Modal / Drawer de Comentários */}
       {commentsOpen && (
         <div
           className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-end lg:items-center justify-center lg:justify-center p-0 lg:p-4 animate-fade-in"
@@ -501,7 +499,6 @@ export function SoultCard({ soult, isActive = true }: SoultCardProps) {
         </div>
       )}
 
-      {/* Modal de Compartilhamento */}
       {shareOpen && (
         <div
           className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4 animate-fade-in"
@@ -549,7 +546,6 @@ export function SoultCard({ soult, isActive = true }: SoultCardProps) {
         </div>
       )}
 
-      {/* Modal de Conexão com Propósito */}
       {showConnectModal && (
         <div
           className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4 animate-fade-in"

@@ -88,7 +88,7 @@ export default function ScreentimePage() {
           localStorage.removeItem(focusKey);
         }
       }
-    } catch { /* Unavailable or invalid local history does not block the page. */ }
+    } catch { }
   }, [focusKey]);
 
   useEffect(() => {
@@ -99,7 +99,7 @@ export default function ScreentimePage() {
       if (seconds === 0) {
         setIsFocusActive(false);
         setFocusCompleted(true);
-        try { localStorage.removeItem(focusKey); } catch { /* Finished in memory. */ }
+        try { localStorage.removeItem(focusKey); } catch { }
       }
     };
     tick();
@@ -217,7 +217,7 @@ export default function ScreentimePage() {
                     setIsTryingToExit(false);
                     setFocusTimeLeft(0);
                     setFocusDeadline(null);
-                    try { localStorage.removeItem(focusKey); } catch { /* Ended in memory. */ }
+                    try { localStorage.removeItem(focusKey); } catch { }
                   }}
                   className="flex-1 bg-transparent border border-white/20 text-white font-semibold py-3 rounded-xl disabled:opacity-30 transition-colors"
                 >
@@ -414,7 +414,6 @@ export default function ScreentimePage() {
                     </section>
                   </div>
 
-                  {/* Right Column: Focus Mode */}
                   <div className="soul-glass rounded-2xl p-5 sm:p-6 flex flex-col justify-between lg:self-start relative overflow-hidden">
                     <div className="relative z-10">
                       <div className="flex items-center gap-3 text-white/80 mb-8">

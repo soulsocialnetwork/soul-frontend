@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useRef } from 'react';
 
-/** Owns the browser stream so route changes cannot leave camera tracks active. */
+// controla o ciclo de vida da câmera e encerra as faixas ao sair do fluxo
 export function useCameraStream() {
   const streamRef = useRef<MediaStream | null>(null);
   const mountedRef = useRef(false);

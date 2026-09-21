@@ -28,7 +28,6 @@ export function Header() {
           />
 
           <div className="flex items-center gap-3">
-            {/* Sino com badge */}
             <button
               onClick={() => setIsNotifOpen(true)}
               aria-label="Notificações"
@@ -42,7 +41,6 @@ export function Header() {
               )}
             </button>
 
-            {/* Avatar do usuário logado */}
             <button
               onClick={() => navigate('/profile')}
               aria-label="Perfil"

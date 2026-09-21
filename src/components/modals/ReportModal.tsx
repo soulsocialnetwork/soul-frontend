@@ -150,7 +150,6 @@ export function ReportModal({ isOpen, onClose, targetId, targetType }: ReportMod
   );
 }
 
-// Check component for success
 function Check(props: any) {
   return (
     <svg

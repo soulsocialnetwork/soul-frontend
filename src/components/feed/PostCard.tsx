@@ -26,7 +26,6 @@ import { cn } from '../../utils/cn';
 import { useAuth } from '../../context/AuthContext';
 import { ReportModal } from '../modals/ReportModal';
 
-// Converte timestamp ISO em texto relativo
 function timeAgo(
   isoDate: string,
   t: ReturnType<typeof useTranslation>['t']
@@ -69,6 +68,7 @@ interface PostCardProps {
   allowMediaFullscreen?: boolean;
 }
 
+// apresenta um post e sincroniza suas interações sociais com respostas da api
 export function PostCard({ post, index = 0, onDelete, allowMediaFullscreen = false }: PostCardProps) {
   const { t } = useTranslation('feed');
   const navigate = useNavigate();
@@ -146,7 +146,6 @@ export function PostCard({ post, index = 0, onDelete, allowMediaFullscreen = fal
 
     const nextLiked = !liked;
 
-    // Atualização otimista da interface.
     setLiked(nextLiked);
     setLikes((current) => current + (nextLiked ? 1 : -1));
 
@@ -167,7 +166,6 @@ export function PostCard({ post, index = 0, onDelete, allowMediaFullscreen = fal
         await postService.unlikePost(post.id);
       }
     } catch {
-      // Se o backend falhar, desfazemos a alteração otimista.
       setLiked(!nextLiked);
       setLikes((current) => current + (nextLiked ? -1 : 1));
     } finally {
@@ -184,12 +182,11 @@ export function PostCard({ post, index = 0, onDelete, allowMediaFullscreen = fal
     if (!isFollowing) {
       setShowConnectModal(true);
     } else {
-      // Deixar de seguir direto
       setIsFollowing(false);
       try {
         await userService.unfollow(post.author.username);
       } catch {
-        setIsFollowing(true); // reverte em caso de erro
+        setIsFollowing(true);
       }
     }
   };
@@ -221,7 +218,6 @@ export function PostCard({ post, index = 0, onDelete, allowMediaFullscreen = fal
       await userService.follow(post.author.username);
       setIsFollowing(true);
     } catch {
-      // Já segue ou outro erro — mantém estado atual
     }
   };
 
@@ -275,7 +271,6 @@ export function PostCard({ post, index = 0, onDelete, allowMediaFullscreen = fal
 
         setShareOpen(false);
       } catch {
-        // Usuário cancelou o compartilhamento.
       }
     } else {
       handleCopyLink();

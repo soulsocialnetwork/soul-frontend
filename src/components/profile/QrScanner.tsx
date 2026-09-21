@@ -9,6 +9,7 @@ type QrScannerProps = {
   onClose: () => void;
 };
 
+// lê o qr público de um perfil e entrega o usuário identificado ao fluxo de conexão
 export function QrScanner({ onUsername, onClose }: QrScannerProps) {
   const videoRef = useRef<HTMLVideoElement>(null);
   const controlsRef = useRef<IScannerControls | null>(null);

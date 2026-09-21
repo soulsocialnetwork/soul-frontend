@@ -21,10 +21,10 @@ type CreateMode = 'post' | 'soult';
 const MAX_SOULT_CAPTION_CHARS = 150;
 const MAX_SOULT_DURATION_SECONDS = 300;
 
+// gerencia criação, validação, preview e publicação de posts e soults
 export default function CreatePage() {
   const [mode, setMode] = useState<CreateMode>('post');
 
-  // Post state
   const [content, setContent] = useState('');
   const MAX_CHARS = 500;
   const [mediaPreview, setMediaPreview] = useState<string | null>(null);
@@ -34,11 +34,9 @@ export default function CreatePage() {
   const [intention, setIntention] = useState<string | null>(null);
   const [showCategoryModal, setShowCategoryModal] = useState(false);
 
-  // Soult (video) state
   const [soultVideo, setSoultVideo] = useState<string | null>(null);
   const [soultCaption, setSoultCaption] = useState('');
 
-  // Shared state
   const [isConfirming, setIsConfirming] = useState(false);
   const [confirmTimer, setConfirmTimer] = useState(3);
   const [isPublishing, setIsPublishing] = useState(false);
@@ -51,7 +49,6 @@ export default function CreatePage() {
   const mediaFileInputRef = useRef<HTMLInputElement>(null);
   const soultFileInputRef = useRef<HTMLInputElement>(null);
 
-  // Reset when switching modes
   const handleModeChange = (newMode: CreateMode) => {
     setMode(newMode);
     setIsConfirming(false);
@@ -187,7 +184,6 @@ export default function CreatePage() {
 
         <main className="flex-1 overflow-y-auto p-4 sm:p-6 lg:p-8 max-w-3xl mx-auto w-full animate-fade-up pb-28 lg:pb-8">
 
-          {/* Mode switcher */}
           <div className="flex p-1 soul-glass rounded-xl mb-8 w-full max-w-xs">
             <button
               onClick={() => handleModeChange('post')}
@@ -211,7 +207,6 @@ export default function CreatePage() {
             </button>
           </div>
 
-          {/* ── POST MODE ── */}
           {mode === 'post' && (
             <div className="flex-1 flex flex-col relative">
               <div className="flex gap-4 flex-1">
@@ -232,7 +227,6 @@ export default function CreatePage() {
                     placeholder="O que você gostaria de compartilhar com calma?"
                     className="w-full bg-transparent text-xl sm:text-2xl text-textPrimary placeholder:text-textSecondary/40 focus:outline-none resize-none flex-1 min-h-[160px]"
                   />
-                  {/* Contador de caracteres */}
                   <div className="flex justify-end mt-1 mb-2">
                     <span className={cn(
                       'text-xs tabular-nums transition-colors',
@@ -264,7 +258,6 @@ export default function CreatePage() {
                 </div>
               </div>
 
-              {/* Post action bar */}
               <div className="mt-8 pt-4 border-t border-white/5 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
                 <div className="flex items-center gap-3">
                   <button
@@ -307,11 +300,9 @@ export default function CreatePage() {
             </div>
           )}
 
-          {/* ── SOULT MODE ── */}
           {mode === 'soult' && (
             <div className="flex-1 flex flex-col relative">
               <div className="flex gap-4 flex-1">
-                {/* Avatar */}
                 <div className="rounded-lg w-11 h-11 flex-shrink-0 overflow-hidden bg-neutral-800 mt-1 flex items-center justify-center text-white/50">
                   {user?.profilePicture ? (
                     <SecureImage src={user.profilePicture} alt={user?.name || 'Avatar'} className="w-full h-full object-cover" />
@@ -332,7 +323,6 @@ export default function CreatePage() {
                     {soultCaption.length}/{MAX_SOULT_CAPTION_CHARS}
                   </span>
 
-                  {/* Video preview inline */}
                   {soultVideo ? (
                     <div className="relative mt-4 rounded-2xl overflow-hidden bg-black group max-w-[280px]">
                       <SecureVideo
@@ -352,7 +342,6 @@ export default function CreatePage() {
                 </div>
               </div>
 
-              {/* Soult action bar — mirrors Post action bar */}
               <div className="mt-8 pt-4 border-t border-white/5 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
                 <div className="flex items-center gap-3">
                   <button
@@ -403,7 +392,6 @@ export default function CreatePage() {
 
       {cameraMode && <CameraCapture mode={cameraMode} onCapture={handleCameraCapture} onClose={() => setCameraMode(null)} />}
 
-      {/* Modal de Categorias (apenas para Post) */}
       {showCategoryModal && (
         <div
           className="fixed inset-0 z-[100] bg-black/90 backdrop-blur-md flex items-center justify-center p-4 animate-fade-in"
@@ -448,7 +436,6 @@ export default function CreatePage() {
         </div>
       )}
 
-      {/* Tela de fricção reflexiva antes de publicar */}
       {isConfirming && (
         <div className="fixed inset-0 z-[100] bg-black/90 backdrop-blur-md flex items-center justify-center p-6 animate-fade-in">
           <div className="w-full max-w-sm text-center space-y-8">

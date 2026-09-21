@@ -23,6 +23,7 @@ const ModerationPage = lazy(() => import('./pages/Moderation'));
 
 const ResetPasswordPage = lazy(() => import('./pages/Auth/ResetPassword'));
 
+// organiza as rotas públicas, autenticadas e administrativas carregadas sob demanda
 export default function App() {
   return (
     <BrowserRouter
@@ -35,7 +36,6 @@ export default function App() {
         <SoulzinhoCursor />
         <ScreenUsageTracker />
         <Suspense fallback={<div role="status" className="p-8 text-center">Carregando...</div>}><Routes>
-          {/* Rotas públicas — se já logado, vai pro feed */}
           <Route element={<PublicRoute />}>
             <Route path="/" element={<InitialPage />} />
             <Route path="/auth" element={<AuthPage />} />
@@ -43,7 +43,6 @@ export default function App() {
             <Route path="/verify-email" element={<VerifyEmailPage />} />
           </Route>
 
-          {/* Rotas protegidas — requer login */}
           <Route element={<PrivateRoute />}>
             <Route path="/feed" element={<FeedPage />} />
             <Route path="/post/:id" element={<PostDetailPage />} />

@@ -5,7 +5,6 @@ export type SerializedPage = {
   page?: { number?: number; totalPages?: number };
 };
 
-/** Supports the legacy Spring Page JSON and Spring Data's stable VIA_DTO shape. */
 export function isLastPage(page: SerializedPage): boolean {
   if (typeof page.last === 'boolean') return page.last;
   const number = page.page?.number ?? page.number ?? 0;

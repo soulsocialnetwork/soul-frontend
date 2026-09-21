@@ -26,7 +26,6 @@ interface AuthFormProps {
   onSubmit: (data: LoginFormData | RegisterFormData) => void | Promise<void>;
 }
 
-// ── Validações frontend ──────────────────────────────────────────────────────
 const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/;
 const USERNAME_REGEX = /^[a-z0-9_]{3,30}$/;
 const MIN_AGE = 13;
@@ -61,12 +60,10 @@ export function AuthForm({ mode, error, isSubmitting = false, onSubmit }: AuthFo
   const validate = (): boolean => {
     const errors: Record<string, string> = {};
 
-    // Email
     if (!EMAIL_REGEX.test(email.trim())) {
       errors.email = 'E-mail inválido.';
     }
 
-    // Senha (validação de formato apenas no cadastro)
     if (mode === 'register') {
       const pwd = passwordStrength(password);
       if (!pwd.ok) {
@@ -79,17 +76,14 @@ export function AuthForm({ mode, error, isSubmitting = false, onSubmit }: AuthFo
     }
 
     if (mode === 'register') {
-      // Nome completo
       if (fullName.trim().length < 2) {
         errors.fullName = 'Digite seu nome completo.';
       }
 
-      // Username
       if (!USERNAME_REGEX.test(username.trim())) {
         errors.username = 'Use apenas letras minúsculas, números e _ (3–30 caracteres).';
       }
 
-      // Data de nascimento
       if (!dobDay || !dobMonth || !dobYear || dobYear.length < 4) {
         errors.dob = 'Informe uma data de nascimento válida.';
       } else {
@@ -124,7 +118,6 @@ export function AuthForm({ mode, error, isSubmitting = false, onSubmit }: AuthFo
 
   return (
     <form onSubmit={handleSubmit} className="flex flex-col gap-4" noValidate>
-      {/* Email */}
       <div className="flex flex-col gap-1">
         <Input
           label={t('email')}
@@ -138,7 +131,6 @@ export function AuthForm({ mode, error, isSubmitting = false, onSubmit }: AuthFo
         )}
       </div>
 
-      {/* Senha */}
       <div className="flex flex-col gap-1">
         <Input
           label={t('password')}
@@ -166,7 +158,6 @@ export function AuthForm({ mode, error, isSubmitting = false, onSubmit }: AuthFo
 
       {mode === 'register' && (
         <>
-          {/* Data de Nascimento */}
           <div className="flex flex-col gap-1">
             <DateOfBirthPicker
               day={dobDay} month={dobMonth} year={dobYear}
@@ -179,7 +170,6 @@ export function AuthForm({ mode, error, isSubmitting = false, onSubmit }: AuthFo
             )}
           </div>
 
-          {/* Nome completo */}
           <div className="flex flex-col gap-1">
             <Input
               label={t('fullName')}
@@ -193,14 +183,12 @@ export function AuthForm({ mode, error, isSubmitting = false, onSubmit }: AuthFo
             )}
           </div>
 
-          {/* Username */}
           <div className="flex flex-col gap-1">
             <Input
               label={t('username')}
               type="text"
               value={username}
               onChange={(e) => {
-                // Força lowercase e remove caracteres inválidos em tempo real
                 const v = e.target.value.toLowerCase().replace(/[^a-z0-9_]/g, '');
                 setUsername(v);
                 setFieldErrors(p => ({ ...p, username: '' }));
@@ -216,7 +204,6 @@ export function AuthForm({ mode, error, isSubmitting = false, onSubmit }: AuthFo
         </>
       )}
 
-      {/* Erro vindo do backend */}
       {error && (
         <p className="text-xs text-red-400/80 ml-1 animate-fade-in">{error}</p>
       )}

@@ -21,7 +21,6 @@ export interface Message {
   readAt: string | null;
 }
 
-// Backend returns otherProfilePicture; we normalize to otherAvatar
 function mapConversation(raw: any): Conversation {
   return {
     id: raw.id,
@@ -46,6 +45,7 @@ function mapMessage(raw: any): Message {
   };
 }
 
+// adapta conversas e mensagens da api para o modelo usado pela interface de dm
 export const messageService = {
   async getConversations(page = 0, size = 20): Promise<{ content: Conversation[]; last: boolean }> {
     const res = await api.get('/messages/conversations', { params: { page, size } });

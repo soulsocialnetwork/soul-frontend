@@ -30,6 +30,7 @@ function ConvAvatar({ conv, size = 'md' }: { conv: Conversation; size?: 'sm' | '
   );
 }
 
+// coordena conversas, mensagens em tempo real e ações locais sobre cada dm
 export default function MessagesPage() {
   const [searchParams] = useSearchParams();
   const linkedConversation = searchParams.get('conversation');
@@ -78,7 +79,6 @@ export default function MessagesPage() {
 
   useEffect(() => { loadConversations(); }, [loadConversations]);
 
-  // Poll conversations list every 10 seconds
   useEffect(() => {
     const interval = setInterval(async () => {
       try {
@@ -94,7 +94,6 @@ export default function MessagesPage() {
     return () => clearInterval(interval);
   }, []);
 
-  // Poll messages in active conversation every 3 seconds
   useEffect(() => {
     if (!selected) return;
     const interval = setInterval(async () => {
@@ -106,7 +105,7 @@ export default function MessagesPage() {
           res.content.forEach(m => merged.set(m.id, m));
           return [...merged.values()].sort((a, b) => a.createdAt.localeCompare(b.createdAt));
         });
-      } catch { /* ignore */ }
+      } catch { }
     }, 3000);
     return () => clearInterval(interval);
   }, [selected?.id]);
@@ -141,7 +140,6 @@ export default function MessagesPage() {
     } catch (error) {
       if (activeConversation.current === conv.id) setMessageError(getHttpErrorMessage(error));
     } finally { if (activeConversation.current === conv.id) setLoadingMsgs(false); }
-    // clear unread
     setConversations(prev => prev.map(c => c.id === conv.id ? { ...c, unreadCount: 0 } : c));
   };
 
@@ -183,7 +181,6 @@ export default function MessagesPage() {
       const conv = await messageService.getOrCreateConversation(username);
       setShowNewConv(false);
       setNewConvSearch('');
-      // Imediatamente adiciona a conversa na lista se ainda não existe
       setConversations(prev => {
         const exists = prev.some(c => c.id === conv.id);
         if (exists) return prev;
@@ -272,7 +269,6 @@ export default function MessagesPage() {
         <Header />
         {messageError && <p role="alert" className="px-5 py-3 text-sm text-red-400">{messageError}</p>}
         <main className="flex-1 flex overflow-hidden">
-          {/* Left Panel */}
           <div className={cn(
             'w-full lg:w-[340px] xl:w-[380px] flex-shrink-0 flex flex-col border-r border-white/[0.06] h-full',
             showMobileChat ? 'hidden lg:flex' : 'flex'
@@ -344,7 +340,6 @@ export default function MessagesPage() {
             </div>
           </div>
 
-          {/* Right Panel: Chat */}
           <div className={cn(
             'flex-1 flex flex-col h-full relative',
             !showMobileChat && !selected ? 'hidden lg:flex' : '',
@@ -485,7 +480,6 @@ export default function MessagesPage() {
         </main>
       </div>
 
-      {/* Modal Nova Conversa */}
       {showNewConv && (
         <div className="fixed inset-0 z-[200] bg-black/90 backdrop-blur-md flex items-start justify-center pt-20 p-4" onClick={() => setShowNewConv(false)}>
           <div className="w-full max-w-sm bg-neutral-900 border border-white/10 rounded-2xl overflow-hidden" onClick={e => e.stopPropagation()}>

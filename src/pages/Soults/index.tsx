@@ -29,7 +29,7 @@ export default function SoulsPage() {
           try {
             const selected = await soultService.getSoult(targetVideo);
             list.unshift(selected);
-          } catch { /* A removed or unavailable Soult should not hide the feed. */ }
+          } catch { }
         }
         if (!cancelled) setSoults(list);
       } catch (cause) {

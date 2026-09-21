@@ -15,6 +15,7 @@ interface NotificationsPanelProps {
 
 type TabType = 'all' | 'requests';
 
+// agrega notificações e solicitações pendentes com atualização da contagem de leitura
 export function NotificationsPanel({
   isOpen,
   onClose,
@@ -306,7 +307,6 @@ export function NotificationsPanel({
               <Loader2 className="w-6 h-6 animate-spin" />
             </div>
           ) : activeTab === 'requests' ? (
-            // TAB DE SOLICITAÇÕES
             requests.length === 0 && error ? null : requests.length === 0 ? (
               <div className="flex flex-col items-center justify-center py-12 text-center text-textSecondary">
                 <Bell className="w-8 h-8 opacity-40 mb-2" />
@@ -376,7 +376,6 @@ export function NotificationsPanel({
               </div>
             )
           ) : (
-            // TAB TODAS NOTIFICAÇÕES
             notifications.length === 0 && error ? null : notifications.length === 0 ? (
               <div className="flex flex-col items-center justify-center py-12 text-center text-textSecondary">
                 <Bell className="w-8 h-8 opacity-40 mb-2" />

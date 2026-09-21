@@ -158,7 +158,6 @@ export default function FeedPage() {
           return [...newPosts, ...existing];
         });
       } catch {
-        // silencia erro de polling
       }
     }, 30000);
     return () => clearInterval(interval);
@@ -178,7 +177,6 @@ export default function FeedPage() {
       setHasMore(!response.isLast);
       setPage((p) => p + 1);
     } catch {
-      // silencia erro de paginação
     } finally {
       setLoadingMore(false);
     }
@@ -218,7 +216,6 @@ export default function FeedPage() {
       return false;
     }
 
-    // Filtros por Aba Principal
     if (activeTab === 'friends' && !realFriendIds.has(post.author.id)) {
       return false;
     }
@@ -235,7 +232,6 @@ export default function FeedPage() {
       }
     }
 
-    // Filtros secundários por Categorias
     if (activeCategories.length === 0) {
       return true;
     }
@@ -322,7 +318,6 @@ export default function FeedPage() {
         <main className="flex-1 overflow-y-auto no-scrollbar pb-24 lg:pb-12 pt-2 lg:pt-8 px-4 sm:px-6">
           <div className="w-full max-w-xl lg:max-w-2xl mx-auto space-y-4 lg:space-y-5">
 
-            {/* Barra de busca */}
             <div className="relative z-20">
               <div className="flex items-center gap-3 soul-glass p-2 pl-5 rounded-2xl focus-within:bg-white/[0.05] focus-within:border-white/10 transition-all relative z-20">
                 <Search className="w-5 h-5 text-textSecondary shrink-0" />
@@ -364,7 +359,6 @@ export default function FeedPage() {
               )}
             </div>
 
-            {/* FeedTabs contendo todas as abas e o menu de Categorias */}
             <FeedTabs
               active={activeTab}
               onChange={setActiveTab}
@@ -373,7 +367,6 @@ export default function FeedPage() {
               onClearCategories={() => setActiveCategories([])}
             />
 
-            {/* Erro ao carregar o feed */}
             {feedError && !loading && (
               <div className="mx-0 rounded-2xl border border-red-400/10 bg-red-400/[0.05] px-4 py-3">
                 <p className="text-sm text-red-300">
@@ -399,7 +392,6 @@ export default function FeedPage() {
               loading={loading}
             />
 
-            {/* Botão carregar mais */}
             {!loading && hasMore && filteredPosts.length > 0 && (
               <div className="flex justify-center pb-4">
                 <button

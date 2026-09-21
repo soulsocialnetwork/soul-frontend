@@ -38,7 +38,6 @@ export function Sidebar() {
   return (
     <aside className="hidden lg:flex flex-col h-screen w-20 sticky top-0 bg-background border-r border-white/[0.06] z-30 select-none py-7 items-center justify-between relative">
       <div className="flex flex-col items-center gap-1 w-full px-2">
-        {/* Logo animado */}
         <div
           onClick={() => navigate('/feed')}
           className="cursor-pointer hover:scale-110 transition-transform mb-6 flex items-center justify-center"
@@ -76,7 +75,6 @@ export function Sidebar() {
             );
           })}
 
-          {/* Botão Notificações com badge */}
           <button
             onClick={() => setIsNotifOpen((prev) => !prev)}
             title="Notificações"
@@ -99,7 +97,6 @@ export function Sidebar() {
           </button>
         </nav>
 
-        {/* Botão Criar Post */}
         <button
           onClick={() => navigate('/create')}
           title="Criar Post"
@@ -109,9 +106,7 @@ export function Sidebar() {
         </button>
       </div>
 
-      {/* Rodapé — Avatar, Config, Sair */}
       <div className="flex flex-col items-center gap-2 w-full px-2 pt-4 border-t border-white/[0.06]">
-        {/* Avatar do usuário logado */}
         <button
           onClick={() => navigate('/profile')}
           title={user?.username ?? 'Perfil'}

@@ -61,10 +61,8 @@ export function BottomNav() {
         </>
       )}
 
-      {/* Bottom Nav */}
       <nav className="fixed bottom-0 inset-x-0 z-50 glass-nav lg:hidden">
         <div className="grid grid-cols-5 items-center h-[68px] px-2 max-w-lg mx-auto">
-          {/* Item 1: Feed */}
           <button
             onClick={() => navigate('/feed')}
             aria-label="Feed"
@@ -79,7 +77,6 @@ export function BottomNav() {
             />
           </button>
 
-          {/* Item 2: Soults */}
           <button
             onClick={() => navigate('/soults')}
             aria-label="Soults"
@@ -94,7 +91,6 @@ export function BottomNav() {
             />
           </button>
 
-          {/* Item 3: Botão Criar (CENTRO ABSOLUTO) */}
           <button
             onClick={() => navigate('/create')}
             aria-label="Criar"
@@ -103,7 +99,6 @@ export function BottomNav() {
             <Plus className="w-5 h-5 text-background" strokeWidth={2.5} />
           </button>
 
-          {/* Item 4: Mensagens */}
           <button
             onClick={() => navigate('/messages')}
             aria-label="Mensagens"
@@ -118,7 +113,6 @@ export function BottomNav() {
             />
           </button>
 
-          {/* Item 5: Perfil (OU Mais Opções se preferir) */}
           <button
             onClick={() => setMoreOpen((v) => !v)}
             aria-label="Mais"

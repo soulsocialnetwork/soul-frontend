@@ -56,6 +56,7 @@ function convertPostResponseToPost(
   };
 }
 
+// concentra publicação, consulta, upload e interações persistidas dos posts
 export const postService = {
   async getFeed(
     page: number = 0,

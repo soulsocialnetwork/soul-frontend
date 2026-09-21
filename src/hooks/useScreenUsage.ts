@@ -15,7 +15,7 @@ function readUsage(id: string): Record<string, number> {
   } catch { return {}; }
 }
 
-/** Approximate foreground usage on this browser, never a server-enforced limit. */
+// registra no navegador o tempo diário em primeiro plano para o usuário autenticado
 export function ScreenUsageTracker() {
   const { user } = useAuth();
   useEffect(() => {
@@ -43,7 +43,7 @@ export function ScreenUsageTracker() {
         try {
           localStorage.setItem(storageKey(user.id), JSON.stringify(recent));
           window.dispatchEvent(new Event(eventName));
-        } catch { /* Browser storage may be unavailable; no invented usage. */ }
+        } catch { }
       }
       last = now;
       active = document.visibilityState === 'visible' && document.hasFocus();

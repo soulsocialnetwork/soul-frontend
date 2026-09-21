@@ -27,6 +27,7 @@ const AuthContext = createContext<AuthContextValue | null>(null);
 
 const SESSION_PUBLIC_PATHS = new Set(['/', '/auth', '/reset-password']);
 
+// mantém a sessão global, restaura o usuário autenticado e coordena login e logout
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<CurrentUserResponse | null>(null);
   const [isLoading, setIsLoading] = useState(() => Boolean(tokenStorage.getAccessToken()));

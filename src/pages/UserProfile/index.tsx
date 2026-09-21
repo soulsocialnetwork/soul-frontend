@@ -37,6 +37,7 @@ import { useAuth } from '../../context/AuthContext';
 
 type ProfileTab = 'posts' | 'soults';
 
+// apresenta perfis públicos e privados com relações, posts, soults e ações sociais
 export default function UserProfilePage() {
   const { username } = useParams<{ username: string }>();
   const navigate = useNavigate();
@@ -76,7 +77,6 @@ export default function UserProfilePage() {
   const [connectionsLoading, setConnectionsLoading] = useState(false);
   const [reportTarget, setReportTarget] = useState<{ id: string; type: 'ACCOUNT' | 'SOULT' } | null>(null);
 
-  // Load profile
   useEffect(() => {
     if (!username) { setLoadingProfile(false); return; }
     let cancelled = false;
@@ -91,7 +91,6 @@ export default function UserProfilePage() {
 
   useEffect(() => { if (username) void userService.getRealFriendStatus(username).then(setRealFriendStatus).catch(() => setRealFriendStatus('NONE')); }, [username]);
 
-  // Load follow status
   useEffect(() => {
     if (!username) return;
     let cancelled = false;
@@ -103,7 +102,6 @@ export default function UserProfilePage() {
     return () => { cancelled = true; };
   }, [username]);
 
-  // Load posts
   useEffect(() => {
     if (!username) return;
     let cancelled = false;
@@ -118,7 +116,6 @@ export default function UserProfilePage() {
     return () => { cancelled = true; };
   }, [username, reloadContent]);
 
-  // Load soults when tab switches to soults
   useEffect(() => {
     if (activeTab !== 'soults' || !username) return;
     let cancelled = false;
@@ -131,7 +128,6 @@ export default function UserProfilePage() {
     return () => { cancelled = true; };
   }, [username, activeTab, reloadContent]);
 
-  // Keyboard/scroll lock for modals
   useEffect(() => {
     const handleEsc = (e: KeyboardEvent) => {
       if (e.key === 'Escape') { setFeedModal(null); setShowAvatarModal(false); }
@@ -160,7 +156,6 @@ export default function UserProfilePage() {
   };
 
   const handleFollowClick = async () => {
-    // Never allow self-follow
     if (!username || followLoading || isOwnProfile) return;
     const prev = followStatus;
     setFollowLoading(true);
@@ -200,7 +195,6 @@ export default function UserProfilePage() {
       await soultService.deleteSoult(soultId);
       setSoults(prev => prev.filter(s => s.id !== soultId));
     } catch {
-      // ignore
     } finally {
       setDeletingSoultId(null);
     }
@@ -288,7 +282,6 @@ export default function UserProfilePage() {
           <div className="w-full max-w-4xl mx-auto pt-4 lg:pt-8 px-4 sm:px-6 space-y-8">
             {banError && <p role="alert" className="p-4 rounded-xl bg-red-500/10 text-red-400">{banError}</p>}
             {user.banned && <p role="status" className="p-4 rounded-xl bg-red-500/10 text-red-400">Esta conta foi banida.</p>}
-            {/* Profile Card */}
             <div className="soul-glass rounded-2xl p-5 sm:p-6 md:p-10">
               <div className="flex flex-col md:flex-row gap-6 md:gap-8 items-center md:items-start w-full">
                 <div
@@ -317,7 +310,6 @@ export default function UserProfilePage() {
                           {banning ? 'Banindo...' : 'Banir conta'}
                         </button>
                       )}
-                      {/* Só exibe o botão Seguir se não for o próprio perfil */}
                       {!isOwnProfile && (
                         <button
                           onClick={async () => {
@@ -430,7 +422,6 @@ export default function UserProfilePage() {
                 </p>
               </div>
             ) : <>
-            {/* Tabs */}
             <div className="flex justify-center border-b border-white/10 gap-8 px-4">
               <button
                 onClick={() => setActiveTab('posts')}
@@ -454,7 +445,6 @@ export default function UserProfilePage() {
               </button>
             </div>
 
-            {/* Posts Tab */}
             {activeTab === 'posts' && (
               loadingPosts ? (
                 <div className="flex justify-center py-12">
@@ -487,7 +477,6 @@ export default function UserProfilePage() {
               )
             )}
 
-            {/* Soults Tab */}
             {activeTab === 'soults' && (
               loadingSoults ? (
                 <div className="flex justify-center py-12">
@@ -528,12 +517,10 @@ export default function UserProfilePage() {
                         </div>
                       )}
 
-                      {/* Overlay info */}
                       <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity flex flex-col justify-end p-2">
                         {soult.title && (
                           <p className="text-white text-[10px] font-semibold line-clamp-2 mb-1">{soult.title}</p>
                         )}
-                        {/* Delete button — only for own profile */}
                         {isOwnProfile && (
                           <button
                             onClick={(e) => { e.stopPropagation(); handleDeleteSoult(soult.id); }}
@@ -559,7 +546,6 @@ export default function UserProfilePage() {
                         )}
                       </div>
 
-                      {/* Play icon sempre visível */}
                       <div className="absolute top-2 left-2 pointer-events-none">
                         <Play className="w-4 h-4 text-white drop-shadow-md fill-white" />
                       </div>
@@ -575,7 +561,6 @@ export default function UserProfilePage() {
 
       <BottomNav />
 
-      {/* Avatar Modal */}
       {showAvatarModal && (
         <div
           className="fixed inset-0 z-[100] bg-black/90 backdrop-blur-md flex items-center justify-center p-4 animate-fade-in"
@@ -602,7 +587,6 @@ export default function UserProfilePage() {
         </div>
       )}
 
-      {/* Feed Modal */}
       {feedModal && (
         <div className="fixed inset-0 bg-black/95 backdrop-blur-md z-50 flex flex-col animate-fade-in">
           <div className="sticky top-0 z-20 bg-black/60 backdrop-blur-lg border-b border-white/10 px-4 py-3 flex items-center justify-between">

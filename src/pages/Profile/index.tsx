@@ -94,6 +94,7 @@ function convertPostResponseToPost(
   };
 }
 
+// reúne edição do perfil, conexões, destaques, publicações e itens salvos do usuário
 export default function ProfilePage() {
   const { user } = useAuth();
   const navigate = useNavigate();
@@ -310,7 +311,6 @@ export default function ProfilePage() {
         );
       }
     } catch {
-      /* Keep server highlights available if local history is invalid. */
     }
 
     setHighlightsList(legacy);
@@ -864,7 +864,6 @@ export default function ProfilePage() {
         </main>
       </div>
 
-      {/* EDITAR PERFIL */}
       {showEditModal && (
         <div
           className="fixed inset-0 bg-black/90 backdrop-blur-md z-[100] flex items-center justify-center p-4 animate-fade-in"
@@ -1031,7 +1030,6 @@ export default function ProfilePage() {
         </div>
       )}
 
-      {/* VISUALIZADOR DE DESTAQUES */}
       {activeHighlightIndex !== null &&
         highlightsList[activeHighlightIndex] && (
           <div className="fixed inset-0 bg-black/95 backdrop-blur-md z-50 flex items-center justify-center p-4 animate-fade-in">
@@ -1158,7 +1156,6 @@ export default function ProfilePage() {
           </div>
         )}
 
-      {/* FEED MODAL */}
       {feedModal && (
         <div className="fixed inset-0 bg-black/90 backdrop-blur-md z-50 flex flex-col animate-fade-in">
           <div className="sticky top-0 z-20 bg-black/60 backdrop-blur-lg border-b border-white/10 px-4 py-3 flex items-center justify-between">
@@ -1198,7 +1195,6 @@ export default function ProfilePage() {
         </div>
       )}
 
-      {/* AVATAR EXPANDIDO */}
       {showAvatarModal && (
         <div
           className="fixed inset-0 z-[100] bg-black/90 backdrop-blur-md flex items-center justify-center p-4 animate-fade-in"
@@ -1250,7 +1246,6 @@ export default function ProfilePage() {
         onChange={handleAvatarFileChange}
       />
 
-      {/* SELETOR DE AVATAR */}
       {showAvatarPickerModal && (
         <div
           className="fixed inset-0 z-[200] bg-black/90 backdrop-blur-md flex items-center justify-center p-4 animate-fade-in"

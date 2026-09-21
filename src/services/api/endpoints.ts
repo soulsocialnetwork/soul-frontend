@@ -1,7 +1,3 @@
-/**
- * Rotas conhecidas da API Spring Boot.
- * Sem implementação de chamadas e sem campos de resposta — etapa posterior.
- */
 export const endpoints = {
   user: {
     create: '/user/create',
@@ -59,11 +55,3 @@ export const endpoints = {
     unreadCount: '/notifications/unread-count',
   },
 } as const;
-
-/**
- * Nomes de schemas / records do backend (soul-backend):
- * LoginResponseDTO, CurrentUserResponseDTO, UserResponseDTO,
- * PublicProfileResponse, PostResponse, CommentResponse,
- * FollowRelationshipResponse, LikeCountResponse,
- * PagePostResponse, PageCommentResponse, PageProfileSummary
- */

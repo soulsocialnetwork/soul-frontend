@@ -72,7 +72,6 @@ export default function CreateHighlightPage() {
 
         <main className="flex-1 overflow-y-auto p-4 sm:p-6 lg:p-8 max-w-3xl mx-auto w-full animate-fade-up pb-28 lg:pb-8">
 
-          {/* Cabeçalho superior */}
           <div className="mb-6 flex items-center gap-3">
             <button
               type="button"
@@ -86,7 +85,6 @@ export default function CreateHighlightPage() {
             </h1>
           </div>
 
-          {/* Seletor de tipo de mídia */}
           <div className="flex p-1 bg-white/5 rounded-xl mb-8 w-full max-w-xs">
             <button
               type="button"
@@ -114,7 +112,6 @@ export default function CreateHighlightPage() {
             </button>
           </div>
 
-          {/* Nome do destaque */}
           <input
             type="text"
             aria-label="Nome do destaque"
@@ -127,7 +124,6 @@ export default function CreateHighlightPage() {
             autoFocus
           />
 
-          {/* Preview ou zona de upload */}
           {selectedMedia ? (
             <div className="rounded-lg relative overflow-hidden bg-black/40 border border-white/10 group">
               {mediaType === 'image' ? (
@@ -171,7 +167,6 @@ export default function CreateHighlightPage() {
             onChange={handleFileChange}
           />
 
-          {/* Barra de ações inferior */}
           <div className="mt-8 pt-4 border-t border-white/5 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
             <button
               type="button"

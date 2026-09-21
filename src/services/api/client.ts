@@ -22,11 +22,7 @@ function isPublicRequest(url = ''): boolean {
   return PUBLIC_PATHS.some((path) => url.split('?')[0] === path);
 }
 
-/**
- * URL base da API Spring Boot.
- * Configure em `.env` / `.env.local` via `VITE_API_URL`.
- * A URL real do backend ainda não está definida neste repositório.
- */
+// centraliza autenticação, renovação de tokens e expiração de sessão nas chamadas da api
 export const api = axios.create({
   baseURL: import.meta.env.VITE_API_URL,
   headers: {

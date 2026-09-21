@@ -12,7 +12,7 @@ export function useNotificationCount() {
       try {
         const value = await notificationService.getUnreadCount();
         if (active) setCount(value);
-      } catch { /* Keep the last known count until the next refresh. */ }
+      } catch { }
     };
     void refresh();
     const interval = window.setInterval(refresh, 15000);

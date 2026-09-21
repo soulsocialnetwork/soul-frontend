@@ -21,18 +21,15 @@ export default function AuthPage() {
   const navigate = useNavigate();
   const { t } = useTranslation('auth');
 
-  // atualiza o modo de auth quando o parâmetro da url muda
   useEffect(() => {
     setMode(initialMode);
     setAuthError('');
   }, [initialMode]);
 
-  // alterna entre login e cadastro na url
   const handleToggle = () => {
     setSearchParams({ mode: mode === 'login' ? 'register' : 'login' });
   };
 
-  // lida com o envio do formulário para logar ou cadastrar
   const handleSubmit = async (
     data: Parameters<typeof login>[0] | Parameters<typeof authService.register>[0]
   ) => {
@@ -44,7 +41,6 @@ export default function AuthPage() {
         navigate('/feed');
       } else {
         await authService.register(data as Parameters<typeof authService.register>[0]);
-        // After successful registration, log the user in
         await login({ 
           email: (data as Parameters<typeof authService.register>[0]).email, 
           password: (data as Parameters<typeof authService.register>[0]).password 
@@ -64,7 +60,6 @@ export default function AuthPage() {
     <div className="min-h-screen bg-background flex flex-col justify-center items-center p-4 sm:p-8 overflow-y-auto">
       <div className="w-full max-w-5xl flex flex-col lg:flex-row items-center justify-between gap-8 lg:gap-12">
         
-        {/* lado esquerdo com a logo em svg, slogan e soulzinho animado maior */}
         <div className="hidden lg:flex flex-1 flex-col items-start text-left z-10">
           <div className="mb-6">
             <SecureImage src={logoBrancaSvg} alt="Soul" className="h-8 w-auto" />
@@ -85,7 +80,6 @@ export default function AuthPage() {
           />
         </div>
 
-        {/* lado direito com o formulário de login ou cadastro */}
         <div className="w-full max-w-md space-y-5 z-10">
           <div className="lg:hidden">
             <AuthHeader />
