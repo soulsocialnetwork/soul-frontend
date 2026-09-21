@@ -10,6 +10,12 @@ export function getHttpErrorMessage(error: unknown): string {
 
     if (data && typeof data === 'object') {
       const body = data as Record<string, unknown>;
+      const errors = body.errors;
+      if (errors && typeof errors === 'object') {
+        const fieldMessage = Object.values(errors as Record<string, unknown>)
+          .find((value): value is string => typeof value === 'string' && value.trim().length > 0);
+        if (fieldMessage) return fieldMessage;
+      }
       for (const key of ['message', 'detail', 'error'] as const) {
         const value = body[key];
         if (typeof value === 'string' && value.trim()) {

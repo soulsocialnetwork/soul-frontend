@@ -18,6 +18,9 @@ import { SOUL_CATEGORIES } from '../../constants/categories';
 
 type CreateMode = 'post' | 'soult';
 
+const MAX_SOULT_CAPTION_CHARS = 150;
+const MAX_SOULT_DURATION_SECONDS = 300;
+
 export default function CreatePage() {
   const [mode, setMode] = useState<CreateMode>('post');
 
@@ -27,6 +30,7 @@ export default function CreatePage() {
   const [mediaPreview, setMediaPreview] = useState<string | null>(null);
   const [mediaFile, setMediaFile] = useState<File | null>(null);
   const [soultFile, setSoultFile] = useState<File | null>(null);
+  const [soultDuration, setSoultDuration] = useState<number | undefined>();
   const [intention, setIntention] = useState<string | null>(null);
   const [showCategoryModal, setShowCategoryModal] = useState(false);
 
@@ -70,9 +74,33 @@ export default function CreatePage() {
     if (!file) return;
     const validationError = validateUploadFile(file, 'video', 50);
     if (validationError) { setPublishError(validationError); e.target.value = ''; return; }
-    setPublishError('');
-    setSoultFile(file);
-    setSoultVideo(URL.createObjectURL(file));
+    const previewUrl = URL.createObjectURL(file);
+    const metadataUrl = URL.createObjectURL(file);
+    const probe = document.createElement('video');
+    probe.preload = 'metadata';
+    probe.onloadedmetadata = () => {
+      URL.revokeObjectURL(metadataUrl);
+      if (!Number.isFinite(probe.duration) || probe.duration <= 0) {
+        setPublishError('Não foi possível identificar a duração do vídeo.');
+        URL.revokeObjectURL(previewUrl);
+        return;
+      }
+      if (probe.duration > MAX_SOULT_DURATION_SECONDS) {
+        setPublishError('O Soult pode ter no máximo 5 minutos.');
+        URL.revokeObjectURL(previewUrl);
+        return;
+      }
+      setPublishError('');
+      setSoultDuration(Math.ceil(probe.duration));
+      setSoultFile(file);
+      setSoultVideo(previewUrl);
+    };
+    probe.onerror = () => {
+      URL.revokeObjectURL(metadataUrl);
+      URL.revokeObjectURL(previewUrl);
+      setPublishError('Não foi possível ler este vídeo.');
+    };
+    probe.src = metadataUrl;
     e.target.value = '';
   }
 
@@ -87,6 +115,7 @@ export default function CreatePage() {
     } else {
       setSoultFile(file);
       setSoultVideo(URL.createObjectURL(file));
+      setSoultDuration(undefined);
     }
     setCameraMode(null);
   };
@@ -104,6 +133,11 @@ export default function CreatePage() {
   }, [isConfirming, confirmTimer]);
 
   const handleConfirmPublish = async () => {
+    if (mode === 'soult' && soultCaption.trim().length > MAX_SOULT_CAPTION_CHARS) {
+      setPublishError(`A legenda pode ter no máximo ${MAX_SOULT_CAPTION_CHARS} caracteres.`);
+      setIsConfirming(false);
+      return;
+    }
     setIsPublishing(true);
     setPublishError('');
     try {
@@ -127,6 +161,7 @@ export default function CreatePage() {
           caption: soultCaption.trim(),
           videoUrl: videoUrl,
           category: intention || undefined,
+          duration: soultDuration,
         });
       }
       setIsConfirming(false);
@@ -289,9 +324,13 @@ export default function CreatePage() {
                   <textarea
                     value={soultCaption}
                     onChange={(e) => setSoultCaption(e.target.value)}
+                    maxLength={MAX_SOULT_CAPTION_CHARS}
                     placeholder="O que aconteceu nesse momento?"
                     className="w-full bg-transparent text-xl sm:text-2xl text-textPrimary placeholder:text-textSecondary/40 focus:outline-none resize-none flex-1 min-h-[120px]"
                   />
+                  <span className="mt-1 self-end text-xs text-textSecondary/60">
+                    {soultCaption.length}/{MAX_SOULT_CAPTION_CHARS}
+                  </span>
 
                   {/* Video preview inline */}
                   {soultVideo ? (
