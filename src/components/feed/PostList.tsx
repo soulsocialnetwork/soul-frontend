@@ -1,19 +1,28 @@
 import { SecureImage } from '../ui/SecureMedia';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { PostCard } from './PostCard';
 import type { Post } from '../../services/postService';
 import { useTranslation } from '../../i18n';
 import { ChevronLeft, ChevronRight, X } from 'lucide-react';
+import { cn } from '../../utils/cn';
+import { AvatarContent } from '../ui/AvatarContent';
 
 interface PostListProps {
   posts: Post[];
   loading?: boolean;
+  onDelete?: (id: string) => void;
 }
 
-export function PostList({ posts, loading = false }: PostListProps) {
+export function PostList({ posts, loading = false, onDelete }: PostListProps) {
   const { t } = useTranslation('feed');
   const [currentPage, setCurrentPage] = useState(0);
   const [selectedPost, setSelectedPost] = useState<Post | null>(null);
+
+  useEffect(() => {
+    if (selectedPost && !posts.some(post => post.id === selectedPost.id)) {
+      setSelectedPost(null);
+    }
+  }, [posts, selectedPost?.id]);
 
   const ITEMS_PER_PAGE = 6;
   const totalPages = Math.ceil(posts.length / ITEMS_PER_PAGE);
@@ -61,36 +70,46 @@ export function PostList({ posts, loading = false }: PostListProps) {
           <button
             key={post.id}
             onClick={() => setSelectedPost(post)}
-            className="group relative aspect-square rounded-2xl overflow-hidden soul-glass hover:border-white/20 transition-all text-left flex flex-col active:scale-95"
+            className={cn(
+              'group relative aspect-square overflow-hidden transition-all text-left active:scale-95',
+              post.imageUrl
+                ? 'rounded-2xl soul-glass flex flex-col hover:border-white/20'
+                : 'rounded-2xl soul-glass flex items-center justify-center hover:border-white/20'
+            )}
           >
             {post.imageUrl ? (
-              <SecureImage
-                src={post.imageUrl}
-                alt=""
-                className="absolute inset-0 w-full h-full object-cover opacity-50 group-hover:opacity-70 transition-opacity"
-              />
-            ) : (
-              <div className="absolute inset-0 bg-gradient-to-br from-zinc-800 to-zinc-900 opacity-80" />
-            )}
-
-            <div className="absolute inset-0 bg-black/40 group-hover:bg-black/20 transition-colors" />
-
-            <div className="relative z-10 p-4 flex flex-col h-full justify-between">
-              <div className="flex items-center gap-2">
+              <>
                 <SecureImage
-                  src={post.author.avatarUrl}
+                  src={post.imageUrl}
                   alt=""
-                  className="rounded-lg w-6 h-6"
+                  className="absolute inset-0 w-full h-full object-cover opacity-50 group-hover:opacity-70 transition-opacity"
                 />
-                <span className="text-xs font-medium truncate drop-shadow-md">
-                  {post.author.username}
-                </span>
+                <div className="absolute inset-0 bg-black/40 group-hover:bg-black/20 transition-colors" />
+                <div className="relative z-10 p-4 flex flex-col h-full justify-between">
+                  <div className="flex items-center gap-2">
+                    <span className="h-6 w-6 shrink-0 overflow-hidden rounded-lg"><AvatarContent src={post.author.avatarUrl} name={post.author.name || post.author.username} /></span>
+                    <span className="text-xs font-medium truncate drop-shadow-md">
+                      {post.author.username}
+                    </span>
+                  </div>
+                  <p className="text-xs font-medium text-white/90 line-clamp-3 drop-shadow-md leading-relaxed">
+                    {post.content}
+                  </p>
+                </div>
+              </>
+            ) : (
+              <div className="relative flex h-full w-full items-center justify-center px-4 pb-4 pt-12">
+                <div className="absolute inset-x-4 top-4 flex min-w-0 items-center gap-2">
+                  <span className="h-6 w-6 shrink-0 overflow-hidden rounded-lg"><AvatarContent src={post.author.avatarUrl} name={post.author.name || post.author.username} /></span>
+                  <span className="truncate text-xs font-medium text-white/90">
+                    {post.author.username}
+                  </span>
+                </div>
+                <p className="text-xs text-textSecondary line-clamp-4 text-center break-words">
+                  {post.content}
+                </p>
               </div>
-
-              <p className="text-xs font-medium text-white/90 line-clamp-3 drop-shadow-md leading-relaxed">
-                {post.content}
-              </p>
-            </div>
+            )}
           </button>
         ))}
       </div>
@@ -150,7 +169,7 @@ export function PostList({ posts, loading = false }: PostListProps) {
             onClick={(e) => e.stopPropagation()}
           >
             <div className="w-full max-w-lg mx-auto">
-              <PostCard post={selectedPost} index={0} />
+              <PostCard post={selectedPost} index={0} onDelete={id => { setSelectedPost(null); onDelete?.(id); }} />
             </div>
           </div>
         </div>

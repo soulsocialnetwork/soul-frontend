@@ -5,7 +5,6 @@ import {
   MessageSquare,
   Share2,
   Bookmark,
-  CheckCircle2,
   X,
   Send,
   Copy,
@@ -16,6 +15,9 @@ import {
   Loader2,
   Trash2,
   Flag,
+  ChevronLeft,
+  ChevronRight,
+  Pencil,
 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import type { Post } from '../../services/postService';
@@ -25,6 +27,11 @@ import { useTranslation } from '../../i18n';
 import { cn } from '../../utils/cn';
 import { useAuth } from '../../context/AuthContext';
 import { ReportModal } from '../modals/ReportModal';
+import { getHttpErrorMessage } from '../../services/api';
+import { AvatarContent } from '../ui/AvatarContent';
+import { ProfileBadge, profileNameColor } from '../profile/ProfileBadge';
+import { modalBackdropClass, modalPanelClass, modalCloseClass } from '../ui/modalStyles';
+import { ConfirmUnfollowModal } from '../profile/ConfirmUnfollowModal';
 
 function timeAgo(
   isoDate: string,
@@ -79,7 +86,19 @@ export function PostCard({ post, index = 0, onDelete, allowMediaFullscreen = fal
   const [commentsCount, setCommentsCount] = useState(post.commentsCount || 0);
   const [isDeleting, setIsDeleting] = useState(false);
   const [isFollowing, setIsFollowing] = useState(false);
+  const [confirmUnfollow, setConfirmUnfollow] = useState(false);
   const [lightboxOpen, setLightboxOpen] = useState(false);
+  const [activeImage, setActiveImage] = useState(0);
+  const [displayContent, setDisplayContent] = useState(post.content);
+  const [displayAudience, setDisplayAudience] = useState(post.audience || 'PUBLIC');
+  const [editingPost, setEditingPost] = useState(false);
+  const [editText, setEditText] = useState(post.content);
+  const [editAudience, setEditAudience] = useState<'PUBLIC' | 'REAL_FRIENDS' | 'PRIVATE'>(post.audience || 'PUBLIC');
+  const [editError, setEditError] = useState('');
+  const [savingEdit, setSavingEdit] = useState(false);
+  const images = post.imageUrls?.length ? post.imageUrls : post.imageUrl ? [post.imageUrl] : [];
+
+  useEffect(() => setActiveImage(0), [post.id]);
 
   useEffect(() => {
     let mounted = true;
@@ -132,6 +151,10 @@ export function PostCard({ post, index = 0, onDelete, allowMediaFullscreen = fal
   const [commentsList, setCommentsList] = useState<import('../../services/api/types').CommentResponse[]>([]);
   const [commentsLoading, setCommentsLoading] = useState(false);
   const [commentsFetched, setCommentsFetched] = useState(false);
+  const [editingCommentId, setEditingCommentId] = useState<string | null>(null);
+  const [editingCommentText, setEditingCommentText] = useState('');
+  const [commentActionId, setCommentActionId] = useState<string | null>(null);
+  const [commentError, setCommentError] = useState('');
 
   const [shareOpen, setShareOpen] = useState(false);
   const [copied, setCopied] = useState(false);
@@ -182,13 +205,15 @@ export function PostCard({ post, index = 0, onDelete, allowMediaFullscreen = fal
     if (!isFollowing) {
       setShowConnectModal(true);
     } else {
-      setIsFollowing(false);
-      try {
-        await userService.unfollow(post.author.username);
-      } catch {
-        setIsFollowing(true);
-      }
+      setConfirmUnfollow(true);
     }
+  };
+
+  const confirmFollowRemoval = async () => {
+    setConfirmUnfollow(false);
+    setIsFollowing(false);
+    try { await userService.unfollow(post.author.username); }
+    catch { setIsFollowing(true); }
   };
 
   const handleRequestDelete = () => {
@@ -251,6 +276,36 @@ export function PostCard({ post, index = 0, onDelete, allowMediaFullscreen = fal
     }
   };
 
+  const handleSaveComment = async (commentId: string) => {
+    if (!editingCommentText.trim() || commentActionId) return;
+    setCommentActionId(commentId);
+    setCommentError('');
+    try {
+      const updated = await postService.updateComment(post.id, commentId, editingCommentText.trim());
+      setCommentsList(previous => previous.map(comment => comment.id === commentId ? updated : comment));
+      setEditingCommentId(null);
+    } catch {
+      setCommentError('Não foi possível editar o comentário. Tente novamente.');
+    } finally {
+      setCommentActionId(null);
+    }
+  };
+
+  const handleDeleteComment = async (commentId: string) => {
+    if (commentActionId || !window.confirm('Excluir este comentário?')) return;
+    setCommentActionId(commentId);
+    setCommentError('');
+    try {
+      await postService.deleteComment(post.id, commentId);
+      setCommentsList(previous => previous.filter(comment => comment.id !== commentId));
+      setCommentsCount(previous => Math.max(0, previous - 1));
+    } catch {
+      setCommentError('Não foi possível excluir o comentário. Tente novamente.');
+    } finally {
+      setCommentActionId(null);
+    }
+  };
+
   const handleCopyLink = () => {
     navigator.clipboard.writeText(window.location.href);
     setCopied(true);
@@ -291,31 +346,16 @@ export function PostCard({ post, index = 0, onDelete, allowMediaFullscreen = fal
             onClick={() => navigate(`/profile/${post.author.username}`)}
           >
             <div className="rounded-lg w-10 h-10 bg-neutral-800 flex items-center justify-center shrink-0 overflow-hidden">
-              {post.author.avatarUrl ? (
-                <SecureImage
-                  src={post.author.avatarUrl}
-                  alt={post.author.name}
-                  className="w-full h-full object-cover object-top"
-                />
-              ) : (
-                <span className="text-textSecondary text-xs font-bold">
-                  {post.author.name.charAt(0)}
-                </span>
-              )}
+              <AvatarContent src={post.author.avatarUrl} name={post.author.name || post.author.username} imageClassName="object-top" fallbackClassName="text-xs" />
             </div>
 
             <div className="flex-1 min-w-0">
               <div className="flex items-center gap-1.5">
-                <span className="text-textPrimary font-semibold text-sm truncate">
+                <span className={cn('font-semibold text-sm truncate', profileNameColor(post.author.profileBadge))}>
                   {post.author.name}
                 </span>
 
-                {post.author.verified && (
-                  <CheckCircle2
-                    className="w-3.5 h-3.5 text-accent shrink-0"
-                    strokeWidth={2.5}
-                  />
-                )}
+                <ProfileBadge badge={post.author.profileBadge} className="h-3.5 w-3.5" />
               </div>
 
               <p className="text-textSecondary text-xs">
@@ -325,14 +365,15 @@ export function PostCard({ post, index = 0, onDelete, allowMediaFullscreen = fal
           </div>
 
           {user?.username === post.author.username ? (
-            <button
+            <div className="flex items-center gap-2"><button type="button" onClick={() => { setEditText(displayContent); setEditAudience(displayAudience); setEditError(''); setEditingPost(true); }}
+              className="flex items-center gap-1.5 rounded-lg border border-white/10 px-2.5 py-1.5 text-xs text-white/70 hover:text-white"><Pencil size={14} />Editar</button><button
               onClick={handleRequestDelete}
               disabled={isDeleting}
               className="flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold transition-all shrink-0 active:scale-95 bg-white/5 hover:bg-red-500/20 text-red-400 border border-transparent hover:border-red-500/30 disabled:opacity-50"
             >
               <Trash2 className="w-3.5 h-3.5" />
               <span>{isDeleting ? 'Excluindo...' : 'Excluir'}</span>
-            </button>
+            </button></div>
           ) : (
             <div className="flex items-center gap-2">
               <button
@@ -372,20 +413,22 @@ export function PostCard({ post, index = 0, onDelete, allowMediaFullscreen = fal
           onClick={() => navigate(`/post/${post.id}`)}
           className="cursor-pointer active:opacity-70 transition-opacity"
         >
-          <p className="px-4 pb-3 text-textPrimary/90 text-sm leading-relaxed">
-            {post.content}
+          <p className="px-4 pb-3 text-textPrimary/90 text-sm leading-relaxed break-words whitespace-pre-wrap" translate="no">
+            {displayContent}
           </p>
         </div>
 
-        <div
+        {post.category && <button type="button" onClick={() => navigate(`/feed?category=${encodeURIComponent(post.category!)}`)}
+          className="mx-4 mb-3 block text-xs font-medium text-white/50 hover:text-white/80">#{post.category}</button>}
+
+        {images.length > 0 && <div
           onClick={() => navigate(`/post/${post.id}`)}
-          className="mx-3 mb-3 rounded-2xl overflow-hidden cursor-pointer active:scale-[0.98] transition-transform"
+          className="mx-3 mb-3 aspect-[4/5] rounded-2xl overflow-hidden cursor-pointer active:scale-[0.98] transition-transform relative bg-white/[0.04]"
         >
-          {post.imageUrl ? (
             <SecureImage
-              src={post.imageUrl}
-              alt="Post media"
-              className="w-full aspect-[3/4] lg:aspect-video object-cover object-top"
+              src={images[activeImage] || images[0]}
+              alt={`Imagem ${activeImage + 1} de ${images.length} do post`}
+              className="block w-full h-full object-cover"
               onClick={(e) => {
                 if (allowMediaFullscreen) {
                   e.stopPropagation();
@@ -393,10 +436,12 @@ export function PostCard({ post, index = 0, onDelete, allowMediaFullscreen = fal
                 }
               }}
             />
-          ) : (
-            <div className="w-full aspect-[3/4] lg:aspect-video bg-gradient-to-br from-surfaceHighlight to-background" />
-          )}
-        </div>
+          {images.length > 1 && <>
+            <button type="button" disabled={activeImage === 0} onClick={event => { event.stopPropagation(); setActiveImage(index => index - 1); }} aria-label="Imagem anterior" className="absolute left-2 top-1/2 -translate-y-1/2 rounded-lg bg-black/60 p-2 text-white disabled:opacity-30"><ChevronLeft size={18} /></button>
+            <button type="button" disabled={activeImage === images.length - 1} onClick={event => { event.stopPropagation(); setActiveImage(index => index + 1); }} aria-label="Próxima imagem" className="absolute right-2 top-1/2 -translate-y-1/2 rounded-lg bg-black/60 p-2 text-white disabled:opacity-30"><ChevronRight size={18} /></button>
+            <span className="absolute bottom-2 left-1/2 -translate-x-1/2 rounded-lg bg-black/50 px-2 py-1 text-xs text-white">{activeImage + 1}/{images.length}</span>
+          </>}
+        </div>}
 
         <div className="flex items-center justify-between px-4 py-3 border-t border-white/[0.05]">
           <div className="flex items-center gap-4">
@@ -507,13 +552,7 @@ export function PostCard({ post, index = 0, onDelete, allowMediaFullscreen = fal
                     className="flex gap-3 items-start"
                   >
                     <div className="rounded-lg w-8 h-8 bg-neutral-800 flex items-center justify-center shrink-0 overflow-hidden cursor-pointer hover:opacity-80" onClick={() => { setCommentsOpen(false); navigate(`/profile/${item.username}`); }}>
-                      {item.profilePicture ? (
-                        <SecureImage src={item.profilePicture} alt={item.username} className="w-full h-full object-cover" />
-                      ) : (
-                        <span className="text-white font-bold text-xs">
-                          {item.username.charAt(0).toUpperCase()}
-                        </span>
-                      )}
+                      <AvatarContent src={item.profilePicture} name={item.username} fallbackClassName="text-xs" />
                     </div>
 
                     <div className="flex-1 min-w-0">
@@ -527,15 +566,36 @@ export function PostCard({ post, index = 0, onDelete, allowMediaFullscreen = fal
                         </span>
                       </div>
 
-                      <p className="text-textPrimary/80 text-xs mt-0.5 leading-relaxed break-words">
-                        {item.content}
-                      </p>
+                      {editingCommentId === item.id ? (
+                        <div className="mt-1 space-y-2">
+                          <textarea
+                            value={editingCommentText}
+                            onChange={event => setEditingCommentText(event.target.value)}
+                            maxLength={2000}
+                            aria-label="Editar comentário"
+                            className="w-full rounded-lg border border-white/20 bg-black/30 p-2 text-xs text-white focus-visible:outline focus-visible:outline-2 focus-visible:outline-white/50"
+                          />
+                          <div className="flex gap-3 text-xs">
+                            <button type="button" disabled={!!commentActionId || !editingCommentText.trim()} onClick={() => void handleSaveComment(item.id)} className="text-white disabled:opacity-40">Salvar</button>
+                            <button type="button" onClick={() => setEditingCommentId(null)} className="text-textSecondary">Cancelar</button>
+                          </div>
+                        </div>
+                      ) : (
+                        <p className="text-textPrimary/80 text-xs mt-0.5 leading-relaxed break-words" translate="no">{item.content}</p>
+                      )}
+                      {(item.userId === user?.id || user?.role === 'ADMIN') && editingCommentId !== item.id && (
+                        <div className="mt-1 flex gap-3 text-[11px] text-textSecondary">
+                          {item.userId === user?.id && <button type="button" onClick={() => { setEditingCommentId(item.id); setEditingCommentText(item.content); }}>Editar</button>}
+                          <button type="button" disabled={commentActionId === item.id} onClick={() => void handleDeleteComment(item.id)} className="hover:text-red-300 disabled:opacity-40">Excluir</button>
+                        </div>
+                      )}
                     </div>
                   </div>
                 ))
               )}
             </div>
 
+            {commentError && <p role="alert" className="mb-2 text-xs text-red-300">{commentError}</p>}
             <form
               onSubmit={handleAddComment}
               className="pt-2 border-t border-white/10 flex items-center gap-2"
@@ -562,40 +622,42 @@ export function PostCard({ post, index = 0, onDelete, allowMediaFullscreen = fal
 
       {shareOpen && (
         <div
-          className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4 animate-fade-in"
+          className={modalBackdropClass}
           onClick={() => setShareOpen(false)}
         >
           <div
-            className="w-full max-w-sm bg-neutral-900/95 backdrop-blur-xl border border-white/10 rounded-2xl p-5 shadow-2xl animate-scale-up space-y-4"
+            className={modalPanelClass}
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="share-post-title"
             onClick={(e) => e.stopPropagation()}
           >
-            <div className="flex items-center justify-between pb-2 border-b border-white/10">
-              <span className="text-sm font-semibold text-textPrimary">
+            <div className="relative text-center">
+              <h3 id="share-post-title" className="text-xl font-bold text-white">
                 Compartilhar publicação
-              </span>
+              </h3>
 
               <button
                 onClick={() => setShareOpen(false)}
-                className="p-1 rounded-full text-textSecondary hover:text-white hover:bg-white/10 transition-colors"
+                aria-label="Fechar"
+                className={modalCloseClass}
               >
                 <X className="w-5 h-5" />
               </button>
             </div>
 
-            <div className="grid grid-cols-3 gap-3 py-2">
+            <div className="grid grid-cols-3 gap-3">
               <button
                 onClick={handleCopyLink}
-                className="flex flex-col items-center gap-2 p-3 rounded-2xl bg-white/5 hover:bg-white/10 border border-white/5 transition-all active:scale-95"
+                className="soul-glass flex flex-col items-center gap-3 rounded-lg px-2 py-5 transition-colors hover:bg-white/[0.07]"
               >
-                <div className="w-10 h-10 rounded-full bg-white/10 text-white flex items-center justify-center">
                   {copied ? (
                     <Check className="w-5 h-5" />
                   ) : (
                     <Copy className="w-5 h-5" />
                   )}
-                </div>
 
-                <span className="text-[11px] text-textSecondary font-medium">
+                <span className="text-xs text-white/90 font-semibold">
                   {copied ? 'Copiado!' : 'Copiar Link'}
                 </span>
               </button>
@@ -611,26 +673,22 @@ export function PostCard({ post, index = 0, onDelete, allowMediaFullscreen = fal
 
                   setShareOpen(false);
                 }}
-                className="flex flex-col items-center gap-2 p-3 rounded-2xl bg-white/5 hover:bg-white/10 border border-white/5 transition-all active:scale-95"
+                className="soul-glass flex flex-col items-center gap-3 rounded-lg px-2 py-5 transition-colors hover:bg-white/[0.07]"
               >
-                <div className="w-10 h-10 rounded-full bg-white/10 text-white flex items-center justify-center">
                   <MessageCircle className="w-5 h-5" />
-                </div>
 
-                <span className="text-[11px] text-textSecondary font-medium">
+                <span className="text-xs text-white/90 font-semibold">
                   WhatsApp
                 </span>
               </button>
 
               <button
                 onClick={handleNativeShare}
-                className="flex flex-col items-center gap-2 p-3 rounded-2xl bg-white/5 hover:bg-white/10 border border-white/5 transition-all active:scale-95"
+                className="soul-glass flex flex-col items-center gap-3 rounded-lg px-2 py-5 transition-colors hover:bg-white/[0.07]"
               >
-                <div className="w-10 h-10 rounded-full bg-white/10 text-white flex items-center justify-center">
                   <Share2 className="w-5 h-5" />
-                </div>
 
-                <span className="text-[11px] text-textSecondary font-medium">
+                <span className="text-xs text-white/90 font-semibold">
                   Mais
                 </span>
               </button>
@@ -750,9 +808,9 @@ export function PostCard({ post, index = 0, onDelete, allowMediaFullscreen = fal
         </div>
       )}
 
-      {lightboxOpen && post.imageUrl && (
+      {lightboxOpen && images.length > 0 && (
         <div
-          className="fixed inset-0 z-[999] bg-black/95 flex items-center justify-center p-4 animate-fade-in"
+          className="fixed inset-0 z-[999] bg-background/95 flex items-center justify-center animate-fade-in"
           onClick={() => setLightboxOpen(false)}
         >
           <button
@@ -762,13 +820,35 @@ export function PostCard({ post, index = 0, onDelete, allowMediaFullscreen = fal
             <X className="w-5 h-5" />
           </button>
           <SecureImage
-            src={post.imageUrl}
+            src={images[activeImage] || images[0]}
             alt="Post completo"
-            className="max-w-full max-h-full object-contain rounded-2xl"
+            className="max-w-full max-h-[100dvh] object-contain"
             onClick={e => e.stopPropagation()}
           />
+          {images.length > 1 && <>
+            <button type="button" disabled={activeImage === 0} onClick={event => { event.stopPropagation(); setActiveImage(index => index - 1); }} aria-label="Imagem anterior" className="absolute left-3 top-1/2 -translate-y-1/2 rounded-lg bg-white/10 p-2 text-white disabled:opacity-30"><ChevronLeft size={22} /></button>
+            <button type="button" disabled={activeImage === images.length - 1} onClick={event => { event.stopPropagation(); setActiveImage(index => index + 1); }} aria-label="Próxima imagem" className="absolute right-3 top-1/2 -translate-y-1/2 rounded-lg bg-white/10 p-2 text-white disabled:opacity-30"><ChevronRight size={22} /></button>
+            <span className="absolute bottom-4 rounded-lg bg-black/50 px-3 py-1 text-sm text-white">{activeImage + 1}/{images.length}</span>
+          </>}
         </div>
       )}
+
+      {editingPost && <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/75 p-4" onMouseDown={event => { if (event.target === event.currentTarget) setEditingPost(false); }}>
+        <form className="soul-glass w-full max-w-md space-y-4 rounded-2xl p-5" onSubmit={async event => {
+          event.preventDefault(); if (savingEdit) return;
+          setSavingEdit(true); setEditError('');
+          try { const updated = await postService.updatePost(post.id, { content: editText.trim(), audience: editAudience }); setDisplayContent(updated.content); setDisplayAudience(updated.audience || 'PUBLIC'); setEditingPost(false); }
+          catch (error) { setEditError(getHttpErrorMessage(error)); }
+          finally { setSavingEdit(false); }
+        }}>
+          <div className="flex items-center justify-between"><h2 className="text-lg font-semibold">Editar post</h2><button type="button" onClick={() => setEditingPost(false)} aria-label="Fechar"><X size={18} /></button></div>
+          <p className="text-xs text-white/50">Imagem e categoria permanecem como foram publicadas.</p>
+          <textarea value={editText} onChange={event => setEditText(event.target.value)} maxLength={5000} className="min-h-32 w-full rounded-xl border border-white/15 bg-black/25 p-3 text-sm text-white focus-visible:outline focus-visible:outline-1 focus-visible:outline-white/50" />
+          <label className="block text-sm text-white/70">Quem pode ver<select value={editAudience} onChange={event => setEditAudience(event.target.value as typeof editAudience)} className="mt-2 w-full rounded-xl border border-white/15 bg-[#202020] px-3 py-2.5 text-white"><option value="PUBLIC">Público</option><option value="REAL_FRIENDS">Amigos Reais</option><option value="PRIVATE">Só eu</option></select></label>
+          {editError && <p role="alert" className="text-sm text-red-300">{editError}</p>}
+          <button disabled={savingEdit} type="submit" className="w-full rounded-xl bg-white py-2.5 font-semibold text-black disabled:opacity-50">{savingEdit ? 'Salvando...' : 'Salvar alterações'}</button>
+        </form>
+      </div>}
 
       <ReportModal
         isOpen={showReportModal}
@@ -776,6 +856,7 @@ export function PostCard({ post, index = 0, onDelete, allowMediaFullscreen = fal
         targetId={post.id}
         targetType="POST"
       />
+      {confirmUnfollow && <ConfirmUnfollowModal username={post.author.username} onCancel={() => setConfirmUnfollow(false)} onConfirm={() => void confirmFollowRemoval()} />}
     </>
   );
 }

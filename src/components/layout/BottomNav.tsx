@@ -1,6 +1,6 @@
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useState } from 'react';
-import { Home, Ghost, Plus, MessageSquare, MoreHorizontal, Settings, Clock, LogOut, X } from 'lucide-react';
+import { Home, Ghost, Plus, MessageSquare, MoreHorizontal, Settings, Clock, LogOut, X, Shield, BadgeCheck } from 'lucide-react';
 import { cn } from '../../utils/cn';
 import { useAuth } from '../../context/AuthContext';
 
@@ -13,7 +13,7 @@ const MORE_ITEMS = [
 export function BottomNav() {
   const navigate = useNavigate();
   const { pathname } = useLocation();
-  const { logout } = useAuth();
+  const { logout, user } = useAuth();
   const [moreOpen, setMoreOpen] = useState(false);
 
   return (
@@ -33,6 +33,24 @@ export function BottomNav() {
                   <X className="w-4 h-4" />
                 </button>
               </div>
+              {(user?.role === 'ADMIN' || user?.role === 'MODERATOR') && (
+                <button
+                  onClick={() => { setMoreOpen(false); navigate('/moderation'); }}
+                  className="w-full flex items-center gap-4 px-4 py-3.5 rounded-2xl text-[15px] font-medium text-textPrimary hover:bg-white/[0.07]"
+                >
+                  <Shield className="w-5 h-5 shrink-0" strokeWidth={1.75} />
+                  Central de Moderação
+                </button>
+              )}
+              {user?.role === 'ADMIN' && (
+                <button
+                  onClick={() => { setMoreOpen(false); navigate('/promote'); }}
+                  className="w-full flex items-center gap-4 rounded-2xl px-4 py-3.5 text-[15px] font-medium text-textPrimary hover:bg-white/[0.07]"
+                >
+                  <BadgeCheck className="h-5 w-5 shrink-0" strokeWidth={1.75} />
+                  Promover perfis
+                </button>
+              )}
               {MORE_ITEMS.map(({ icon: Icon, label, path, danger }) => (
                 <button
                   key={label}

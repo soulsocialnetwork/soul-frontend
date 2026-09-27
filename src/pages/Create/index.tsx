@@ -5,7 +5,8 @@ import { Header } from '../../components/layout/Header';
 import { BottomNav } from '../../components/layout/BottomNav';
 import { Button } from '../../components/ui/Button';
 import { CameraCapture } from '../../components/ui/CameraCapture';
-import { Camera, Image, X, Tag, ChevronDown, Video, User } from 'lucide-react';
+import { Camera, Image, X, Tag, ChevronDown, Video } from 'lucide-react';
+import { AvatarContent } from '../../components/ui/AvatarContent';
 import { cn } from '../../utils/cn';
 import { useNavigate } from 'react-router-dom';
 import { useTranslation } from '../../i18n';
@@ -15,8 +16,11 @@ import { getHttpErrorMessage } from '../../services/api';
 import { useAuth } from '../../context/AuthContext';
 import { validateUploadFile } from '../../utils/mediaValidation';
 import { SOUL_CATEGORIES } from '../../constants/categories';
+import { draftService, type PostDraft } from '../../services/draftService';
+import { CustomSelect } from '../../components/ui/CustomSelect';
 
 type CreateMode = 'post' | 'soult';
+type ContentAudience = 'PUBLIC' | 'REAL_FRIENDS' | 'PRIVATE';
 
 const MAX_SOULT_CAPTION_CHARS = 150;
 const MAX_SOULT_DURATION_SECONDS = 300;
@@ -29,9 +33,15 @@ export default function CreatePage() {
   const MAX_CHARS = 500;
   const [mediaPreview, setMediaPreview] = useState<string | null>(null);
   const [mediaFile, setMediaFile] = useState<File | null>(null);
+  const [carouselFiles, setCarouselFiles] = useState<File[]>([]);
+  const [drafts, setDrafts] = useState<PostDraft[]>([]);
+  const [activeDraftId, setActiveDraftId] = useState<string | null>(null);
+  const [activeSoultDraftId, setActiveSoultDraftId] = useState<string | null>(null);
+  const [savingDraft, setSavingDraft] = useState(false);
   const [soultFile, setSoultFile] = useState<File | null>(null);
   const [soultDuration, setSoultDuration] = useState<number | undefined>();
   const [intention, setIntention] = useState<string | null>(null);
+  const [audience, setAudience] = useState<ContentAudience>('PUBLIC');
   const [showCategoryModal, setShowCategoryModal] = useState(false);
 
   const [soultVideo, setSoultVideo] = useState<string | null>(null);
@@ -49,6 +59,77 @@ export default function CreatePage() {
   const mediaFileInputRef = useRef<HTMLInputElement>(null);
   const soultFileInputRef = useRef<HTMLInputElement>(null);
 
+  useEffect(() => {
+    if (!user?.id) return;
+    void draftService.list(user.id).then(setDrafts).catch(() => setDrafts([]));
+  }, [user?.id]);
+
+  const saveDraft = async () => {
+    if (!user?.id || savingDraft) return;
+    setSavingDraft(true); setPublishError('');
+    const id = activeDraftId || crypto.randomUUID();
+    try {
+      await draftService.save({ id, userId: user.id, kind: 'post', content, category: intention, audience,
+        files: carouselFiles.length ? carouselFiles : mediaFile ? [mediaFile] : [], updatedAt: Date.now() });
+      setActiveDraftId(id);
+      setDrafts(await draftService.list(user.id));
+    } catch { setPublishError('Não foi possível salvar o rascunho neste navegador. Verifique o espaço disponível.'); }
+    finally { setSavingDraft(false); }
+  };
+
+  const openDraft = (draft: PostDraft) => {
+    setActiveDraftId(draft.id);
+    setContent(draft.content);
+    setIntention(draft.category);
+    setAudience(draft.audience || 'PUBLIC');
+    const files = draft.files || [];
+    setMediaFile(files[0] || null);
+    setCarouselFiles(files[0]?.type.startsWith('image/') ? files : []);
+    setMediaPreview(files[0] ? URL.createObjectURL(files[0]) : null);
+    setPublishError('');
+  };
+
+  const saveSoultDraft = async () => {
+    if (!user?.id || savingDraft) return;
+    setSavingDraft(true); setPublishError('');
+    const id = activeSoultDraftId || crypto.randomUUID();
+    try {
+      await draftService.save({ id, userId: user.id, kind: 'soult', content: soultCaption, category: intention,
+        audience, files: soultFile ? [soultFile] : [], duration: soultDuration, updatedAt: Date.now() });
+      setActiveSoultDraftId(id);
+      setDrafts(await draftService.list(user.id));
+    } catch { setPublishError('Não foi possível salvar o rascunho do Soult neste navegador.'); }
+    finally { setSavingDraft(false); }
+  };
+
+  const openSoultDraft = (draft: PostDraft) => {
+    setActiveSoultDraftId(draft.id);
+    setSoultCaption(draft.content);
+    setIntention(draft.category);
+    setAudience(draft.audience || 'PUBLIC');
+    const file = draft.files?.[0] || null;
+    setSoultFile(file);
+    setSoultVideo(file ? URL.createObjectURL(file) : null);
+    setSoultDuration(draft.duration);
+    setPublishError('');
+  };
+
+  const resetForm = () => {
+    setContent(''); setMediaPreview(null); setMediaFile(null); setCarouselFiles([]); setActiveDraftId(null);
+    setSoultCaption(''); setSoultVideo(null); setSoultFile(null); setSoultDuration(undefined); setActiveSoultDraftId(null);
+    setIntention(null); setAudience('PUBLIC'); setIsConfirming(false); setPublishError('');
+  };
+
+  const deleteDraft = async (id: string) => {
+    if (!window.confirm('Excluir este rascunho?')) return;
+    try {
+      await draftService.delete(id);
+      setDrafts(current => current.filter(draft => draft.id !== id));
+      if (activeDraftId === id) setActiveDraftId(null);
+      if (activeSoultDraftId === id) setActiveSoultDraftId(null);
+    } catch { setPublishError('Não foi possível excluir o rascunho.'); }
+  };
+
   const handleModeChange = (newMode: CreateMode) => {
     setMode(newMode);
     setIsConfirming(false);
@@ -56,14 +137,29 @@ export default function CreatePage() {
   };
 
   function handleMediaFileChange(e: React.ChangeEvent<HTMLInputElement>) {
-    const file = e.target.files?.[0];
-    if (!file) return;
+    const selected = Array.from(e.target.files || []);
+    e.target.value = '';
+    if (!selected.length) return;
+    if (selected.length > 1 || (carouselFiles.length > 0 && selected[0].type.startsWith('image/'))) {
+      const next = [...carouselFiles, ...selected];
+      if (next.length > 10 || next.some(file => !file.type.startsWith('image/'))) { setPublishError('O carrossel aceita até 10 imagens, sem vídeos.'); return; }
+      for (const file of selected) {
+        const error = validateUploadFile(file, 'image', 50);
+        if (error) { setPublishError(error); return; }
+      }
+      setCarouselFiles(next);
+      setMediaFile(next[0]);
+      if (!mediaPreview) setMediaPreview(URL.createObjectURL(next[0]));
+      setPublishError('');
+      return;
+    }
+    const file = selected[0];
     const validationError = validateUploadFile(file, 'any', 50);
-    if (validationError) { setPublishError(validationError); e.target.value = ''; return; }
+    if (validationError) { setPublishError(validationError); return; }
     setPublishError('');
+    setCarouselFiles(file.type.startsWith('image/') ? [file] : []);
     setMediaFile(file);
     setMediaPreview(URL.createObjectURL(file));
-    e.target.value = '';
   }
 
   function handleSoultFileChange(e: React.ChangeEvent<HTMLInputElement>) {
@@ -107,8 +203,11 @@ export default function CreatePage() {
   const handleCameraCapture = (file: File) => {
     setPublishError('');
     if (cameraMode === 'photo') {
-      setMediaFile(file);
-      setMediaPreview(URL.createObjectURL(file));
+      const next = carouselFiles.length ? [...carouselFiles, file] : [file];
+      if (next.length > 10) { setPublishError('O carrossel aceita até 10 imagens.'); setCameraMode(null); return; }
+      setCarouselFiles(next);
+      setMediaFile(next[0]);
+      if (!carouselFiles.length || !mediaPreview) setMediaPreview(URL.createObjectURL(next[0]));
     } else {
       setSoultFile(file);
       setSoultVideo(URL.createObjectURL(file));
@@ -140,14 +239,22 @@ export default function CreatePage() {
     try {
       if (mode === 'post') {
         let imageUrl: string | undefined = undefined;
-        if (mediaFile) {
+        let imageUrls: string[] | undefined;
+        if (carouselFiles.length) {
+          imageUrls = [];
+          for (const file of carouselFiles) imageUrls.push(await postService.uploadMedia(file));
+          imageUrl = imageUrls[0];
+        } else if (mediaFile) {
           imageUrl = await postService.uploadMedia(mediaFile);
         }
         await postService.createPost({
           content: content.trim(),
           imageUrl,
+          imageUrls,
           category: intention || undefined,
+          audience,
         });
+        if (activeDraftId) await draftService.delete(activeDraftId).catch(() => {});
       } else {
         let videoUrl: string | undefined = undefined;
         if (soultFile) {
@@ -158,8 +265,10 @@ export default function CreatePage() {
           caption: soultCaption.trim(),
           videoUrl: videoUrl,
           category: intention || undefined,
+          audience,
           duration: soultDuration,
         });
+        if (activeSoultDraftId) await draftService.delete(activeSoultDraftId).catch(() => {});
       }
       setIsConfirming(false);
       navigate('/feed');
@@ -207,15 +316,24 @@ export default function CreatePage() {
             </button>
           </div>
 
+          <div className="mb-5 flex flex-wrap items-center gap-3 text-sm text-zinc-300">
+            <span>Quem pode ver</span>
+            <CustomSelect value={audience} onChange={value => setAudience(value as ContentAudience)}
+              className="max-w-52" options={[{ value: 'PUBLIC', label: 'Público' }, { value: 'REAL_FRIENDS', label: 'Amigos Reais' }, { value: 'PRIVATE', label: 'Só eu' }]} />
+          </div>
+
           {mode === 'post' && (
             <div className="flex-1 flex flex-col relative">
+              {drafts.some(draft => draft.kind !== 'soult') && <div className="mb-5 flex flex-wrap items-center gap-2">
+                <span className="text-xs text-textSecondary">Rascunhos:</span>
+                {drafts.filter(draft => draft.kind !== 'soult').map(draft => <span key={draft.id} className={cn('inline-flex items-center rounded-lg border text-xs', activeDraftId === draft.id ? 'border-white/30 bg-white/10' : 'border-white/10')}>
+                  <button type="button" onClick={() => openDraft(draft)} className="max-w-36 truncate px-3 py-2 text-white/70 hover:text-white">{draft.content.trim().slice(0, 24) || `${draft.files.length} mídia(s)`}</button>
+                  <button type="button" onClick={() => void deleteDraft(draft.id)} aria-label="Excluir rascunho" className="pr-2 text-white/40 hover:text-white"><X size={14} /></button>
+                </span>)}
+              </div>}
               <div className="flex gap-4 flex-1">
                 <div className="rounded-lg w-11 h-11 flex-shrink-0 overflow-hidden bg-neutral-800 mt-1 flex items-center justify-center text-white/50">
-                  {user?.profilePicture ? (
-                    <SecureImage src={user.profilePicture} alt={user?.name || 'Avatar'} className="w-full h-full object-cover" />
-                  ) : (
-                    <User className="w-6 h-6" />
-                  )}
+                  <AvatarContent src={user?.profilePicture} name={user?.name || user?.username} />
                 </div>
 
                 <div className="flex-1 flex flex-col">
@@ -248,13 +366,16 @@ export default function CreatePage() {
                         <SecureImage src={mediaPreview} alt="Preview" className="w-full max-h-[400px] object-cover" />
                       )}
                       <button
-                        onClick={() => { setMediaPreview(null); setMediaFile(null); }}
+                        onClick={() => { setMediaPreview(null); setMediaFile(null); setCarouselFiles([]); }}
                         className="absolute top-3 right-3 p-1.5 bg-black/50 backdrop-blur-md rounded-full text-white opacity-0 group-hover:opacity-100 transition-opacity hover:bg-black/70"
                       >
                         <X className="w-5 h-5" />
                       </button>
                     </div>
                   )}
+                  {carouselFiles.length > 1 && <div className="mt-2 flex flex-wrap gap-2 text-xs text-white/60">
+                    {carouselFiles.map((file, index) => <span key={`${file.name}-${index}`} className="rounded-lg border border-white/10 px-2 py-1">{index + 1}. {file.name}</span>)}
+                  </div>}
                 </div>
               </div>
 
@@ -286,6 +407,9 @@ export default function CreatePage() {
                   </button>
                 </div>
 
+                <div className="flex flex-wrap items-center gap-2">
+                <button type="button" onClick={resetForm} className="rounded-xl border border-white/15 px-4 py-3 text-sm font-semibold text-white/70 hover:text-white">Limpar</button>
+                <button type="button" disabled={savingDraft || (!content.trim() && !mediaFile)} onClick={() => void saveDraft()} className="rounded-xl border border-white/15 px-4 py-3 text-sm font-semibold text-white/70 hover:text-white disabled:opacity-50">{savingDraft ? 'Salvando...' : 'Rascunho'}</button>
                 <Button
                   variant="primary"
                   className="px-8 py-3.5 rounded-xl font-bold"
@@ -294,21 +418,26 @@ export default function CreatePage() {
                 >
                   {t('publish', 'Publicar')}
                 </Button>
+                </div>
               </div>
 
-              <input ref={mediaFileInputRef} type="file" accept="image/png,image/jpeg,image/gif,image/webp,video/mp4,video/webm" className="hidden" onChange={handleMediaFileChange} />
+              <input ref={mediaFileInputRef} type="file" multiple accept="image/png,image/jpeg,image/gif,image/webp,video/mp4,video/webm" className="hidden" onChange={handleMediaFileChange} />
             </div>
           )}
 
           {mode === 'soult' && (
             <div className="flex-1 flex flex-col relative">
+              <div className="mb-5 flex flex-wrap items-center gap-2">
+                <button type="button" onClick={resetForm} className="rounded-lg border border-white/10 px-3 py-2 text-xs text-white/70 hover:text-white">Novo Soult</button>
+                {drafts.some(draft => draft.kind === 'soult') && <span className="text-xs text-textSecondary">Rascunhos:</span>}
+                {drafts.filter(draft => draft.kind === 'soult').map(draft => <span key={draft.id} className={cn('inline-flex items-center rounded-lg border text-xs', activeSoultDraftId === draft.id ? 'border-white/30 bg-white/10' : 'border-white/10')}>
+                  <button type="button" onClick={() => openSoultDraft(draft)} className="max-w-36 truncate px-3 py-2 text-white/70 hover:text-white">{draft.content.trim().slice(0, 24) || 'Vídeo sem legenda'}</button>
+                  <button type="button" onClick={() => void deleteDraft(draft.id)} aria-label="Excluir rascunho" className="pr-2 text-white/40 hover:text-white"><X size={14} /></button>
+                </span>)}
+              </div>
               <div className="flex gap-4 flex-1">
                 <div className="rounded-lg w-11 h-11 flex-shrink-0 overflow-hidden bg-neutral-800 mt-1 flex items-center justify-center text-white/50">
-                  {user?.profilePicture ? (
-                    <SecureImage src={user.profilePicture} alt={user?.name || 'Avatar'} className="w-full h-full object-cover" />
-                  ) : (
-                    <User className="w-6 h-6" />
-                  )}
+                  <AvatarContent src={user?.profilePicture} name={user?.name || user?.username} />
                 </div>
 
                 <div className="flex-1 flex flex-col">
@@ -370,6 +499,9 @@ export default function CreatePage() {
                   </button>
                 </div>
 
+                <div className="flex flex-wrap items-center gap-2">
+                <button type="button" onClick={resetForm} className="rounded-xl border border-white/15 px-4 py-3 text-sm font-semibold text-white/70 hover:text-white">Limpar</button>
+                <button type="button" disabled={savingDraft || (!soultCaption.trim() && !soultFile)} onClick={() => void saveSoultDraft()} className="rounded-xl border border-white/15 px-4 py-3 text-sm font-semibold text-white/70 hover:text-white disabled:opacity-50">{savingDraft ? 'Salvando...' : 'Rascunho'}</button>
                 <Button
                   variant="primary"
                   className="px-8 py-3.5 rounded-xl font-bold"
@@ -378,6 +510,7 @@ export default function CreatePage() {
                 >
                   Publicar Soult
                 </Button>
+                </div>
               </div>
 
               <input ref={soultFileInputRef} type="file" accept="video/mp4,video/webm" className="hidden" onChange={handleSoultFileChange} />
@@ -412,7 +545,7 @@ export default function CreatePage() {
               </button>
             </div>
 
-            <div className="grid grid-cols-2 gap-2 max-h-[60vh] overflow-y-auto no-scrollbar">
+            <div className="grid grid-cols-2 gap-2 max-h-[60vh] overflow-y-auto">
               {SOUL_CATEGORIES.map((category) => {
                 const CategoryIcon = category.icon;
                 return (

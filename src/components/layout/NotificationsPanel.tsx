@@ -139,7 +139,18 @@ export function NotificationsPanel({
 
   const handleOpenProfile = (username: string) => {
     onClose();
-    navigate(`/profile/${username}`);
+    navigate(`/profile/${encodeURIComponent(username)}`);
+  };
+
+  const openActorProfile = async (notification: NotificationResponse) => {
+    if (!notification.read) {
+      try {
+        await notificationService.markAsRead(notification.id);
+        setNotifications(previous => previous.map(item => item.id === notification.id ? { ...item, read: true } : item));
+        notifyNotificationsUpdated();
+      } catch { }
+    }
+    handleOpenProfile(notification.triggerUsername);
   };
   
   const handleOpenPost = (postId: string) => {
@@ -288,7 +299,7 @@ export function NotificationsPanel({
           </div>
         </div>
 
-        <div className="flex-1 overflow-y-auto no-scrollbar p-4 sm:p-6">
+        <div className="flex-1 overflow-y-auto p-4 sm:p-6">
           {error && <div role="alert" className="mb-4 rounded-xl border border-red-500/20 bg-red-500/10 p-3 text-sm text-red-300">{error} <button onClick={() => setRefreshKey(value => value + 1)} className="underline font-semibold">Tentar novamente</button></div>}
           {activeTab === 'all' && realFriendRequests.length > 0 && (
             <div className="mb-5 space-y-2">
@@ -384,15 +395,16 @@ export function NotificationsPanel({
             ) : (
               <div className="space-y-2">
                 {notifications.map((notif) => (
-                  <button type="button"
+                  <div role="button" tabIndex={0}
                     key={notif.id}
                     className={cn(
                       "w-full text-left flex items-center gap-3 sm:gap-4 group p-3 -mx-2 rounded-2xl hover:bg-white/5 transition-colors cursor-pointer",
                       !notif.read && "bg-white/[0.03]"
                     )}
                     onClick={() => { void openNotification(notif); }}
+                    onKeyDown={event => { if (event.target === event.currentTarget && (event.key === 'Enter' || event.key === ' ')) { event.preventDefault(); void openNotification(notif); } }}
                   >
-                    <div className="relative shrink-0">
+                    <button type="button" aria-label={`Abrir perfil de ${notif.triggerUsername}`} onClick={event => { event.stopPropagation(); void openActorProfile(notif); }} className="relative shrink-0">
                       <div className="rounded-lg w-10 h-10 sm:w-11 sm:h-11 overflow-hidden shrink-0 bg-neutral-800 flex items-center justify-center">
                         {notif.triggerAvatarUrl ? (
                           <SecureImage
@@ -409,13 +421,13 @@ export function NotificationsPanel({
                       <div className="absolute -bottom-1 -right-1 w-5 h-5 bg-background rounded-full flex items-center justify-center">
                         {getNotificationIcon(notif.type)}
                       </div>
-                    </div>
+                    </button>
 
                     <div className="flex-1 min-w-0">
                       <p className="text-sm text-textPrimary leading-snug break-words">
-                        <span className="font-bold mr-1 hover:underline">
+                        <button type="button" onClick={event => { event.stopPropagation(); void openActorProfile(notif); }} className="font-bold mr-1 hover:underline">
                           {notif.triggerUsername}
-                        </span>
+                        </button>
                         <span className="text-textSecondary">
                           {getNotificationText(notif.type)}
                         </span>
@@ -428,7 +440,7 @@ export function NotificationsPanel({
                     {!notif.read && (
                       <div className="w-2 h-2 rounded-full bg-blue-500 shrink-0" />
                     )}
-                  </button>
+                  </div>
                 ))}
                 {hasMoreNotifications && <button onClick={loadMore} disabled={loadingMore} className="w-full rounded-xl border border-white/10 py-3 text-sm text-textSecondary hover:text-white disabled:opacity-50">{loadingMore ? 'Carregando...' : 'Ver notificações anteriores'}</button>}
               </div>

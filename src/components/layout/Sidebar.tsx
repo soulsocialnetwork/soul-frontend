@@ -3,7 +3,7 @@ import { useState } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { 
   Home, Ghost, Plus, MessageSquare, Clock,
-  Bell, Settings, LogOut, Shield
+  Bell, Settings, LogOut, Shield, BadgeCheck
 } from 'lucide-react';
 import soulzinhoWebm from '../../assets/soulzinho-animacao-ofical-tela-inicial.webm';
 import { cn } from '../../utils/cn';
@@ -30,6 +30,9 @@ export function Sidebar() {
 
   if (user?.role === 'ADMIN' || user?.role === 'MODERATOR') {
     mainNavItems.push({ icon: Shield, label: 'Moderação', path: '/moderation' });
+  }
+  if (user?.role === 'ADMIN') {
+    mainNavItems.push({ icon: BadgeCheck, label: 'Promover perfis', path: '/promote' });
   }
 
   const avatarUrl = user?.profilePicture;

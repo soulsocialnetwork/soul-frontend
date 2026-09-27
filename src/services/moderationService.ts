@@ -41,8 +41,18 @@ export const moderationService = {
     await api.delete(`/moderation/posts/${postId}/remove`);
   },
   
-  async banAccount(accountId: string): Promise<void> {
-    await api.delete(`/moderation/accounts/${accountId}/ban`);
+  async banAccount(accountId: string, reason?: string, durationHours?: number | null): Promise<void> {
+    if (reason) await api.post(`/moderation/accounts/${accountId}/ban`, { reason, durationHours: durationHours ?? null });
+    else await api.delete(`/moderation/accounts/${accountId}/ban`);
+  },
+
+  async getBannedAccounts(): Promise<Array<{ id: string; username: string; name: string; reason: string; bannedAt: string; banUntil: string | null; bannedBy: string }>> {
+    const res = await api.get('/moderation/accounts/banned');
+    return res.data;
+  },
+
+  async unbanAccount(accountId: string): Promise<void> {
+    await api.post(`/moderation/accounts/${accountId}/unban`);
   },
   
   async ignoreAccountReport(accountId: string): Promise<void> {

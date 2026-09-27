@@ -3,7 +3,6 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { useState, useEffect } from 'react';
 import {
   ArrowLeft,
-  CheckCircle2,
   UserPlus,
   UserCheck,
   Grid,
@@ -13,6 +12,8 @@ import {
   MessageSquare,
   Trash2,
   Play,
+  ChevronLeft,
+  ChevronRight,
   Flag,
   LockKeyhole,
 } from 'lucide-react';
@@ -20,6 +21,10 @@ import { BottomNav } from '../../components/layout/BottomNav';
 import { Sidebar } from '../../components/layout/Sidebar';
 import { PostCard } from '../../components/feed/PostCard';
 import { ReportModal } from '../../components/modals/ReportModal';
+import { HighlightCover } from '../../components/profile/HighlightCover';
+import { ProfileBadge, profileNameColor } from '../../components/profile/ProfileBadge';
+import { ProfileMetric } from '../../components/profile/ProfileMetric';
+import { ConfirmUnfollowModal } from '../../components/profile/ConfirmUnfollowModal';
 import { cn } from '../../utils/cn';
 import {
   userService,
@@ -32,7 +37,7 @@ import type { ProfileSummary } from '../../services/api/types';
 import { messageService } from '../../services/messageService';
 import { ConnectionsModal } from '../../components/profile/ConnectionsModal';
 import { moderationService } from '../../services/moderationService';
-import { getHttpErrorMessage } from '../../services/api';
+import { api, getHttpErrorMessage } from '../../services/api';
 import { useAuth } from '../../context/AuthContext';
 
 type ProfileTab = 'posts' | 'soults';
@@ -43,6 +48,9 @@ export default function UserProfilePage() {
   const navigate = useNavigate();
   const [banning, setBanning] = useState(false);
   const [banError, setBanError] = useState('');
+  const [showBanForm, setShowBanForm] = useState(false);
+  const [banReason, setBanReason] = useState('');
+  const [banDuration, setBanDuration] = useState('');
   const { user: currentUser } = useAuth();
 
   useEffect(() => {
@@ -61,9 +69,12 @@ export default function UserProfilePage() {
   const [soults, setSoults] = useState<Soult[]>([]);
   const [activeTab, setActiveTab] = useState<ProfileTab>('posts');
   const [followLoading, setFollowLoading] = useState(false);
+  const [confirmUnfollow, setConfirmUnfollow] = useState(false);
   const [sendingMsg, setSendingMsg] = useState(false);
   const [invitingFriend, setInvitingFriend] = useState(false);
   const [realFriendStatus, setRealFriendStatus] = useState<'NONE' | 'SENT' | 'RECEIVED' | 'FRIENDS'>('NONE');
+  const [showCutTies, setShowCutTies] = useState(false);
+  const [cuttingTies, setCuttingTies] = useState(false);
   const [followStatus, setFollowStatus] = useState<'NOT_FOLLOWING' | 'PENDING' | 'FOLLOWING'>('NOT_FOLLOWING');
   const isFollowing = followStatus === 'FOLLOWING';
   const [showAvatarModal, setShowAvatarModal] = useState(false);
@@ -76,6 +87,9 @@ export default function UserProfilePage() {
   const [connectionsList, setConnectionsList] = useState<ProfileSummary[]>([]);
   const [connectionsLoading, setConnectionsLoading] = useState(false);
   const [reportTarget, setReportTarget] = useState<{ id: string; type: 'ACCOUNT' | 'SOULT' } | null>(null);
+  const [highlights, setHighlights] = useState<Array<{ id: string; title: string; coverUrl: string; mediaUrls: string[] }>>([]);
+  const [activeHighlight, setActiveHighlight] = useState<number | null>(null);
+  const [activeHighlightMedia, setActiveHighlightMedia] = useState(0);
 
   useEffect(() => {
     if (!username) { setLoadingProfile(false); return; }
@@ -140,14 +154,34 @@ export default function UserProfilePage() {
   const isOwnProfile = currentUser?.username === username;
   const canViewProfileContent = !user?.privateProfile || isOwnProfile || isFollowing || currentUser?.role === 'ADMIN';
 
+  useEffect(() => {
+    if (!username || !canViewProfileContent) { setHighlights([]); return; }
+    let cancelled = false;
+    api.get<Array<{ id: string; title: string; coverUrl: string; mediaUrls?: string[] }>>(`/highlights/user/${encodeURIComponent(username)}`)
+      .then(({ data }) => { if (!cancelled) setHighlights(data.map(item => ({ ...item, mediaUrls: item.mediaUrls?.length ? item.mediaUrls : [item.coverUrl] }))); })
+      .catch(() => { if (!cancelled) setHighlights([]); });
+    return () => { cancelled = true; };
+  }, [username, canViewProfileContent]);
+
+  const moveHighlight = (direction: number) => {
+    if (activeHighlight === null) return;
+    const nextMedia = activeHighlightMedia + direction;
+    if (nextMedia >= 0 && nextMedia < highlights[activeHighlight].mediaUrls.length) { setActiveHighlightMedia(nextMedia); return; }
+    const nextHighlight = activeHighlight + direction;
+    if (nextHighlight < 0 || nextHighlight >= highlights.length) { setActiveHighlight(null); return; }
+    setActiveHighlight(nextHighlight);
+    setActiveHighlightMedia(direction < 0 ? highlights[nextHighlight].mediaUrls.length - 1 : 0);
+  };
+
   const handleBan = async () => {
     if (!user || banning || user.banned) return;
-    if (!window.confirm(`Banir @${user.username}? Esta conta perderá o acesso ao Soul.`)) return;
+    if (!banReason.trim()) return;
     setBanning(true);
     setBanError('');
     try {
-      await moderationService.banAccount(user.id);
+      await moderationService.banAccount(user.id, banReason, banDuration ? Number(banDuration) : null);
       setUser(previous => previous ? { ...previous, banned: true } : previous);
+      setShowBanForm(false);
     } catch (error) {
       setBanError(getHttpErrorMessage(error));
     } finally {
@@ -155,8 +189,20 @@ export default function UserProfilePage() {
     }
   };
 
-  const handleFollowClick = async () => {
+  const handleUnban = async () => {
+    if (!user || banning || !window.confirm(`Desbanir @${user.username}?`)) return;
+    setBanning(true);
+    setBanError('');
+    try {
+      await moderationService.unbanAccount(user.id);
+      setUser(previous => previous ? { ...previous, banned: false } : previous);
+    } catch (error) { setBanError(getHttpErrorMessage(error)); }
+    finally { setBanning(false); }
+  };
+
+  const handleFollowClick = async (confirmed = false) => {
     if (!username || followLoading || isOwnProfile) return;
+    if (followStatus === 'FOLLOWING' && !confirmed) { setConfirmUnfollow(true); return; }
     const prev = followStatus;
     setFollowLoading(true);
     try {
@@ -166,6 +212,10 @@ export default function UserProfilePage() {
       setFollowStatus(next);
       if (prev === 'FOLLOWING' || next === 'FOLLOWING') {
         setUser(u => u ? { ...u, followerCount: Math.max(0, u.followerCount + (next === 'FOLLOWING' ? 1 : -1)) } : null);
+      }
+      if (prev === 'FOLLOWING' && realFriendStatus === 'FRIENDS') {
+        setRealFriendStatus('NONE');
+        setUser(u => u ? { ...u, friendsCount: Math.max(0, u.friendsCount - 1) } : null);
       }
       if (next === 'FOLLOWING') setReloadContent(value => value + 1);
     } catch (error) {
@@ -179,10 +229,10 @@ export default function UserProfilePage() {
     if (!username || sendingMsg) return;
     setSendingMsg(true);
     try {
-      await messageService.getOrCreateConversation(username);
-      navigate('/messages');
-    } catch {
-      navigate('/messages');
+      const conversation = await messageService.getOrCreateConversation(username);
+      navigate(`/messages?conversation=${encodeURIComponent(conversation.id)}`);
+    } catch (error) {
+      setBanError(getHttpErrorMessage(error));
     } finally {
       setSendingMsg(false);
     }
@@ -255,6 +305,7 @@ export default function UserProfilePage() {
       username: user.username,
       avatarUrl: user.avatarUrl,
       verified: user.verified,
+      profileBadge: user.profileBadge,
     },
     content: post.content || '',
     imageUrl: post.imageUrl || undefined,
@@ -278,7 +329,7 @@ export default function UserProfilePage() {
           <span className="font-semibold text-sm truncate">{user.username}</span>
         </div>
 
-        <main className="flex-1 overflow-y-auto no-scrollbar pb-24 lg:pb-12">
+        <main className="flex-1 overflow-y-auto pb-24 lg:pb-12">
           <div className="w-full max-w-4xl mx-auto pt-4 lg:pt-8 px-4 sm:px-6 space-y-8">
             {banError && <p role="alert" className="p-4 rounded-xl bg-red-500/10 text-red-400">{banError}</p>}
             {user.banned && <p role="status" className="p-4 rounded-xl bg-red-500/10 text-red-400">Esta conta foi banida.</p>}
@@ -298,30 +349,31 @@ export default function UserProfilePage() {
                 </div>
 
                 <div className="flex-1 flex flex-col items-center md:items-start text-center md:text-left w-full min-w-0">
-                  <div className="flex flex-col md:flex-row items-center gap-4 mb-5 w-full md:w-auto">
-                    <div className="flex items-center justify-center md:justify-start gap-2 w-full md:w-auto overflow-hidden">
-                      <h1 className="text-xl sm:text-2xl font-bold tracking-tight truncate">{user.username}</h1>
-                      {user.verified && <CheckCircle2 className="w-5 h-5 text-accent shrink-0" strokeWidth={2.5} />}
+                  <div className="flex flex-col items-center md:items-start gap-4 mb-5 w-full min-w-0">
+                    <div className="flex items-center justify-center md:justify-start gap-2 w-full min-w-0">
+                      <h1 className={cn('min-w-0 break-all text-xl sm:text-2xl font-bold tracking-tight', profileNameColor(user.profileBadge))}>@{user.username}</h1>
+                      <ProfileBadge badge={user.profileBadge} />
                     </div>
 
-                    <div className="flex flex-wrap items-center gap-2 w-full md:w-auto shrink-0">
-                      {currentUser?.role === 'ADMIN' && !isOwnProfile && !user.banned && (
-                        <button onClick={handleBan} disabled={banning} className="px-4 h-9 rounded-xl bg-red-500/10 text-red-400 hover:bg-red-500/20 text-sm font-semibold disabled:opacity-50">
-                          {banning ? 'Banindo...' : 'Banir conta'}
+                    <div className="flex flex-wrap items-center justify-center md:justify-start gap-2 w-full">
+                      {currentUser?.role === 'ADMIN' && !isOwnProfile && (
+                        <button onClick={user.banned ? handleUnban : () => setShowBanForm(true)} disabled={banning} className="px-4 h-9 rounded-xl bg-red-500/10 text-red-400 hover:bg-red-500/20 text-sm font-semibold disabled:opacity-50">
+                          {banning ? 'Processando...' : user.banned ? 'Desbanir conta' : 'Banir conta'}
                         </button>
                       )}
                       {!isOwnProfile && (
                         <button
                           onClick={async () => {
                             if (!username || invitingFriend) return;
+                            if (realFriendStatus === 'FRIENDS') { setShowCutTies(true); return; }
                             setInvitingFriend(true);
                             try { await userService.inviteRealFriend(username); setRealFriendStatus('SENT'); }
                             catch (error) { setPostsError(getHttpErrorMessage(error)); }
                             finally { setInvitingFriend(false); }
                           }}
-                          disabled={!isFollowing || invitingFriend || realFriendStatus !== 'NONE'}
+                          disabled={(!isFollowing && realFriendStatus !== 'FRIENDS') || invitingFriend || (realFriendStatus !== 'NONE' && realFriendStatus !== 'FRIENDS')}
                           title="Ambos precisam se seguir para enviar o convite"
-                          className={cn('flex items-center justify-center gap-2 px-4 h-9 rounded-xl text-[13px] font-semibold soul-glass text-white transition-all shrink-0', !isFollowing || invitingFriend ? 'opacity-50 cursor-not-allowed' : 'active:scale-95')}
+                          className={cn('flex items-center justify-center gap-2 px-4 h-9 rounded-xl text-[13px] font-semibold soul-glass text-white transition-all shrink-0', (!isFollowing && realFriendStatus !== 'FRIENDS') || invitingFriend ? 'opacity-50 cursor-not-allowed' : 'active:scale-95')}
                         >
                           {invitingFriend ? <Loader2 className="w-4 h-4 animate-spin" /> : realFriendStatus === 'FRIENDS' ? <><UserCheck className="w-4 h-4" /><span className="hidden sm:inline">Amigos reais</span></> : realFriendStatus === 'SENT' ? <><UserCheck className="w-4 h-4" /><span className="hidden sm:inline">Convite enviado</span></> : realFriendStatus === 'RECEIVED' ? <><UserCheck className="w-4 h-4" /><span className="hidden sm:inline">Convite recebido</span></> : <><UserPlus className="w-4 h-4" /><span className="hidden sm:inline">Tornar amigos reais</span></>}
                         </button>
@@ -329,7 +381,7 @@ export default function UserProfilePage() {
 
                       {!isOwnProfile && (
                         <button
-                          onClick={handleFollowClick}
+                          onClick={() => void handleFollowClick()}
                           disabled={followLoading}
                           className={cn(
                             'flex items-center justify-center gap-2 px-5 h-9 rounded-xl text-[13px] font-semibold transition-all active:scale-95 flex-1 md:flex-none disabled:opacity-60',
@@ -378,29 +430,14 @@ export default function UserProfilePage() {
                     </div>
                   </div>
 
-                  <div className="flex gap-4 sm:gap-6 justify-center md:justify-start w-full mb-5 text-sm">
+                  <div className="flex flex-wrap items-center gap-2 justify-center md:justify-start w-full mb-5 text-sm">
                     <div className="flex flex-col items-center md:items-start">
                       <span className="font-bold text-base sm:text-lg leading-none">{user.postsCount}</span>
                       <span className="text-textSecondary text-xs mt-1">publicações</span>
                     </div>
-                    <div
-                      onClick={() => handleOpenConnections('followers')}
-                      className="flex flex-col items-center md:items-start cursor-pointer hover:opacity-80 active:scale-95 transition-all"
-                    >
-                      <span className="font-bold text-base sm:text-lg leading-none">{user.followerCount || 0}</span>
-                      <span className="text-textSecondary text-xs mt-1">seguidores</span>
-                    </div>
-                    <div
-                      onClick={() => handleOpenConnections('following')}
-                      className="flex flex-col items-center md:items-start cursor-pointer hover:opacity-80 active:scale-95 transition-all"
-                    >
-                      <span className="font-bold text-base sm:text-lg leading-none">{user.followingCount}</span>
-                      <span className="text-textSecondary text-xs mt-1">seguindo</span>
-                    </div>
-                    <div className="flex flex-col items-center md:items-start">
-                      <span className="font-bold text-base sm:text-lg leading-none">{user.friendsCount || 0}</span>
-                      <span className="text-textSecondary text-xs mt-1">amigos reais</span>
-                    </div>
+                    <ProfileMetric value={user.followerCount || 0} label="seguidores" onClick={() => handleOpenConnections('followers')} />
+                    <ProfileMetric value={user.followingCount} label="seguindo" onClick={() => handleOpenConnections('following')} />
+                    <ProfileMetric value={user.friendsCount || 0} label="amigos reais" />
                   </div>
 
                   <div className="space-y-1 text-sm text-textSecondary max-w-md w-full px-2 md:px-0">
@@ -422,6 +459,11 @@ export default function UserProfilePage() {
                 </p>
               </div>
             ) : <>
+            {highlights.length > 0 && <div className="flex gap-4 overflow-x-auto pb-4" aria-label="Destaques do perfil">
+              {highlights.map((highlight, index) => <button key={highlight.id} type="button" onClick={() => { setActiveHighlight(index); setActiveHighlightMedia(0); }} className="flex shrink-0 flex-col items-center gap-2 text-xs text-white/70">
+                <HighlightCover src={highlight.coverUrl} label={highlight.title} /><span className="max-w-20 truncate">{highlight.title}</span>
+              </button>)}
+            </div>}
             <div className="flex justify-center border-b border-white/10 gap-8 px-4">
               <button
                 onClick={() => setActiveTab('posts')}
@@ -493,7 +535,18 @@ export default function UserProfilePage() {
                   {soults.map((soult) => (
                     <div
                       key={soult.id}
-                      className="aspect-[9/16] bg-black md:rounded-2xl overflow-hidden relative group"
+                      role="link"
+                      tabIndex={0}
+                      aria-label={`Abrir Soult de ${soult.author.name || soult.username || 'usuário'}`}
+                      onClick={() => navigate(`/soults?video=${encodeURIComponent(soult.id)}`)}
+                      onKeyDown={event => {
+                        if (event.target !== event.currentTarget) return;
+                        if (event.key === 'Enter' || event.key === ' ') {
+                          event.preventDefault();
+                          navigate(`/soults?video=${encodeURIComponent(soult.id)}`);
+                        }
+                      }}
+                      className="aspect-[9/16] bg-black md:rounded-2xl overflow-hidden relative group cursor-pointer focus-visible:outline focus-visible:outline-2 focus-visible:outline-white/60"
                     >
                       {soult.thumbnailUrl ? (
                         <SecureImage src={soult.thumbnailUrl} alt="Soult" className="w-full h-full object-cover" />
@@ -595,7 +648,7 @@ export default function UserProfilePage() {
               <X className="w-5 h-5" />
             </button>
           </div>
-          <div className="flex-1 overflow-y-auto no-scrollbar py-6 pb-24">
+          <div className="flex-1 overflow-y-auto py-6 pb-24">
             <div className="max-w-lg mx-auto space-y-6 sm:px-4">
               {feedModal.list
                 .slice(feedModal.startIndex)
@@ -614,7 +667,36 @@ export default function UserProfilePage() {
           users={connectionsList}
           loading={connectionsLoading}
           onClose={() => setConnectionsModal(null)}
+          onRelationshipChange={() => { if (username) void userService.getByUsername(username).then(profile => {
+            if (profile) setUser(previous => previous ? { ...previous, followerCount: profile.followerCount, followingCount: profile.followingCount, friendsCount: profile.friendsCount } : previous);
+          }); }}
         />
+      )}
+
+      {confirmUnfollow && username && <ConfirmUnfollowModal username={username} onCancel={() => setConfirmUnfollow(false)} onConfirm={() => { setConfirmUnfollow(false); void handleFollowClick(true); }} />}
+
+      {showCutTies && (
+        <div className="fixed inset-0 z-[110] flex items-center justify-center bg-black/80 p-4 backdrop-blur-sm" role="presentation" onMouseDown={event => { if (event.target === event.currentTarget) setShowCutTies(false); }}>
+          <div className="w-full max-w-sm space-y-4 rounded-2xl border border-white/10 bg-[#1c1c1c] p-5" role="dialog" aria-modal="true" aria-label="Cortar laços de Amigo Real">
+            <div><h2 className="text-lg font-semibold text-white">Antes de cortar laços</h2><p className="mt-2 text-sm leading-relaxed text-white/55">Você pode conversar com @{user.username} primeiro. Enviar mensagem é opcional, e a outra pessoa decide se quer responder.</p></div>
+            <div className="flex gap-2">
+              <button type="button" disabled={cuttingTies || sendingMsg} onClick={() => { setShowCutTies(false); void handleSendMessage(); }} className="flex-1 rounded-lg bg-white px-3 py-2.5 text-xs font-semibold text-black disabled:opacity-50">Abrir conversa</button>
+              <button type="button" disabled={cuttingTies} onClick={async () => {
+                if (!username) return;
+                setCuttingTies(true); setBanError('');
+                try {
+                  await userService.removeRealFriend(username);
+                  setRealFriendStatus('NONE');
+                  setUser(previous => previous ? { ...previous, friendsCount: Math.max(0, previous.friendsCount - 1) } : previous);
+                  setShowCutTies(false);
+                } catch (error) { setBanError(getHttpErrorMessage(error)); }
+                finally { setCuttingTies(false); }
+              }} className="flex-1 rounded-lg border border-red-400/20 px-3 py-2.5 text-xs font-semibold text-red-300 hover:bg-red-400/10 disabled:opacity-50">Cortar laços</button>
+            </div>
+            {banError && <p role="alert" className="text-xs text-red-300">{banError}</p>}
+            <button type="button" onClick={() => setShowCutTies(false)} className="text-xs text-white/45 hover:text-white">Voltar ao perfil</button>
+          </div>
+        </div>
       )}
 
       {reportTarget && (
@@ -625,6 +707,33 @@ export default function UserProfilePage() {
           targetType={reportTarget.type}
         />
       )}
+      {showBanForm && (
+        <div className="fixed inset-0 z-[200] flex items-center justify-center bg-black/70 p-4" onMouseDown={event => { if (event.target === event.currentTarget) setShowBanForm(false); }}>
+          <form onSubmit={event => { event.preventDefault(); void handleBan(); }} className="soul-glass w-full max-w-md space-y-4 rounded-2xl p-5">
+            <h2 className="text-lg font-semibold text-white">Banir @{user.username}</h2>
+            <label className="block text-sm text-white/80">Motivo
+              <textarea required maxLength={500} value={banReason} onChange={event => setBanReason(event.target.value)} className="mt-2 min-h-24 w-full rounded-lg border border-white/15 bg-black/30 p-3 text-white" />
+            </label>
+            <label className="block text-sm text-white/80">Duração
+              <select value={banDuration} onChange={event => setBanDuration(event.target.value)} className="mt-2 w-full rounded-lg border border-white/15 bg-black/30 p-3 text-white">
+                <option value="">Permanente</option><option value="24">24 horas</option><option value="72">3 dias</option><option value="168">7 dias</option><option value="720">30 dias</option>
+              </select>
+            </label>
+            {banError && <p role="alert" className="text-sm text-red-400">{banError}</p>}
+            <div className="flex justify-end gap-2"><button type="button" onClick={() => setShowBanForm(false)} className="rounded-lg bg-white/10 px-4 py-2 text-white">Cancelar</button><button type="submit" disabled={banning || !banReason.trim()} className="rounded-lg bg-red-500/20 px-4 py-2 text-red-300 disabled:opacity-50">Confirmar banimento</button></div>
+          </form>
+        </div>
+      )}
+      {activeHighlight !== null && highlights[activeHighlight] && <div className="fixed inset-0 z-[150] flex items-center justify-center bg-black/90 p-0 sm:p-4" onMouseDown={event => { if (event.target === event.currentTarget) setActiveHighlight(null); }}>
+        <div className="relative h-[100dvh] w-full overflow-hidden bg-black sm:h-[80dvh] sm:max-h-[650px] sm:max-w-sm sm:rounded-2xl sm:border sm:border-white/15">
+          {/[.](mp4|webm)(?:[?#]|$)/i.test(highlights[activeHighlight].mediaUrls[activeHighlightMedia])
+            ? <SecureVideo key={highlights[activeHighlight].mediaUrls[activeHighlightMedia]} src={`${highlights[activeHighlight].mediaUrls[activeHighlightMedia]}#t=0.001`} controls autoPlay className="h-full w-full object-contain" />
+            : <SecureImage src={highlights[activeHighlight].mediaUrls[activeHighlightMedia]} className="h-full w-full object-contain" alt={highlights[activeHighlight].title} />}
+          <div className="absolute left-3 right-3 top-[max(0.75rem,env(safe-area-inset-top))] flex items-center justify-between gap-2"><div className="min-w-0 flex-1"><div className="flex gap-1">{highlights[activeHighlight].mediaUrls.map((_, index) => <span key={index} className={`h-1 flex-1 rounded-full ${index <= activeHighlightMedia ? 'bg-white' : 'bg-white/30'}`} />)}</div><p className="mt-2 truncate text-sm font-semibold text-white">{highlights[activeHighlight].title}</p></div><button type="button" onClick={() => setActiveHighlight(null)} aria-label="Fechar destaque" className="flex h-11 w-11 shrink-0 items-center justify-center rounded-lg bg-black/50 text-white"><X size={18} /></button></div>
+          <button type="button" onClick={() => moveHighlight(-1)} aria-label="Mídia anterior" className="absolute left-2 top-1/2 -translate-y-1/2 rounded-lg bg-black/50 p-2 text-white"><ChevronLeft size={20} /></button>
+          <button type="button" onClick={() => moveHighlight(1)} aria-label="Próxima mídia" className="absolute right-2 top-1/2 -translate-y-1/2 rounded-lg bg-black/50 p-2 text-white"><ChevronRight size={20} /></button>
+        </div>
+      </div>}
     </div>
   );
 }

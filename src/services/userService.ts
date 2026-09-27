@@ -1,4 +1,5 @@
 import { api } from './api';
+import { resolveProfileBadge, type ProfileBadgeKind } from '../components/profile/ProfileBadge';
 import type {
 PagePostResponse,
 PostResponse,
@@ -6,6 +7,7 @@ PublicProfileResponse,
 FollowRelationshipResponse,
 PageProfileResponse,
 PageFollowRequestResponse,
+ProfileSummary,
 } from './api/types';
 
 export interface UserPost {
@@ -16,6 +18,7 @@ createdAt?: string;
 }
 
 export interface UserProfile {
+profileBadge?: ProfileBadgeKind;
 banned?: boolean;
 id: string;
 name: string;
@@ -36,6 +39,7 @@ function mapPublicProfile(
 profile: PublicProfileResponse
 ): UserProfile {
 return {
+profileBadge: resolveProfileBadge(profile.profileBadge, profile.verified && profile.username.toLowerCase() === 'soul'),
 id: profile.id,
 banned: profile.banned,
 name: profile.name,
@@ -63,6 +67,10 @@ createdAt: post.createdAt,
 }
 
 export const userService = {
+async setProfileBadge(username: string, badge: ProfileBadgeKind): Promise<UserProfile> {
+  const response = await api.patch<PublicProfileResponse>(`/profiles/${encodeURIComponent(username)}/badge`, { badge });
+  return mapPublicProfile(response.data);
+},
 async getByUsername(username: string): Promise<UserProfile | null> {
 const response = await api.get<PublicProfileResponse>(
 `/profiles/${encodeURIComponent(username)}`
@@ -142,9 +150,22 @@ async getRealFriendIds(): Promise<string[]> {
   return response.data.map(friend => friend.id);
 },
 
-async getRealFriends(): Promise<{ id: string; username: string; name: string }[]> {
-  const response = await api.get<{ id: string; username: string; name: string }[]>('/profiles/me/real-friends');
-  return response.data;
+async getRealFriends(): Promise<ProfileSummary[]> {
+  type LegacyFriend = Pick<ProfileSummary, 'id' | 'name' | 'username'>;
+  const response = await api.get<Array<ProfileSummary | LegacyFriend>>('/profiles/me/real-friends');
+  return Promise.all(response.data.map(async friend => {
+    if ('profilePicture' in friend) return friend;
+    try {
+      const profile = await api.get<PublicProfileResponse>(`/profiles/${encodeURIComponent(friend.username)}`);
+      return { ...friend, profilePicture: profile.data.profilePicture, profileBadge: profile.data.profileBadge, bio: profile.data.bio, privateProfile: profile.data.privateProfile };
+    } catch {
+      return { ...friend, profilePicture: null, bio: null, privateProfile: false };
+    }
+  }));
+},
+
+async removeRealFriend(username: string): Promise<void> {
+  await api.delete(`/profiles/${encodeURIComponent(username)}/real-friends`);
 },
 
 async getFollowers(

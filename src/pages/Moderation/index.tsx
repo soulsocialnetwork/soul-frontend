@@ -10,7 +10,8 @@ import { cn } from '../../utils/cn';
 import axios from 'axios';
 import { getHttpErrorMessage } from '../../services/api';
 
-type Tab = 'posts' | 'accounts' | 'soults';
+type Tab = 'posts' | 'accounts' | 'soults' | 'banned';
+type BannedAccount = Awaited<ReturnType<typeof moderationService.getBannedAccounts>>[number];
 
 interface ReportResponse {
   id: string;
@@ -27,6 +28,10 @@ export default function ModerationPage() {
   const [activeTab, setActiveTab] = useState<Tab>('posts');
   const [posts, setPosts] = useState<PostResponse[]>([]);
   const [accounts, setAccounts] = useState<ReportResponse[]>([]);
+  const [bannedAccounts, setBannedAccounts] = useState<BannedAccount[]>([]);
+  const [banTarget, setBanTarget] = useState<{ reportId: string; accountId: string } | null>(null);
+  const [banReason, setBanReason] = useState('');
+  const [banDuration, setBanDuration] = useState('');
   
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(true);
@@ -42,6 +47,7 @@ export default function ModerationPage() {
     const request = ++loadRequest.current;
     setPosts([]);
     setAccounts([]);
+    setBannedAccounts([]);
     setLoading(true);
     setAccessDenied(false);
     setError('');
@@ -49,6 +55,9 @@ export default function ModerationPage() {
       if (activeTab === 'posts') {
         const res = await moderationService.getHiddenPosts(0, 50);
         if (request === loadRequest.current) setPosts(res.content);
+      } else if (activeTab === 'banned') {
+        const res = await moderationService.getBannedAccounts();
+        if (request === loadRequest.current) setBannedAccounts(res);
       } else {
         const res = activeTab === 'soults'
           ? await moderationService.getReportedSoults(0, 50)
@@ -100,17 +109,37 @@ export default function ModerationPage() {
 
   const handleBanAccount = async (reportId: string, accountId: string) => {
     setError('');
-    if (activeTab === 'accounts' && !window.confirm('Banir esta conta? Ela perderá o acesso ao Soul.')) return;
+    if (activeTab === 'accounts' && !banTarget) {
+      setBanTarget({ reportId, accountId });
+      setBanReason('');
+      setBanDuration('');
+      return;
+    }
     setActionLoading(`ban-${reportId}`);
     try {
       if (activeTab === 'soults') await moderationService.removeSoult(accountId);
-      else await moderationService.banAccount(accountId);
+      else await moderationService.banAccount(accountId, banReason, banDuration ? Number(banDuration) : null);
       setAccounts(prev => prev.filter(r => r.targetId !== accountId));
+      setBanTarget(null);
     } catch (err) {
       setError(getHttpErrorMessage(err));
       if (axios.isAxiosError(err) && (err.response?.status === 403 || err.response?.status === 401)) {
         setAccessDenied(true);
       }
+    } finally {
+      setActionLoading(null);
+    }
+  };
+
+  const handleUnban = async (accountId: string) => {
+    if (!window.confirm('Desbanir esta conta e restaurar o acesso?')) return;
+    setActionLoading(`unban-${accountId}`);
+    setError('');
+    try {
+      await moderationService.unbanAccount(accountId);
+      setBannedAccounts(prev => prev.filter(account => account.id !== accountId));
+    } catch (err) {
+      setError(getHttpErrorMessage(err));
     } finally {
       setActionLoading(null);
     }
@@ -170,7 +199,7 @@ export default function ModerationPage() {
         </div>
       </div>
 
-      <div className="flex gap-2 mb-6 bg-white/5 p-1 rounded-xl">
+      <div className="flex flex-wrap gap-2 mb-6 bg-white/5 p-1 rounded-xl">
         <button
           disabled={actionLoading !== null} onClick={() => setActiveTab('posts')}
           className={cn(
@@ -195,6 +224,10 @@ export default function ModerationPage() {
           'flex-1 py-2 rounded-lg text-sm font-semibold',
           activeTab === 'soults' ? 'bg-white/10 text-white' : 'text-textSecondary hover:text-white'
         )}>Soults</button>
+        <button disabled={actionLoading !== null} onClick={() => setActiveTab('banned')} className={cn(
+          'flex-1 min-w-[110px] py-2 rounded-lg text-sm font-semibold',
+          activeTab === 'banned' ? 'bg-white/10 text-white' : 'text-textSecondary hover:text-white'
+        )}>Banidas</button>
       </div>
 
       {error && <div role="alert" className="mb-4 p-4 rounded-xl bg-red-500/10 text-red-400">{error}</div>}
@@ -204,7 +237,16 @@ export default function ModerationPage() {
         <div className="flex items-center justify-center py-32">
           <Loader2 className="w-6 h-6 animate-spin text-textSecondary" />
         </div>
-      ) : error && posts.length === 0 && accounts.length === 0 ? null : activeTab === 'posts' ? (
+      ) : error && posts.length === 0 && accounts.length === 0 && bannedAccounts.length === 0 ? null : activeTab === 'banned' ? (
+        bannedAccounts.length === 0 ? <p className="text-center py-16 text-textSecondary">Nenhuma conta banida.</p> :
+        <div className="space-y-3">{bannedAccounts.map(account => <div key={account.id} className="soul-glass rounded-2xl p-4 flex flex-wrap items-center justify-between gap-3">
+          <div><Link to={`/profile/${encodeURIComponent(account.username)}`} className="font-semibold text-white hover:underline">@{account.username}</Link>
+            <p className="text-sm text-textSecondary">Motivo: {account.reason || 'Não informado'}</p>
+            <p className="text-xs text-textSecondary">{account.banUntil ? `Até ${new Date(account.banUntil).toLocaleString('pt-BR')}` : 'Banimento permanente'} · {account.bannedAt ? new Date(account.bannedAt).toLocaleString('pt-BR') : 'Data não registrada'}</p>
+          </div>
+          <button onClick={() => handleUnban(account.id)} disabled={actionLoading !== null} className="px-4 py-2 rounded-lg bg-white/10 hover:bg-white/20 text-sm disabled:opacity-50">Desbanir</button>
+        </div>)}</div>
+      ) : activeTab === 'posts' ? (
         posts.length === 0 ? (
           <div className="text-center py-20 soul-glass rounded-2xl">
             <EyeOff className="w-8 h-8 text-white/20 mx-auto mb-3" />
@@ -307,6 +349,16 @@ export default function ModerationPage() {
           </div>
         )
       )}
+      {banTarget && <div className="fixed inset-0 z-50 bg-black/70 flex items-center justify-center p-4" onMouseDown={event => { if (event.target === event.currentTarget) setBanTarget(null); }}>
+        <form onSubmit={event => { event.preventDefault(); if (banTarget) void handleBanAccount(banTarget.reportId, banTarget.accountId); }} className="soul-glass rounded-2xl p-5 w-full max-w-md space-y-4">
+          <h2 className="text-lg font-semibold">Banir conta</h2>
+          <label className="block text-sm">Motivo<textarea required maxLength={500} value={banReason} onChange={event => setBanReason(event.target.value)} className="mt-2 w-full min-h-24 p-3 rounded-lg bg-black/30 border border-white/15 text-white" /></label>
+          <label className="block text-sm">Duração<select value={banDuration} onChange={event => setBanDuration(event.target.value)} className="mt-2 w-full p-3 rounded-lg bg-black/30 border border-white/15 text-white">
+            <option value="">Permanente</option><option value="24">24 horas</option><option value="72">3 dias</option><option value="168">7 dias</option><option value="720">30 dias</option>
+          </select></label>
+          <div className="flex justify-end gap-2"><button type="button" onClick={() => setBanTarget(null)} className="px-4 py-2 rounded-lg bg-white/10">Cancelar</button><button type="submit" disabled={actionLoading !== null || !banReason.trim()} className="px-4 py-2 rounded-lg bg-red-500/20 text-red-300 disabled:opacity-50">Confirmar banimento</button></div>
+        </form>
+      </div>}
       </div>
       <BottomNav />
     </div>

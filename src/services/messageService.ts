@@ -19,6 +19,19 @@ export interface Message {
   content: string;
   createdAt: string;
   readAt: string | null;
+  editedAt: string | null;
+  deletedAt: string | null;
+  replyToMessageId: string | null;
+  replyToContent: string | null;
+  kind: 'TEXT' | 'IMAGE' | 'AUDIO';
+  mediaUrl: string | null;
+}
+
+export interface BlockedUser {
+  id: string;
+  username: string;
+  name: string;
+  profilePicture: string | null;
 }
 
 function mapConversation(raw: any): Conversation {
@@ -28,7 +41,7 @@ function mapConversation(raw: any): Conversation {
     otherUsername: raw.otherUsername,
     otherName: raw.otherName,
     otherAvatar: raw.otherProfilePicture ?? raw.otherAvatar ?? null,
-    lastMessage: raw.lastMessage ?? null,
+    lastMessage: raw.lastMessage?.startsWith(':sticker:') || raw.lastMessage === ':soulzinho:' ? 'Figurinha' : raw.lastMessage ?? null,
     lastMessageAt: raw.lastMessageAt ?? null,
     unreadCount: raw.unreadCount ?? 0,
   };
@@ -42,6 +55,12 @@ function mapMessage(raw: any): Message {
     content: raw.content,
     createdAt: raw.createdAt,
     readAt: raw.readAt ?? null,
+    editedAt: raw.editedAt ?? null,
+    deletedAt: raw.deletedAt ?? null,
+    replyToMessageId: raw.replyToMessageId ?? null,
+    replyToContent: raw.replyToContent ?? null,
+    kind: raw.kind ?? 'TEXT',
+    mediaUrl: raw.mediaUrl ?? null,
   };
 }
 
@@ -74,9 +93,24 @@ export const messageService = {
     };
   },
 
-  async sendMessage(convId: string, content: string): Promise<Message> {
-    const res = await api.post(`/messages/conversations/${convId}/msgs`, { content });
+  async sendMessage(convId: string, content: string, replyToMessageId?: string): Promise<Message> {
+    const res = await api.post(`/messages/conversations/${convId}/msgs`, { content, replyToMessageId });
     return mapMessage(res.data);
+  },
+  async sendAttachment(convId: string, kind: 'IMAGE' | 'AUDIO', mediaUrl: string, caption: string, replyToMessageId?: string): Promise<Message> {
+    const response = await api.post(`/messages/conversations/${encodeURIComponent(convId)}/msgs`,
+      { kind, mediaUrl, content: caption, replyToMessageId });
+    return mapMessage(response.data);
+  },
+  async editMessage(convId: string, messageId: string, content: string): Promise<Message> {
+    const res = await api.patch(`/messages/conversations/${encodeURIComponent(convId)}/msgs/${encodeURIComponent(messageId)}`, { content });
+    return mapMessage(res.data);
+  },
+  async deleteMessage(convId: string, messageId: string): Promise<void> {
+    await api.delete(`/messages/conversations/${encodeURIComponent(convId)}/msgs/${encodeURIComponent(messageId)}`);
+  },
+  async deleteMessageForMe(convId: string, messageId: string): Promise<void> {
+    await api.delete(`/messages/conversations/${encodeURIComponent(convId)}/msgs/${encodeURIComponent(messageId)}/for-me`);
   },
   async clearMessages(convId: string): Promise<void> {
     await api.delete(`/messages/conversations/${encodeURIComponent(convId)}/messages`);
@@ -86,5 +120,12 @@ export const messageService = {
   },
   async blockConversationParticipant(convId: string): Promise<void> {
     await api.post(`/messages/conversations/${encodeURIComponent(convId)}/block`);
+  },
+  async getBlockedUsers(): Promise<BlockedUser[]> {
+    const response = await api.get<BlockedUser[]>('/messages/blocked-users');
+    return response.data;
+  },
+  async unblockUser(targetId: string): Promise<void> {
+    await api.delete(`/messages/blocked-users/${encodeURIComponent(targetId)}`);
   },
 };

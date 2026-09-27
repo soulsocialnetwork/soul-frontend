@@ -13,21 +13,28 @@ Trash2,
 ShieldCheck,
 Loader2,
 Eye,
-EyeOff
+EyeOff,
+ShieldBan,
+Mail,
+FileText,
 } from 'lucide-react';
 import { cn } from '../../utils/cn';
 import { ScreenLoader } from '../../components/ui/ScreenLoader';
 import { authService } from '../../services/authService';
 import { getHttpErrorMessage } from '../../services/api';
 import { useAuth } from '../../context/AuthContext';
+import { messageService, type BlockedUser } from '../../services/messageService';
+import { AvatarContent } from '../../components/ui/AvatarContent';
 
 type ModalType =
 | 'profile'
 | 'security'
+| 'email'
 | 'notifications'
 | 'help'
 | 'logout'
 | 'privacy'
+| 'blockedUsers'
 | 'deleteAccount'
 | null;
 
@@ -38,6 +45,21 @@ const { user, logout, refreshUser } = useAuth();
 const navigate = useNavigate();
 const [saveError, setSaveError] = useState('');
 const [saving, setSaving] = useState(false);
+const [blockedUsers, setBlockedUsers] = useState<BlockedUser[]>([]);
+const [blockedUsersLoading, setBlockedUsersLoading] = useState(false);
+const [unblockingId, setUnblockingId] = useState<string | null>(null);
+
+useEffect(() => {
+  if (activeModal !== 'blockedUsers') return;
+  let cancelled = false;
+  setBlockedUsersLoading(true);
+  setSaveError('');
+  messageService.getBlockedUsers()
+    .then(users => { if (!cancelled) setBlockedUsers(users); })
+    .catch(error => { if (!cancelled) setSaveError(getHttpErrorMessage(error)); })
+    .finally(() => { if (!cancelled) setBlockedUsersLoading(false); });
+  return () => { cancelled = true; };
+}, [activeModal]);
 
 useEffect(() => {
 const timer = setTimeout(() => setLoading(false), 500);
@@ -70,6 +92,7 @@ const [bio, setBio] = useState(
 );
 
 const [notifPush, setNotifPush] = useState(user?.notifPush ?? true);
+const [browserPermission, setBrowserPermission] = useState<NotificationPermission | 'unsupported'>(() => 'Notification' in window ? Notification.permission : 'unsupported');
 const [notifEmail, setNotifEmail] = useState(user?.notifEmail ?? false);
 const [notifQuietMode, setNotifQuietMode] = useState(user?.notifQuietMode ?? false);
 const [quietModeStart, setQuietModeStart] = useState(user?.quietModeStart ?? '22:00');
@@ -82,6 +105,12 @@ const [currentPassword, setCurrentPassword] = useState('');
 const [newPassword, setNewPassword]         = useState('');
 const [confirmPassword, setConfirmPassword] = useState('');
 const [showNewPwd, setShowNewPwd]           = useState(false);
+const [showCurrentPwd, setShowCurrentPwd]   = useState(false);
+const [showConfirmPwd, setShowConfirmPwd]   = useState(false);
+const [newEmail, setNewEmail] = useState('');
+const [emailPassword, setEmailPassword] = useState('');
+const [emailSent, setEmailSent] = useState(false);
+const [showEmailPassword, setShowEmailPassword] = useState(false);
 const [passwordError, setPasswordError]     = useState('');
 const [passwordSuccess, setPasswordSuccess] = useState(false);
 const [isChangingPassword, setIsChangingPassword] = useState(false);
@@ -104,6 +133,13 @@ const SETTINGS_SECTIONS = [
         label: 'Alterar Senha',
         desc: 'Troque a senha da sua conta',
         action: () => setActiveModal('security')
+      },
+      {
+        id: 'email',
+        icon: Mail,
+        label: 'Alterar e-mail',
+        desc: user?.email || 'Confirme o novo endereço por e-mail',
+        action: () => { setNewEmail(''); setEmailPassword(''); setEmailSent(false); setActiveModal('email'); }
       }
     ]
   },
@@ -117,6 +153,13 @@ const SETTINGS_SECTIONS = [
         label: 'Privacidade',
         desc: user?.privacyStatus ? 'Perfil privado ativo' : 'Controle quem pode ver seu perfil',
         action: () => setActiveModal('privacy')
+      },
+      {
+        id: 'blockedUsers',
+        icon: ShieldBan,
+        label: 'Contas bloqueadas',
+        desc: 'Veja e desbloqueie contas',
+        action: () => setActiveModal('blockedUsers')
       }
     ]
   },
@@ -131,6 +174,15 @@ const SETTINGS_SECTIONS = [
         desc: 'Push, e-mail e modo silencioso',
         action: () => setActiveModal('notifications')
       }
+    ]
+  },
+  {
+    id: 'documents',
+    title: 'Documentos',
+    items: [
+      { id: 'guidelines', icon: FileText, label: 'Diretrizes da Comunidade', desc: 'Regras de convivência no Soul', action: () => navigate('/diretrizes') },
+      { id: 'privacyPolicy', icon: FileText, label: 'Política de Privacidade', desc: 'Como os dados são usados', action: () => navigate('/privacidade') },
+      { id: 'terms', icon: FileText, label: 'Termos de Uso', desc: 'Condições do ambiente de teste', action: () => navigate('/termos') },
     ]
   },
   {
@@ -158,7 +210,7 @@ return ( <div className="min-h-[100dvh] bg-background flex flex-col lg:flex-row 
       {loading ? (
         <ScreenLoader />
       ) : (
-        <div className="flex-1 overflow-y-auto no-scrollbar pb-28 lg:pb-12">
+        <div className="flex-1 overflow-y-auto pb-28 lg:pb-12">
           <div className="w-full max-w-2xl mx-auto px-5 lg:px-10 pt-6 lg:pt-10">
             <h1 className="text-2xl lg:text-3xl font-bold mb-8 tracking-tight animate-fade-in">
               Configurações
@@ -341,13 +393,18 @@ return ( <div className="min-h-[100dvh] bg-background flex flex-col lg:flex-row 
       >
         <div className="space-y-1.5">
           <label className="text-xs font-medium text-textSecondary ml-1">Senha Atual</label>
+          <div className="relative">
           <input
-            type="password"
+            type={showCurrentPwd ? 'text' : 'password'}
             value={currentPassword}
             onChange={(e) => { setCurrentPassword(e.target.value); setPasswordError(''); }}
             placeholder="••••••••"
-            className="w-full bg-black/20 border border-white/10 rounded-xl px-4 py-3.5 text-sm text-textPrimary focus:outline-none focus:border-white/30 transition-colors"
+            className="w-full bg-black/20 border border-white/10 rounded-xl px-4 py-3.5 pr-11 text-sm text-textPrimary focus:outline-none focus:border-white/30 transition-colors"
           />
+          <button type="button" aria-label={showCurrentPwd ? 'Ocultar senha atual' : 'Mostrar senha atual'} onClick={() => setShowCurrentPwd(value => !value)} className="absolute right-3 top-1/2 -translate-y-1/2 text-white/40 hover:text-white focus-visible:outline focus-visible:outline-2 focus-visible:outline-white/50">
+            {showCurrentPwd ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+          </button>
+          </div>
         </div>
 
         <div className="space-y-1.5">
@@ -373,13 +430,18 @@ return ( <div className="min-h-[100dvh] bg-background flex flex-col lg:flex-row 
 
         <div className="space-y-1.5">
           <label className="text-xs font-medium text-textSecondary ml-1">Confirmar Nova Senha</label>
+          <div className="relative">
           <input
-            type="password"
+            type={showConfirmPwd ? 'text' : 'password'}
             value={confirmPassword}
             onChange={(e) => { setConfirmPassword(e.target.value); setPasswordError(''); }}
             placeholder="••••••••"
-            className={cn('w-full bg-black/20 border rounded-xl px-4 py-3.5 text-sm text-textPrimary focus:outline-none transition-colors', confirmPassword.length > 0 && confirmPassword !== newPassword ? 'border-red-500/50 focus:border-red-500' : 'border-white/10 focus:border-white/30')}
+            className={cn('w-full bg-black/20 border rounded-xl px-4 py-3.5 pr-11 text-sm text-textPrimary focus:outline-none transition-colors', confirmPassword.length > 0 && confirmPassword !== newPassword ? 'border-red-500/50 focus:border-red-500' : 'border-white/10 focus:border-white/30')}
           />
+          <button type="button" aria-label={showConfirmPwd ? 'Ocultar confirmação da senha' : 'Mostrar confirmação da senha'} onClick={() => setShowConfirmPwd(value => !value)} className="absolute right-3 top-1/2 -translate-y-1/2 text-white/40 hover:text-white focus-visible:outline focus-visible:outline-2 focus-visible:outline-white/50">
+            {showConfirmPwd ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+          </button>
+          </div>
           {confirmPassword.length > 0 && confirmPassword !== newPassword && (
             <p className="text-xs text-red-400 ml-1">As senhas não coincidem.</p>
           )}
@@ -399,6 +461,24 @@ return ( <div className="min-h-[100dvh] bg-background flex flex-col lg:flex-row 
     </ModalWrapper>
   )}
 
+  {activeModal === 'email' && (
+    <ModalWrapper title="Alterar e-mail" onClose={() => setActiveModal(null)}>
+      {emailSent ? <div className="space-y-4 text-sm text-textSecondary"><p>Enviamos um link de confirmação para <strong className="text-white">{newEmail}</strong>. O endereço atual continua em uso até você confirmar pelo link.</p><button type="button" onClick={() => setActiveModal(null)} className="w-full rounded-xl bg-white px-4 py-3 font-semibold text-black">Entendi</button></div> :
+        <form onSubmit={async event => {
+          event.preventDefault(); setSaveError(''); setSaving(true);
+          try { await authService.requestEmailChange(newEmail.trim(), emailPassword); setEmailSent(true); setEmailPassword(''); }
+          catch (error) { setSaveError(getHttpErrorMessage(error)); }
+          finally { setSaving(false); }
+        }} className="space-y-4">
+          <p className="text-sm text-textSecondary">E-mail atual: <span className="text-white">{user?.email}</span></p>
+          <label className="block text-xs text-textSecondary">Novo e-mail<input type="email" required value={newEmail} onChange={event => setNewEmail(event.target.value)} className="mt-1.5 w-full rounded-xl border border-white/10 bg-black/20 px-4 py-3 text-sm text-white focus-visible:outline focus-visible:outline-1 focus-visible:outline-white/40" /></label>
+          <label className="block text-xs text-textSecondary">Senha atual<div className="relative mt-1.5"><input type={showEmailPassword ? 'text' : 'password'} required value={emailPassword} onChange={event => setEmailPassword(event.target.value)} className="w-full rounded-xl border border-white/10 bg-black/20 px-4 py-3 pr-11 text-sm text-white focus-visible:outline focus-visible:outline-1 focus-visible:outline-white/40" /><button type="button" onClick={() => setShowEmailPassword(value => !value)} aria-label={showEmailPassword ? 'Ocultar senha' : 'Mostrar senha'} className="absolute right-3 top-1/2 -translate-y-1/2 text-white/50">{showEmailPassword ? <EyeOff size={16} /> : <Eye size={16} />}</button></div></label>
+          {saveError && <p role="alert" className="text-sm text-red-400">{saveError}</p>}
+          <button type="submit" disabled={saving} className="w-full rounded-xl bg-white py-3 font-semibold text-black disabled:opacity-50">{saving ? 'Enviando...' : 'Enviar confirmação'}</button>
+        </form>}
+    </ModalWrapper>
+  )}
+
   {activeModal === 'notifications' && (
     <ModalWrapper
       title="Preferências de Notificação"
@@ -411,8 +491,7 @@ return ( <div className="min-h-[100dvh] bg-background flex flex-col lg:flex-row 
           </h4>
 
           <p className="text-xs text-textSecondary/80 ml-1 mb-2">
-            Agrupa notificações para evitar distrações e as entrega apenas
-            fora do horário de silêncio.
+                Silencia alertas do navegador durante o horário escolhido.
           </p>
 
           <div
@@ -496,7 +575,7 @@ return ( <div className="min-h-[100dvh] bg-background flex flex-col lg:flex-row 
               </p>
 
               <p className="text-xs text-textSecondary mt-0.5">
-                Alertas de interações no app
+                Alertas do navegador enquanto o Soul estiver aberto
               </p>
             </div>
 
@@ -516,6 +595,15 @@ return ( <div className="min-h-[100dvh] bg-background flex flex-col lg:flex-row 
               />
             </div>
           </div>
+
+          {notifPush && <div className="px-1 text-xs text-textSecondary">
+            {browserPermission !== 'unsupported' ? browserPermission === 'granted'
+              ? 'Notificações do navegador permitidas.'
+              : browserPermission === 'denied'
+                ? 'Notificações bloqueadas no navegador. Libere o Soul nas permissões do site.'
+                : <button type="button" onClick={() => void Notification.requestPermission().then(permission => { setBrowserPermission(permission); window.dispatchEvent(new Event('soul:browser-permission-updated')); })} className="text-white/80 underline hover:text-white">Permitir notificações do navegador</button>
+              : 'Este navegador não oferece notificações do sistema.'}
+          </div>}
 
           <div
             className="flex items-center justify-between p-4 rounded-xl soul-glass cursor-pointer transition-colors"
@@ -674,6 +762,43 @@ return ( <div className="min-h-[100dvh] bg-background flex flex-col lg:flex-row 
         </button>
         <p className="text-xs leading-relaxed text-textSecondary">As solicitações pendentes aparecem na aba Solicitações das notificações.</p>
       </div>
+    </ModalWrapper>
+  )}
+
+  {activeModal === 'blockedUsers' && (
+    <ModalWrapper title="Contas bloqueadas" onClose={() => setActiveModal(null)}>
+      {saveError && <p role="alert" className="mb-3 text-sm text-red-400">{saveError}</p>}
+      {blockedUsersLoading ? (
+        <div className="flex justify-center py-8"><Loader2 className="h-5 w-5 animate-spin" /></div>
+      ) : blockedUsers.length === 0 ? (
+        <p className="py-6 text-center text-sm text-textSecondary">Você não bloqueou nenhuma conta.</p>
+      ) : (
+        <div className="space-y-2">
+          {blockedUsers.map(blocked => (
+            <div key={blocked.id} className="flex items-center gap-3 rounded-xl border border-white/10 p-3">
+              <span className="h-10 w-10 shrink-0 overflow-hidden rounded-xl text-sm"><AvatarContent src={blocked.profilePicture} name={blocked.name || blocked.username} /></span>
+              <div className="min-w-0 flex-1">
+                <p className="truncate text-sm font-semibold">{blocked.name}</p>
+                <p className="truncate text-xs text-textSecondary">@{blocked.username}</p>
+              </div>
+              <button
+                type="button"
+                disabled={unblockingId === blocked.id}
+                onClick={async () => {
+                  setUnblockingId(blocked.id);
+                  setSaveError('');
+                  try {
+                    await messageService.unblockUser(blocked.id);
+                    setBlockedUsers(users => users.filter(item => item.id !== blocked.id));
+                  } catch (error) { setSaveError(getHttpErrorMessage(error)); }
+                  finally { setUnblockingId(null); }
+                }}
+                className="rounded-xl border border-white/15 px-3 py-2 text-xs font-semibold hover:bg-white/10 disabled:opacity-50"
+              >Desbloquear</button>
+            </div>
+          ))}
+        </div>
+      )}
     </ModalWrapper>
   )}
 

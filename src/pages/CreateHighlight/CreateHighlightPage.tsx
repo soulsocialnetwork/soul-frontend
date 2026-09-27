@@ -1,6 +1,6 @@
 import { SecureImage, SecureVideo } from '../../components/ui/SecureMedia';
 import { useState, useRef, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useParams } from 'react-router-dom';
 import { Sidebar } from '../../components/layout/Sidebar';
 import { Header } from '../../components/layout/Header';
 import { BottomNav } from '../../components/layout/BottomNav';
@@ -13,9 +13,11 @@ import { api, getHttpErrorMessage } from '../../services/api';
 import { validateUploadFile } from '../../utils/mediaValidation';
 
 export default function CreateHighlightPage() {
-  const [file, setFile] = useState<File | null>(null);
+  const [files, setFiles] = useState<File[]>([]);
+  const [existingUrls, setExistingUrls] = useState<string[]>([]);
   const [saving, setSaving] = useState(false);
   const navigate = useNavigate();
+  const { id: editingId } = useParams<{ id: string }>();
   const [mediaType, setMediaType] = useState<'image' | 'video'>('image');
   const [highlightTitle, setHighlightTitle] = useState('');
   const [selectedMedia, setSelectedMedia] = useState<string | null>(null);
@@ -24,20 +26,38 @@ export default function CreateHighlightPage() {
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
-    if (!file) { setSelectedMedia(null); return; }
-    const url = URL.createObjectURL(file);
+    if (!editingId) return;
+    let cancelled = false;
+    api.get<Array<{ id: string; title: string; coverUrl: string; mediaUrls?: string[] }>>('/highlights/me')
+      .then(({ data }) => {
+        if (cancelled) return;
+        const item = data.find(highlight => highlight.id === editingId);
+        if (!item) { setSaveError('Destaque não encontrado.'); return; }
+        setHighlightTitle(item.title);
+        setExistingUrls(item.mediaUrls?.length ? item.mediaUrls : [item.coverUrl]);
+      })
+      .catch(error => { if (!cancelled) setSaveError(getHttpErrorMessage(error)); });
+    return () => { cancelled = true; };
+  }, [editingId]);
+
+  useEffect(() => {
+    if (!files[0]) { setSelectedMedia(null); return; }
+    const url = URL.createObjectURL(files[0]);
     setSelectedMedia(url);
     return () => URL.revokeObjectURL(url);
-  }, [file]);
+  }, [files]);
 
   const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
-    const next = event.target.files?.[0];
+    const next = Array.from(event.target.files || []);
     event.target.value = '';
-    if (!next) return;
-    const validationError = validateUploadFile(next, mediaType, 20);
-    if (validationError) { setSaveError(validationError); return; }
+    if (!next.length) return;
+    if (existingUrls.length + files.length + next.length > 10) { setSaveError('Um destaque aceita até 10 mídias.'); return; }
+    for (const file of next) {
+      const validationError = validateUploadFile(file, file.type.startsWith('video/') ? 'video' : 'image', 20);
+      if (validationError) { setSaveError(validationError); return; }
+    }
     setSaveError('');
-    setFile(next);
+    setFiles(current => [...current, ...next]);
   };
 
   const handleCameraCapture = (captured: File) => {
@@ -45,16 +65,19 @@ export default function CreateHighlightPage() {
     const validationError = validateUploadFile(captured, mediaType, 20);
     if (validationError) { setSaveError(validationError); return; }
     setSaveError('');
-    setFile(captured);
+    if (existingUrls.length + files.length >= 10) { setSaveError('Um destaque aceita até 10 mídias.'); return; }
+    setFiles(current => [...current, captured]);
   };
 
   const handleSaveHighlight = async () => {
-    if (!highlightTitle.trim() || !file || saving) return;
+    if (!highlightTitle.trim() || existingUrls.length + files.length === 0 || saving) return;
     setSaveError('');
     setSaving(true);
     try {
-      const coverUrl = await postService.uploadMedia(file);
-      await api.post('/highlights', { title: highlightTitle.trim(), coverUrl });
+      const mediaUrls = [...existingUrls];
+      for (const file of files) mediaUrls.push(await postService.uploadMedia(file));
+      if (editingId) await api.put(`/highlights/${encodeURIComponent(editingId)}`, { title: highlightTitle.trim(), coverUrl: mediaUrls[0], mediaUrls });
+      else await api.post('/highlights', { title: highlightTitle.trim(), coverUrl: mediaUrls[0], mediaUrls });
       navigate('/profile');
     } catch (error) {
       setSaveError(getHttpErrorMessage(error));
@@ -81,7 +104,7 @@ export default function CreateHighlightPage() {
               <ArrowLeft className="w-6 h-6" />
             </button>
             <h1 className="text-2xl font-bold tracking-tight text-white">
-              Criar Destaque
+              {editingId ? 'Editar Destaque' : 'Criar Destaque'}
             </h1>
           </div>
 
@@ -90,7 +113,7 @@ export default function CreateHighlightPage() {
               type="button"
               disabled={saving}
               aria-pressed={mediaType === 'image'}
-              onClick={() => { setMediaType('image'); setFile(null); }}
+              onClick={() => setMediaType('image')}
               className={cn(
                 'flex-1 py-2.5 text-sm font-semibold rounded-lg transition-all duration-200 flex items-center justify-center gap-2',
                 mediaType === 'image' ? 'bg-white/10 text-white' : 'text-textSecondary hover:text-white'
@@ -102,7 +125,7 @@ export default function CreateHighlightPage() {
               type="button"
               disabled={saving}
               aria-pressed={mediaType === 'video'}
-              onClick={() => { setMediaType('video'); setFile(null); }}
+              onClick={() => setMediaType('video')}
               className={cn(
                 'flex-1 py-2.5 text-sm font-semibold rounded-lg transition-all duration-200 flex items-center justify-center gap-2',
                 mediaType === 'video' ? 'bg-white/10 text-white' : 'text-textSecondary hover:text-white'
@@ -124,16 +147,16 @@ export default function CreateHighlightPage() {
             autoFocus
           />
 
-          {selectedMedia ? (
+          {(selectedMedia || existingUrls[0]) ? (
             <div className="rounded-lg relative overflow-hidden bg-black/40 border border-white/10 group">
-              {mediaType === 'image' ? (
-                <SecureImage src={selectedMedia} alt="Preview" className="w-full max-h-[400px] object-cover" />
+              {files[0]?.type.startsWith('image/') || (!files[0] && !/[.](mp4|webm)(?:[?#]|$)/i.test(existingUrls[0])) ? (
+                <SecureImage src={selectedMedia || existingUrls[0]} alt="Preview" className="w-full max-h-[400px] object-cover" />
               ) : (
-                <SecureVideo src={selectedMedia} className="w-full max-h-[400px] object-cover" controls />
+                <SecureVideo src={selectedMedia || existingUrls[0]} className="w-full max-h-[400px] object-cover" controls />
               )}
               <button
                 type="button"
-                onClick={() => setFile(null)}
+                onClick={() => files.length ? setFiles(current => current.slice(1)) : setExistingUrls(current => current.slice(1))}
                 aria-label="Remover mídia selecionada"
                 disabled={saving}
                 className="absolute top-3 right-3 p-1.5 bg-black/50 backdrop-blur-md rounded-full text-white opacity-0 group-hover:opacity-100 transition-opacity hover:bg-black/70"
@@ -158,8 +181,22 @@ export default function CreateHighlightPage() {
             </button>
           )}
 
+          {existingUrls.length > 0 && <div className="mt-3 flex flex-wrap gap-2" aria-label="Mídias já salvas">
+            {existingUrls.map((url, index) => <div key={url} className="flex items-center gap-2 rounded-lg border border-white/10 bg-white/[0.04] px-3 py-2 text-xs text-white/70">
+              <span>{index + 1}. Mídia salva</span><button type="button" disabled={saving} onClick={() => setExistingUrls(current => current.filter(item => item !== url))} aria-label={`Remover mídia ${index + 1}`}><X size={14} /></button>
+            </div>)}
+          </div>}
+
+          {files.length > 0 && <div className="mt-3 flex flex-wrap gap-2" aria-label="Mídias do destaque">
+            {files.map((item, index) => <div key={`${item.name}-${index}`} className="flex items-center gap-2 rounded-lg border border-white/10 bg-white/[0.04] px-3 py-2 text-xs text-white/70">
+              <span className="max-w-32 truncate">{index + 1}. {item.name}</span>
+              <button type="button" disabled={saving} onClick={() => setFiles(current => current.filter((_, position) => position !== index))} aria-label={`Remover ${item.name}`} className="text-white/60 hover:text-white"><X size={14} /></button>
+            </div>)}
+          </div>}
+
           <input
             type="file"
+            multiple
             disabled={saving}
             ref={fileInputRef}
             className="hidden"
@@ -172,7 +209,7 @@ export default function CreateHighlightPage() {
               type="button"
               onClick={() => fileInputRef.current?.click()}
               className="flex items-center justify-center w-10 h-10 hover:bg-white/5 rounded-full transition-colors text-zinc-400 hover:text-white"
-              title="Trocar mídia"
+              title="Adicionar mídia"
             >
               {mediaType === 'image' ? <Image className="w-5 h-5" /> : <Video className="w-5 h-5" />}
             </button>
@@ -192,7 +229,7 @@ export default function CreateHighlightPage() {
                 variant="primary"
                 className="px-8 py-3.5 rounded-xl font-bold shadow-lg"
                 onClick={handleSaveHighlight}
-                disabled={saving || !highlightTitle.trim() || !file}
+                disabled={saving || !highlightTitle.trim() || existingUrls.length + files.length === 0}
               >
                 {saving ? 'Salvando...' : 'Salvar'}
               </Button>

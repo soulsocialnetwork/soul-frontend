@@ -62,7 +62,7 @@ export function CustomSelect({ value, placeholder, options, onChange, className 
           open ? 'opacity-100 scale-y-100 pointer-events-auto' : 'opacity-0 scale-y-95 pointer-events-none'
         )}
       >
-        <div className="max-h-48 overflow-y-auto no-scrollbar py-1.5">
+        <div className="max-h-48 overflow-y-auto py-1.5">
           {options.map((opt) => (
             <button
               key={opt.value}

@@ -1,0 +1,1 @@
+export const profileListRowClass = 'flex items-center gap-3 rounded-lg border border-white/10 bg-white/[0.035] px-3 py-2.5 shadow-[inset_0_1px_0_rgba(255,255,255,0.04)] transition-colors hover:bg-white/[0.06]';

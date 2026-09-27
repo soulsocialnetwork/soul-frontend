@@ -1,6 +1,7 @@
-
+import type { ProfileBadgeKind } from '../../components/profile/ProfileBadge';
 
 export interface UserResponse {
+profileBadge?: ProfileBadgeKind;
 id: string;
 name: string;
 username: string;
@@ -13,6 +14,7 @@ role?: string;
 }
 
 export interface CurrentUserResponse {
+profileBadge?: ProfileBadgeKind;
 notifPush?: boolean;
 notifEmail?: boolean;
 notifQuietMode?: boolean;
@@ -50,6 +52,7 @@ refreshToken: string;
 
 
 export interface PublicProfileResponse {
+profileBadge?: ProfileBadgeKind;
 banned?: boolean;
 id: string;
 name: string;
@@ -65,6 +68,7 @@ verified: boolean;
 }
 
 export interface ProfileSummary {
+profileBadge?: ProfileBadgeKind;
 id: string;
 name: string;
 username: string;
@@ -104,9 +108,11 @@ last: boolean;
 }
 
 export interface PostResponse {
+  profileBadge?: ProfileBadgeKind;
   id: string;
   content: string;
   imageUrl: string | null;
+  imageUrls?: string[];
   category: string | null;
   createdAt: string;
   userId: string;
@@ -117,12 +123,15 @@ export interface PostResponse {
   likesCount: number;
   commentsCount: number;
   hasLiked: boolean;
+  audience?: 'PUBLIC' | 'REAL_FRIENDS' | 'PRIVATE';
 }
 
 export interface PostRequest {
 content: string;
 imageUrl?: string;
+imageUrls?: string[];
 category?: string;
+audience?: 'PUBLIC' | 'REAL_FRIENDS' | 'PRIVATE';
 }
 
 export interface PagePostResponse {

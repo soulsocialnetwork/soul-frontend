@@ -41,11 +41,10 @@ export default function AuthPage() {
         navigate('/feed');
       } else {
         await authService.register(data as Parameters<typeof authService.register>[0]);
-        await login({ 
-          email: (data as Parameters<typeof authService.register>[0]).email, 
-          password: (data as Parameters<typeof authService.register>[0]).password 
+        navigate('/confirmar-email', {
+          replace: true,
+          state: { email: (data as Parameters<typeof authService.register>[0]).email },
         });
-        navigate('/feed');
       }
     } catch (error) {
       setAuthError(getHttpErrorMessage(error));

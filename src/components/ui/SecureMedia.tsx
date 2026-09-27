@@ -1,4 +1,4 @@
-import { forwardRef, useEffect, useState, type ImgHTMLAttributes, type VideoHTMLAttributes } from 'react';
+import { forwardRef, useEffect, useState, type AudioHTMLAttributes, type ImgHTMLAttributes, type VideoHTMLAttributes } from 'react';
 import { api } from '../../services/api';
 
 function useMedia(src?: string) {
@@ -37,4 +37,8 @@ export const SecureVideo = forwardRef<HTMLVideoElement, VideoHTMLAttributes<HTML
   const url = useMedia(src);
   const posterUrl = useMedia(poster);
   return <video {...props} ref={ref} src={url} poster={posterUrl} />;
+});
+export const SecureAudio = forwardRef<HTMLAudioElement, AudioHTMLAttributes<HTMLAudioElement>>(({ src, ...props }, ref) => {
+  const url = useMedia(src);
+  return <audio {...props} ref={ref} src={url} />;
 });

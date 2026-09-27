@@ -40,7 +40,8 @@ function calcAge(year: string, month: string, day: string): number {
 }
 
 function passwordStrength(pwd: string): { ok: boolean; message: string } {
-  if (pwd.length < 6) return { ok: false, message: 'A senha precisa ter no mínimo 6 caracteres.' };
+  if (pwd.length < 8) return { ok: false, message: 'A senha precisa ter no mínimo 8 caracteres.' };
+  if (new TextEncoder().encode(pwd).length > 72) return { ok: false, message: 'A senha ficou muito longa. Use uma senha mais curta.' };
   return { ok: true, message: '' };
 }
 
@@ -206,6 +207,12 @@ export function AuthForm({ mode, error, isSubmitting = false, onSubmit }: AuthFo
 
       {error && (
         <p className="text-xs text-red-400/80 ml-1 animate-fade-in">{error}</p>
+      )}
+
+      {mode === 'register' && (
+        <p className="text-center text-xs leading-5 text-textSecondary">
+          Ao criar uma conta, você concorda com os <Link to="/termos" className="text-textPrimary underline-offset-2 hover:underline">Termos de Uso</Link> e as <Link to="/diretrizes" className="text-textPrimary underline-offset-2 hover:underline">Diretrizes da Comunidade</Link>. Leia também a <Link to="/privacidade" className="text-textPrimary underline-offset-2 hover:underline">Política de Privacidade</Link>.
+        </p>
       )}
 
       <Button

@@ -15,16 +15,23 @@ import {
 import { useTranslation } from '../../i18n';
 import { ScreenLoader } from '../../components/ui/ScreenLoader';
 import { useAuth } from '../../context/AuthContext';
-import { dayKey, useScreenUsage } from '../../hooks/useScreenUsage';
+import { dayKey, useScreenUsage, useSoultUsage } from '../../hooks/useScreenUsage';
+import { authService } from '../../services/authService';
+import { getHttpErrorMessage } from '../../services/api';
 
 const formatMinutes = (total: number) => `${Math.floor(total / 60)}h ${String(total % 60).padStart(2, '0')}m`;
 const dateLabel = (date: Date) => new Intl.DateTimeFormat('pt-BR', { weekday: 'long', day: '2-digit', month: 'short' }).format(date);
 
 export default function ScreentimePage() {
   const [loading, setLoading] = useState(true);
-  const { user } = useAuth();
+  const { user, refreshUser } = useAuth();
   const usage = useScreenUsage(user?.id);
+  const watchedSoults = useSoultUsage(user?.id);
   const dailyGoal = user?.dailyTimeLimit ?? 120;
+  const [desiredMinutes, setDesiredMinutes] = useState(String(dailyGoal));
+  const [desiredSoults, setDesiredSoults] = useState('');
+  const [savingIntention, setSavingIntention] = useState(false);
+  const [intentionError, setIntentionError] = useState('');
   const focusKey = 'soul:focus:' + user?.id;
   const [focusDeadline, setFocusDeadline] = useState<number | null>(null);
   const [hoveredBarIndex, setHoveredBarIndex] = useState<number | null>(null);
@@ -59,6 +66,7 @@ export default function ScreentimePage() {
     : null;
   const maxHistoryMs = Math.max(dailyGoal * 60000, ...history.map(day => day.ms || 0), 1);
   const recordedDays = history.filter(day => day.ms !== undefined).length;
+  const periodMinutes = Math.floor(history.reduce((sum, day) => sum + (day.ms || 0), 0) / 60000);
   const radius = 46;
   const circumference = 2 * Math.PI * radius;
   const strokeDashoffset = circumference - pct * circumference;
@@ -70,6 +78,29 @@ export default function ScreentimePage() {
 
     return () => clearTimeout(timer);
   }, []);
+
+  useEffect(() => { setDesiredMinutes(String(dailyGoal)); }, [dailyGoal]);
+  useEffect(() => {
+    try { setDesiredSoults(localStorage.getItem(`soul:soult-limit:${user?.id}`) || ''); }
+    catch { setDesiredSoults(''); }
+  }, [user?.id]);
+
+  const saveIntention = async () => {
+    const minutes = Number(desiredMinutes);
+    const soults = desiredSoults === '' ? null : Number(desiredSoults);
+    if (!Number.isInteger(minutes) || minutes < 1 || minutes > 1440 || (soults !== null && (!Number.isInteger(soults) || soults < 1 || soults > 500))) {
+      setIntentionError('Escolha de 1 a 1440 minutos e de 1 a 500 Soults por dia.');
+      return;
+    }
+    setSavingIntention(true);
+    setIntentionError('');
+    try {
+      await authService.updateScreentime(minutes);
+      localStorage.setItem(`soul:soult-limit:${user?.id}`, soults === null ? '' : String(soults));
+      await refreshUser();
+    } catch (error) { setIntentionError(getHttpErrorMessage(error)); }
+    finally { setSavingIntention(false); }
+  };
 
   useEffect(() => {
     setIsFocusActive(false);
@@ -166,62 +197,35 @@ export default function ScreentimePage() {
       .padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
 
     return (
-      <div className="fixed inset-0 z-[100] bg-black flex flex-col items-center justify-center p-6 animate-fade-in">
-        <div className="flex flex-col items-center max-w-md w-full text-center space-y-8">
-          <Moon className="w-12 h-12 text-zinc-500" />
-
-          <div className="space-y-2">
-            <h2 className="text-xl text-zinc-400 font-medium">
-              Focando em:
-            </h2>
-
-            <p className="text-3xl font-bold text-white leading-tight">
-              {focusTask || 'Momento de Calmaria'}
-            </p>
-          </div>
-
-          <div className="text-7xl font-extrabold text-white tabular-nums tracking-tight">
-            {timeDisplay}
-          </div>
+      <div className="fixed inset-0 z-[100] flex items-center justify-center overflow-y-auto bg-background p-4 sm:p-8 animate-fade-in">
+        <div className="w-full max-w-lg px-6 py-9 text-center sm:px-10 sm:py-12">
+          <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-2xl border border-white/[0.09] bg-white/[0.04]"><Moon className="h-5 w-5 text-white/80" /></div>
+          <p className="mt-5 text-[11px] font-semibold uppercase tracking-[0.18em] text-white/45">Modo foco</p>
+          <h2 className="mt-5 text-sm text-white/45">Focando em</h2>
+          <p className="mt-1 break-words text-xl font-semibold leading-snug text-white sm:text-2xl">{focusTask || 'Momento de Calmaria'}</p>
+          <div role="timer" className="mt-9 text-6xl font-semibold tracking-tight tabular-nums text-white sm:text-7xl">{timeDisplay}</div>
+          <p className="mt-3 text-xs text-white/35">Um momento de cada vez.</p>
 
           {!isTryingToExit ? (
-            <button
-              onClick={() => {
-                setIsTryingToExit(true);
-                setExitTimer(5);
-              }}
-              className="mt-12 text-zinc-500 hover:text-white transition-colors text-sm"
-            >
+            <button type="button" onClick={() => { setIsTryingToExit(true); setExitTimer(5); }}
+              className="mt-10 rounded-xl px-4 py-2 text-sm text-white/50 transition-colors hover:bg-white/[0.05] hover:text-white focus-visible:outline focus-visible:outline-1 focus-visible:outline-white/40">
               Encerrar antes do tempo
             </button>
           ) : (
-            <div className="mt-8 flex flex-col items-center space-y-4 soul-glass p-6 rounded-2xl animate-slide-up">
-              <p className="text-sm text-zinc-300">
-                Sua tarefa já foi concluída?
-              </p>
-
-              <div className="flex items-center gap-3 w-full">
-                <button
-                  onClick={() => {
-                    setIsTryingToExit(false);
-                  }}
-                  className="flex-1 bg-white text-black font-semibold py-3 rounded-xl hover:bg-zinc-200 transition-colors"
-                >
-                  Continuar
-                </button>
-
-                <button
-                  disabled={exitTimer > 0}
-                  onClick={() => {
-                    setIsFocusActive(false);
-                    setIsTryingToExit(false);
-                    setFocusTimeLeft(0);
-                    setFocusDeadline(null);
-                    try { localStorage.removeItem(focusKey); } catch { }
-                  }}
-                  className="flex-1 bg-transparent border border-white/20 text-white font-semibold py-3 rounded-xl disabled:opacity-30 transition-colors"
-                >
-                  {exitTimer > 0 ? `Sair (${exitTimer}s)` : 'Sair'}
+            <div className="mt-9 border-t border-white/[0.08] pt-6 animate-fade-up">
+              <p className="text-sm font-medium text-white/85">Sua tarefa já foi concluída?</p>
+              <p className="mt-1 text-xs text-white/45">Você pode continuar no seu ritmo ou encerrar a sessão.</p>
+              <div className="mt-5 grid grid-cols-2 gap-2.5">
+                <button type="button" onClick={() => setIsTryingToExit(false)}
+                  className="min-h-11 rounded-xl bg-white px-3 py-2 text-sm font-semibold text-black transition-colors hover:bg-zinc-200">Continuar</button>
+                <button type="button" disabled={exitTimer > 0} onClick={() => {
+                  setIsFocusActive(false);
+                  setIsTryingToExit(false);
+                  setFocusTimeLeft(0);
+                  setFocusDeadline(null);
+                  try { localStorage.removeItem(focusKey); } catch { }
+                }} className="min-h-11 rounded-xl border border-white/15 px-3 py-2 text-sm font-medium text-white/75 transition-colors hover:bg-white/[0.05] disabled:cursor-wait disabled:opacity-40">
+                  {exitTimer > 0 ? `Sair em ${exitTimer}s` : 'Encerrar'}
                 </button>
               </div>
             </div>
@@ -304,7 +308,7 @@ export default function ScreentimePage() {
           {loading ? (
             <ScreenLoader />
           ) : (
-            <div className="flex-1 overflow-y-auto no-scrollbar pb-28 lg:pb-12">
+            <div className="flex-1 overflow-y-auto pb-28 lg:pb-12">
               <div className="w-full max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 pt-7 space-y-5">
                 <div>
                   <h1 className="text-2xl sm:text-3xl font-semibold tracking-tight text-white">
@@ -316,10 +320,8 @@ export default function ScreentimePage() {
                   </p>
                 </div>
 
-
-
                 <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-                  <div className="space-y-4">
+                  <div className="flex flex-col gap-4">
                     <section className="soul-glass rounded-2xl p-5 sm:p-6" aria-label="Uso de hoje">
                       <div className="flex items-center justify-between">
                         <span className="text-xs font-semibold tracking-[0.16em] uppercase text-white/45">Hoje</span>
@@ -327,7 +329,7 @@ export default function ScreentimePage() {
                       </div>
                       <div className="mt-5 flex flex-col sm:flex-row items-center gap-5 sm:gap-7">
                         <div className="relative w-28 h-28 shrink-0">
-                          <svg viewBox="0 0 100 100" className="h-full w-full -rotate-90" role="img" aria-label={`${Math.round(pct * 100)}% da meta diária`}>
+                          <svg viewBox="0 0 100 100" className="h-full w-full -rotate-90" role="img" aria-label={`${Math.round(pct * 100)}% do tempo escolhido para hoje`}>
                             <circle cx="50" cy="50" r={radius} fill="none" stroke="rgba(255,255,255,0.09)" strokeWidth="5" />
                             <circle cx="50" cy="50" r={radius} fill="none" stroke="#f4f4f5" strokeWidth="5" strokeLinecap="round" strokeDasharray={circumference} strokeDashoffset={strokeDashoffset} className="transition-all duration-500" />
                           </svg>
@@ -336,11 +338,127 @@ export default function ScreentimePage() {
                         <div className="min-w-0 text-center sm:text-left">
                           <p className="text-sm text-white/50">Tempo no Soul</p>
                           <p className="mt-1 text-4xl font-semibold tracking-tight tabular-nums text-white">{timeStr}</p>
-                          <p className="mt-3 text-sm text-white/45">Meta diária <span className="font-semibold text-white/75">{goalStr}</span></p>
+                          <p className="mt-3 text-sm text-white/45">Tempo escolhido <span className="font-semibold text-white/75">{goalStr}</span></p>
+                          {pct >= 1 && <p className="mt-2 text-xs text-white/60">Você chegou ao tempo que escolheu. Que tal fazer uma pausa?</p>}
                         </div>
                       </div>
                     </section>
 
+                    <section className="soul-glass flex flex-1 flex-col justify-between gap-5 rounded-2xl p-5 sm:p-6" aria-label="Uso consciente">
+                      <div>
+                        <h2 className="text-sm font-semibold text-white">Meu ritmo no Soul</h2>
+                        <p className="mt-1 max-w-sm text-xs leading-relaxed text-white/50">Escolha um tempo e uma quantidade de Soults para hoje. Você pode mudar quando quiser.</p>
+                      </div>
+                      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                        <label className="min-w-0 text-xs text-white/60">Minutos por dia
+                          <span className="mt-1.5 flex h-10 overflow-hidden rounded-lg border border-white/10 bg-black/30 focus-within:border-white/25">
+                            <input type="number" min="1" max="1440" value={desiredMinutes} onChange={event => setDesiredMinutes(event.target.value)} className="min-w-0 flex-1 bg-transparent px-3 text-sm text-white outline-none [appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none" />
+                            <span className="flex w-8 flex-col border-l border-white/10">
+                              <button type="button" aria-label="Aumentar minutos por dia" onClick={() => setDesiredMinutes(value => String(Math.min(1440, (Number(value) || 0) + 1)))} className="flex flex-1 items-center justify-center text-white/45 hover:bg-white/10 hover:text-white"><ChevronUp className="h-3.5 w-3.5" /></button>
+                              <button type="button" aria-label="Diminuir minutos por dia" onClick={() => setDesiredMinutes(value => String(Math.max(1, (Number(value) || 1) - 1)))} className="flex flex-1 items-center justify-center border-t border-white/10 text-white/45 hover:bg-white/10 hover:text-white"><ChevronDown className="h-3.5 w-3.5" /></button>
+                            </span>
+                          </span>
+                        </label>
+                        <label className="min-w-0 text-xs text-white/60">Soults por dia
+                          <span className="mt-1.5 flex h-10 overflow-hidden rounded-lg border border-white/10 bg-black/30 focus-within:border-white/25">
+                            <input type="number" min="1" max="500" placeholder="Sem limite" value={desiredSoults} onChange={event => setDesiredSoults(event.target.value)} className="min-w-0 flex-1 bg-transparent px-3 text-sm text-white outline-none [appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none" />
+                            <span className="flex w-8 flex-col border-l border-white/10">
+                              <button type="button" aria-label="Aumentar Soults por dia" onClick={() => setDesiredSoults(value => String(Math.min(500, (Number(value) || 0) + 1)))} className="flex flex-1 items-center justify-center text-white/45 hover:bg-white/10 hover:text-white"><ChevronUp className="h-3.5 w-3.5" /></button>
+                              <button type="button" aria-label="Diminuir Soults por dia" onClick={() => setDesiredSoults(value => value === '' ? '' : String(Math.max(1, Number(value) - 1)))} className="flex flex-1 items-center justify-center border-t border-white/10 text-white/45 hover:bg-white/10 hover:text-white"><ChevronDown className="h-3.5 w-3.5" /></button>
+                            </span>
+                          </span>
+                        </label>
+                      </div>
+                      <div className="flex flex-wrap items-center justify-between gap-3 border-t border-white/[0.07] pt-4">
+                        <div className="min-w-0 flex-1">
+                          <p className="text-xs text-white/55">Soults reproduzidos hoje: <strong className="text-white">{watchedSoults}</strong>{desiredSoults && ` de ${desiredSoults}`}</p>
+                          {desiredSoults && watchedSoults >= Number(desiredSoults) && <p className="mt-1 text-xs text-white/55">Você chegou à quantidade que escolheu. Uma pausa pode fazer bem.</p>}
+                          {intentionError && <p role="alert" className="mt-2 text-xs text-red-400">{intentionError}</p>}
+                        </div>
+                        <button type="button" disabled={savingIntention} onClick={saveIntention} className="shrink-0 rounded-lg bg-white/10 px-4 py-2 text-xs font-semibold text-white transition-colors hover:bg-white/15 disabled:opacity-50">Salvar escolha</button>
+                      </div>
+                    </section>
+                  </div>
+
+                  <div className="space-y-4">
+                    <div className="soul-glass rounded-2xl p-5 sm:p-6 flex flex-col justify-between lg:self-start relative overflow-hidden">
+                    <div className="relative z-10">
+                      <div className="flex items-center gap-3 text-white/80 mb-5">
+                        <div className="p-2.5 bg-white/[0.07] border border-white/[0.08] rounded-2xl">
+                          <Moon className="w-5 h-5 text-white" />
+                        </div>
+                        <span className="text-sm font-semibold tracking-[0.16em] uppercase">
+                          Modo Foco
+                        </span>
+                      </div>
+
+                      <p className="text-sm text-white/50 mb-5 max-w-xs leading-relaxed">
+                        Desconecte-se de distrações intencionalmente. Defina seu tempo e o que quer realizar.
+                      </p>
+
+                      <div className="space-y-5">
+                        <div>
+                          <label className="text-[10px] font-bold uppercase tracking-widest text-white/40 mb-2 block">
+                            Tempo (minutos)
+                          </label>
+                          <div className="flex items-center justify-between bg-black/40 border border-white/[0.05] rounded-xl overflow-hidden focus-within:border-white/20 transition-colors p-1">
+                            <button
+                              type="button"
+                              onClick={() => setFocusTime((prev) => String(Math.max(5, (parseInt(prev, 10) || 0) - 5)))}
+                              aria-label="Diminuir tempo de foco em cinco minutos"
+                              className="m-1 flex h-9 w-9 items-center justify-center rounded-lg border border-white/10 bg-white/[0.04] text-white/55 transition-colors hover:bg-white/10 hover:text-white"
+                            >
+                              <Minus className="w-4 h-4" />
+                            </button>
+                            <input
+                              type="number"
+                              min={5}
+                              value={focusTime}
+                              onChange={(e) => setFocusTime(e.target.value)}
+                              className="w-20 bg-transparent text-center text-2xl font-extrabold text-white focus:outline-none [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                            />
+                            <button
+                              type="button"
+                              onClick={() => setFocusTime((prev) => String(Math.min(180, (parseInt(prev, 10) || 0) + 5)))}
+                              aria-label="Aumentar tempo de foco em cinco minutos"
+                              className="m-1 flex h-9 w-9 items-center justify-center rounded-lg border border-white/10 bg-white/[0.04] text-white/55 transition-colors hover:bg-white/10 hover:text-white"
+                            >
+                              <Plus className="w-4 h-4" />
+                            </button>
+                          </div>
+                        </div>
+
+                        <div>
+                          <label className="text-[10px] font-bold uppercase tracking-widest text-white/40 mb-2 block">
+                            Minha intenção
+                          </label>
+                          <input
+                            type="text"
+                            placeholder="Ex: Ler um livro, Meditar..."
+                            value={focusTask}
+                            onChange={(e) => {
+                              setFocusTask(e.target.value);
+                              if (e.target.value.trim()) setFocusError('');
+                            }}
+                            className="w-full bg-black/40 border border-white/[0.05] rounded-xl px-4 py-3.5 text-sm text-white placeholder-white/20 focus:outline-none focus:border-white/20 transition-colors"
+                          />
+                          {focusError && (
+                            <p className="mt-2 text-xs text-red-400/80 font-medium">{focusError}</p>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+
+                    <div className="relative z-10 mt-5 pt-5 border-t border-white/[0.05]">
+                      <button
+                        onClick={startFocus}
+                        className="w-full bg-white text-black font-semibold rounded-xl py-4 text-sm flex items-center justify-center gap-2 hover:bg-zinc-200 active:scale-[0.98] transition-all"
+                      >
+                        <Play className="w-4 h-4 fill-black" />
+                        <span>Iniciar foco</span>
+                      </button>
+                    </div>
+                    </div>
                     <section className="soul-glass rounded-2xl p-5 sm:p-6" aria-label="Média diária">
                       <div className="flex items-center justify-between">
                         <span className="text-xs font-semibold tracking-[0.16em] uppercase text-white/45">Média diária</span>
@@ -353,12 +471,14 @@ export default function ScreentimePage() {
                           : 'Ainda não há dias completos registrados neste período.'}
                       </p>
                     </section>
+                  </div>
+                </div>
 
-                    <section className="soul-glass rounded-2xl p-5 sm:p-6" aria-label="Histórico de uso">
+                <section className="soul-glass rounded-2xl p-5 sm:p-6" aria-label="Histórico de uso">
                       <div className="flex flex-wrap items-start justify-between gap-4">
                         <div>
                           <h2 className="text-lg font-semibold tracking-tight text-white">Histórico</h2>
-                          <p className="mt-1 text-xs text-white/40">{recordedDays} {recordedDays === 1 ? 'dia registrado' : 'dias registrados'} neste período</p>
+                          <p className="mt-1 text-xs text-white/40">{recordedDays} {recordedDays === 1 ? 'dia registrado' : 'dias registrados'} · {formatMinutes(periodMinutes)} no período</p>
                         </div>
                         <div className="inline-flex rounded-xl border border-white/[0.08] bg-black/25 p-1" role="group" aria-label="Período do histórico">
                           {([7, 30] as const).map(days => (
@@ -411,86 +531,7 @@ export default function ScreentimePage() {
                             </div>
                           ))}
                       </div>}
-                    </section>
-                  </div>
-
-                  <div className="soul-glass rounded-2xl p-5 sm:p-6 flex flex-col justify-between lg:self-start relative overflow-hidden">
-                    <div className="relative z-10">
-                      <div className="flex items-center gap-3 text-white/80 mb-8">
-                        <div className="p-2.5 bg-white/[0.07] border border-white/[0.08] rounded-2xl">
-                          <Moon className="w-5 h-5 text-white" />
-                        </div>
-                        <span className="text-sm font-semibold tracking-[0.16em] uppercase">
-                          Modo Foco
-                        </span>
-                      </div>
-
-                      <p className="text-sm text-white/50 mb-8 max-w-xs leading-relaxed">
-                        Desconecte-se de distrações intencionalmente. Defina seu tempo e o que quer realizar.
-                      </p>
-
-                      <div className="space-y-6">
-                        <div>
-                          <label className="text-[10px] font-bold uppercase tracking-widest text-white/40 mb-2 block">
-                            Tempo (minutos)
-                          </label>
-                          <div className="flex items-center justify-between bg-black/40 border border-white/[0.05] rounded-xl overflow-hidden focus-within:border-white/20 transition-colors p-1">
-                            <button
-                              type="button"
-                              onClick={() => setFocusTime((prev) => String(Math.max(5, (parseInt(prev, 10) || 0) - 5)))}
-                              className="p-3 text-white/40 hover:text-white hover:bg-white/10 rounded-lg transition-colors"
-                            >
-                              <Minus className="w-4 h-4" />
-                            </button>
-                            <input
-                              type="number"
-                              min={5}
-                              value={focusTime}
-                              onChange={(e) => setFocusTime(e.target.value)}
-                              className="w-20 bg-transparent text-center text-2xl font-extrabold text-white focus:outline-none [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
-                            />
-                            <button
-                              type="button"
-                              onClick={() => setFocusTime((prev) => String((parseInt(prev, 10) || 0) + 5))}
-                              className="p-3 text-white/40 hover:text-white hover:bg-white/10 rounded-lg transition-colors"
-                            >
-                              <Plus className="w-4 h-4" />
-                            </button>
-                          </div>
-                        </div>
-
-                        <div>
-                          <label className="text-[10px] font-bold uppercase tracking-widest text-white/40 mb-2 block">
-                            Minha intenção
-                          </label>
-                          <input
-                            type="text"
-                            placeholder="Ex: Ler um livro, Meditar..."
-                            value={focusTask}
-                            onChange={(e) => {
-                              setFocusTask(e.target.value);
-                              if (e.target.value.trim()) setFocusError('');
-                            }}
-                            className="w-full bg-black/40 border border-white/[0.05] rounded-xl px-4 py-3.5 text-sm text-white placeholder-white/20 focus:outline-none focus:border-white/20 transition-colors"
-                          />
-                          {focusError && (
-                            <p className="mt-2 text-xs text-red-400/80 font-medium">{focusError}</p>
-                          )}
-                        </div>
-                      </div>
-                    </div>
-
-                    <div className="relative z-10 mt-8 pt-8 border-t border-white/[0.05]">
-                      <button
-                        onClick={startFocus}
-                        className="w-full bg-white text-black font-semibold rounded-xl py-4 text-sm flex items-center justify-center gap-2 hover:bg-zinc-200 active:scale-[0.98] transition-all"
-                      >
-                        <Play className="w-4 h-4 fill-black" />
-                        <span>Iniciar foco</span>
-                      </button>
-                    </div>
-                  </div>
-                </div>
+                </section>
               </div>
             </div>
           )}

@@ -25,6 +25,20 @@
 }
 
 @layer base {
+  *::-webkit-scrollbar { width: 4px; height: 4px; }
+  *::-webkit-scrollbar-button { display: none; width: 0; height: 0; }
+  *::-webkit-scrollbar-track { background: transparent; }
+  *::-webkit-scrollbar-corner { background: transparent; }
+  *::-webkit-scrollbar-thumb {
+    background: rgba(255, 255, 255, 0.17);
+    border-radius: 0;
+  }
+  *::-webkit-scrollbar-thumb:hover { background: rgba(255, 255, 255, 0.3); }
+
+  @supports (-moz-appearance: none) {
+    * { scrollbar-width: thin; scrollbar-color: rgba(255, 255, 255, 0.17) transparent; }
+  }
+
   body {
     @apply bg-background text-textPrimary antialiased overflow-x-hidden;
     selection-background-color: rgba(255, 255, 255, 0.12);
@@ -142,6 +156,24 @@
   -webkit-tap-highlight-color: transparent;
 }
 
+.founder-name-gradient {
+  background-image: linear-gradient(105deg, #8b5cf6 0%, #e9d5ff 24%, #a855f7 48%, #7c3aed 72%, #e9d5ff 100%);
+  background-size: 220% 100%;
+  background-position: 0% 50%;
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+  animation: founder-gradient-flow 5s ease-in-out infinite;
+}
+
+@keyframes founder-gradient-flow {
+  50% { background-position: 100% 50%; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .founder-name-gradient { animation: none; }
+}
+
 @media (hover: hover) and (pointer: fine) {
   .soulzinho-cursor-active,
   .soulzinho-cursor-active * {
@@ -182,6 +214,30 @@
 *:focus-visible {
   outline: 1px solid rgba(255, 255, 255, 0.32);
   outline-offset: 2px;
+}
+
+.soul-chat-audio-range {
+  appearance: none;
+  margin: 0;
+  height: 3px;
+  border-radius: 999px;
+}
+
+.soul-chat-audio-range::-webkit-slider-thumb {
+  appearance: none;
+  width: 9px;
+  height: 9px;
+  border: 0;
+  border-radius: 50%;
+  background: currentColor;
+}
+
+.soul-chat-audio-range::-moz-range-thumb {
+  width: 9px;
+  height: 9px;
+  border: 0;
+  border-radius: 50%;
+  background: currentColor;
 }
 
 input:focus-visible,

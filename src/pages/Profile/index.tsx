@@ -17,22 +17,26 @@ import type {
 import { userService } from '../../services/userService';
 import { ConnectionsModal } from '../../components/profile/ConnectionsModal';
 import { RealFriendsModal } from '../../components/profile/RealFriendsModal';
+import { HighlightCover } from '../../components/profile/HighlightCover';
+import { ProfileBadge, profileNameColor, resolveProfileBadge } from '../../components/profile/ProfileBadge';
+import { ProfileMetric } from '../../components/profile/ProfileMetric';
+import { AvatarCropper } from '../../components/profile/AvatarCropper';
+import { AvatarContent } from '../../components/ui/AvatarContent';
 import { postService } from '../../services/postService';
 import { soultService, type Soult } from '../../services/soultService';
 import {
   Grid,
   Film,
   Bookmark,
-  Plus,
   X,
   ChevronLeft,
   ChevronRight,
   Camera,
   Check,
   Trash2,
+  Pencil,
   QrCode,
   Loader2,
-  BadgeCheck,
 } from 'lucide-react';
 import { cn } from '../../utils/cn';
 import { ScreenLoader } from '../../components/ui/ScreenLoader';
@@ -44,6 +48,7 @@ export interface HighlightItem {
   cover: string;
   image: string;
   type?: 'image' | 'video';
+  mediaUrls?: string[];
   isNew?: boolean;
 }
 
@@ -85,6 +90,7 @@ function convertPostResponseToPost(
       username: postResponse.username,
       avatarUrl: postResponse.profilePicture || undefined,
       verified: postResponse.verified,
+      profileBadge: postResponse.profileBadge,
     },
     content: postResponse.content,
     imageUrl: postResponse.imageUrl || undefined,
@@ -126,6 +132,7 @@ export default function ProfilePage() {
 
   const [activeHighlightIndex, setActiveHighlightIndex] =
     useState<number | null>(null);
+  const [activeHighlightMediaIndex, setActiveHighlightMediaIndex] = useState(0);
 
   const [avatarFilePreview, setAvatarFilePreview] = useState('');
   const [avatarFile, setAvatarFile] = useState<File | null>(null);
@@ -140,8 +147,8 @@ export default function ProfilePage() {
   const [realFriendsCount, setRealFriendsCount] = useState(0);
   const [postCount, setPostCount] = useState(0);
 
-  const [showRealFriendsModal, setShowRealFriendsModal] =
-    useState(false);
+  const [realFriendsModalView, setRealFriendsModalView] =
+    useState<'friends' | 'qr' | null>(null);
 
   const [connectionsModal, setConnectionsModal] = useState<{
     type: 'followers' | 'following';
@@ -316,7 +323,7 @@ export default function ProfilePage() {
     setHighlightsList(legacy);
 
     api
-      .get<{ id: string; title: string; coverUrl: string }[]>(
+      .get<{ id: string; title: string; coverUrl: string; mediaUrls?: string[] }[]>(
         '/highlights/me'
       )
       .then(({ data }) => {
@@ -327,6 +334,7 @@ export default function ProfilePage() {
               name: item.title,
               cover: item.coverUrl,
               image: item.coverUrl,
+              mediaUrls: item.mediaUrls?.length ? item.mediaUrls : [item.coverUrl],
               type: /[.](mp4|webm|mov)(?:[?#]|$)/i.test(
                 item.coverUrl
               )
@@ -412,15 +420,22 @@ export default function ProfilePage() {
 
   const handleOpenHighlight = (index: number) => {
     setActiveHighlightIndex(index);
+    setActiveHighlightMediaIndex(0);
   };
 
   const handleNextHighlight = () => {
     if (activeHighlightIndex === null) return;
+    const current = highlightsList[activeHighlightIndex];
+    if (activeHighlightMediaIndex + 1 < (current.mediaUrls?.length || 1)) {
+      setActiveHighlightMediaIndex(index => index + 1);
+      return;
+    }
 
     const nextIndex = activeHighlightIndex + 1;
 
     if (nextIndex < highlightsList.length) {
       setActiveHighlightIndex(nextIndex);
+      setActiveHighlightMediaIndex(0);
     } else {
       setActiveHighlightIndex(null);
     }
@@ -428,9 +443,11 @@ export default function ProfilePage() {
 
   const handlePrevHighlight = () => {
     if (activeHighlightIndex === null) return;
+    if (activeHighlightMediaIndex > 0) { setActiveHighlightMediaIndex(index => index - 1); return; }
 
     if (activeHighlightIndex > 0) {
       setActiveHighlightIndex(activeHighlightIndex - 1);
+      setActiveHighlightMediaIndex(Math.max(0, (highlightsList[activeHighlightIndex - 1].mediaUrls?.length || 1) - 1));
     }
   };
 
@@ -486,8 +503,6 @@ export default function ProfilePage() {
 
     if (!file) return;
 
-    setAvatarFile(file);
-
     const reader = new FileReader();
 
     reader.onload = (ev) => {
@@ -533,7 +548,7 @@ export default function ProfilePage() {
               </button>
             </div>
           ) : (
-            <div className="flex-1 overflow-y-auto no-scrollbar pb-24 lg:pb-12">
+            <div className="flex-1 overflow-y-auto pb-24 lg:pb-12">
               <div className="w-full max-w-4xl mx-auto pt-4 lg:pt-8 px-4 sm:px-6 space-y-8">
                 <div className="w-full max-w-3xl mx-auto pt-2 md:pt-4">
                   <div className="flex flex-col md:flex-row gap-6 md:gap-9 items-center md:items-start">
@@ -541,30 +556,20 @@ export default function ProfilePage() {
                       onClick={() => setShowAvatarModal(true)}
                       className="rounded-lg border border-white/15 w-28 h-28 md:w-40 md:h-40 overflow-hidden bg-neutral-800 shrink-0 cursor-pointer active:scale-95 transition-transform"
                     >
-                      {profileData.avatarUrl ? (
-                        <SecureImage
-                          src={profileData.avatarUrl}
-                          alt="Avatar"
-                          className="w-full h-full rounded-lg object-cover"
-                        />
-                      ) : (
-                        <div className="w-full h-full rounded-lg flex items-center justify-center text-textSecondary">
-                          <Camera className="w-8 h-8" />
-                        </div>
-                      )}
+                      <AvatarContent src={profileData.avatarUrl} name={profileData.fullName || profileData.username} fallbackClassName="text-4xl" />
                     </div>
 
                     <div className="flex-1 flex flex-col items-center md:items-start text-center md:text-left w-full">
                       <div className="mb-4 w-full">
                         <div className="flex items-center justify-center md:justify-start gap-2">
-                          <h1 className="text-2xl font-bold tracking-tight">
-                            {profileData.username || 'Perfil'}
+                          <h1 className={cn('min-w-0 break-all text-2xl font-bold tracking-tight', profileNameColor(resolveProfileBadge(user?.profileBadge, user?.role === 'ADMIN' && user?.username.toLowerCase() === 'soul')))}>
+                            {profileData.username ? `@${profileData.username}` : 'Perfil'}
                           </h1>
-                          {user?.role === 'ADMIN' && <BadgeCheck aria-label="Perfil verificado" className="w-5 h-5 text-accent shrink-0" strokeWidth={2.5} />}
+                          <ProfileBadge badge={resolveProfileBadge(user?.profileBadge, user?.role === 'ADMIN' && user?.username.toLowerCase() === 'soul')} />
                         </div>
                       </div>
 
-                      <div className="flex gap-6 mb-4 text-sm">
+                      <div className="flex flex-wrap items-center gap-2 mb-4 text-sm">
                         <div className="flex flex-col items-center md:items-start">
                           <span className="font-bold text-lg leading-none">
                             {postCount}
@@ -575,48 +580,9 @@ export default function ProfilePage() {
                           </span>
                         </div>
 
-                        <div
-                          onClick={() =>
-                            handleOpenConnections('followers')
-                          }
-                          className="flex flex-col items-center md:items-start cursor-pointer hover:opacity-80 active:scale-95 transition-all"
-                        >
-                          <span className="font-bold text-lg leading-none">
-                            {followersCount}
-                          </span>
-
-                          <span className="text-textSecondary text-xs">
-                            seguidores
-                          </span>
-                        </div>
-
-                        <div
-                          onClick={() =>
-                            handleOpenConnections('following')
-                          }
-                          className="flex flex-col items-center md:items-start cursor-pointer hover:opacity-80 active:scale-95 transition-all"
-                        >
-                          <span className="font-bold text-lg leading-none">
-                            {followingCount}
-                          </span>
-
-                          <span className="text-textSecondary text-xs">
-                            seguindo
-                          </span>
-                        </div>
-
-                        <button
-                          type="button"
-                          onClick={() => setShowRealFriendsModal(true)}
-                          className="flex flex-col items-center text-left transition-opacity hover:opacity-80 active:scale-95 md:items-start"
-                        >
-                          <span className="text-lg font-bold leading-none">
-                            {realFriendsCount}
-                          </span>
-                          <span className="text-xs text-textSecondary">
-                            Amigos Reais
-                          </span>
-                        </button>
+                        <ProfileMetric value={followersCount} label="seguidores" onClick={() => handleOpenConnections('followers')} />
+                        <ProfileMetric value={followingCount} label="seguindo" onClick={() => handleOpenConnections('following')} />
+                        <ProfileMetric value={realFriendsCount} label="amigos reais" onClick={() => setRealFriendsModalView('friends')} />
                       </div>
 
                       <div className="space-y-1 text-sm text-textSecondary max-w-md">
@@ -641,12 +607,10 @@ export default function ProfilePage() {
                         </button>
 
                         <button
-                          onClick={() =>
-                            setShowRealFriendsModal(true)
-                          }
+                          onClick={() => setRealFriendsModalView('qr')}
                           className="soul-glass rounded-lg inline-flex h-10 w-10 shrink-0 items-center justify-center text-white active:scale-95 transition-all"
-                          title="Amigos Reais e QR Code"
-                          aria-label="Abrir Amigos Reais e QR Code"
+                          title="Meu QR Code"
+                          aria-label="Abrir meu QR Code"
                         >
                           <QrCode className="w-[18px] h-[18px]" />
                         </button>
@@ -684,11 +648,7 @@ export default function ProfilePage() {
                         }
                         className="flex flex-col items-center gap-2 cursor-pointer shrink-0 group active:scale-95 transition-transform"
                       >
-                        <div className="rounded-lg border border-white/15 h-16 w-16 overflow-hidden bg-neutral-800 transition-colors group-hover:bg-neutral-700 md:h-20 md:w-20">
-                          <div className="flex h-full w-full items-center justify-center">
-                            <Plus className="h-6 w-6 text-white/70 group-hover:text-white md:h-8 md:w-8" />
-                          </div>
-                        </div>
+                        <HighlightCover isNew label="Novo destaque" />
 
                         <span className="text-xs font-semibold text-textSecondary group-hover:text-white">
                           Novo
@@ -704,20 +664,7 @@ export default function ProfilePage() {
                             }
                             className="flex flex-col items-center gap-2 cursor-pointer shrink-0 active:scale-95 transition-transform"
                           >
-                            <div className="rounded-lg border border-white/15 h-16 w-16 overflow-hidden bg-neutral-800 md:h-20 md:w-20">
-                              {highlight.type === 'video' ? (
-                                <SecureVideo
-                                  src={`${highlight.cover}#t=0.001`}
-                                  className="rounded-lg w-full h-full object-cover pointer-events-none"
-                                />
-                              ) : (
-                                <SecureImage
-                                  src={highlight.cover}
-                                  alt={highlight.name}
-                                  className="rounded-lg w-full h-full object-cover"
-                                />
-                              )}
-                            </div>
+                            <HighlightCover src={highlight.cover} label={highlight.name} />
 
                             <span className="text-xs font-semibold text-textSecondary">
                               {highlight.name}
@@ -830,7 +777,7 @@ export default function ProfilePage() {
                           type="button"
                           onClick={() => navigate(`/soults?video=${soult.id}`)}
                           className="aspect-square bg-white/5 md:rounded-2xl overflow-hidden cursor-pointer active:scale-95 transition-transform relative group"
-                          aria-label={`Abrir Soult salvo: ${soult.title}`}
+                          aria-label={`Abrir Soult: ${soult.title}`}
                         >
                           {soult.thumbnailUrl ? (
                             <SecureImage src={soult.thumbnailUrl} alt={soult.title} className="h-full w-full object-cover" />
@@ -840,9 +787,9 @@ export default function ProfilePage() {
                           <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/75 to-transparent px-2 pb-2 pt-8 text-left">
                             <span className="line-clamp-1 text-xs font-semibold text-white">{soult.title}</span>
                           </div>
-                          <div className="absolute top-2 right-2 w-6 h-6 bg-black/50 rounded-full flex items-center justify-center">
+                          {activeTab === 'saved' && <div className="absolute top-2 right-2 w-6 h-6 bg-black/50 rounded-lg flex items-center justify-center">
                             <Bookmark className="w-3 h-3 text-white" fill="white" />
-                          </div>
+                          </div>}
                         </button>
                       ))}
 
@@ -892,17 +839,7 @@ export default function ProfilePage() {
             >
               <div className="flex flex-col items-center gap-3">
                 <div className="rounded-lg relative w-24 h-24 overflow-hidden group bg-neutral-800">
-                  {editForm.avatarUrl ? (
-                    <SecureImage
-                      src={editForm.avatarUrl}
-                      alt="Avatar Preview"
-                      className="w-full h-full object-cover"
-                    />
-                  ) : (
-                    <div className="w-full h-full flex items-center justify-center">
-                      <Camera className="w-6 h-6 text-zinc-500" />
-                    </div>
-                  )}
+                  <AvatarContent src={editForm.avatarUrl} name={editForm.fullName || profileData.fullName || profileData.username} fallbackClassName="text-3xl" />
 
                   <div className="absolute inset-0 bg-black/50 flex flex-col items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity cursor-pointer">
                     <Camera className="w-6 h-6 text-white" />
@@ -1032,11 +969,11 @@ export default function ProfilePage() {
 
       {activeHighlightIndex !== null &&
         highlightsList[activeHighlightIndex] && (
-          <div className="fixed inset-0 bg-black/95 backdrop-blur-md z-50 flex items-center justify-center p-4 animate-fade-in">
-            <div className="relative w-full max-w-sm h-[80vh] max-h-[650px] bg-zinc-900 border border-white/10 rounded-2xl overflow-hidden flex flex-col justify-between p-4 shadow-2xl">
+          <div className="fixed inset-0 bg-black/95 backdrop-blur-md z-50 flex items-center justify-center p-0 sm:p-4 animate-fade-in">
+            <div className="relative flex h-[100dvh] w-full flex-col justify-between overflow-hidden bg-black p-4 pt-[max(1rem,env(safe-area-inset-top))] shadow-2xl sm:h-[80vh] sm:max-h-[650px] sm:max-w-sm sm:rounded-2xl sm:border sm:border-white/10 sm:bg-zinc-900 sm:pt-4">
               <div className="relative z-10 flex flex-col gap-2">
-                <div className="w-full bg-white/20 h-1 rounded-full overflow-hidden">
-                  <div className="bg-white h-full w-full animate-pulse" />
+                <div className="flex w-full gap-1" aria-label={`Mídia ${activeHighlightMediaIndex + 1} de ${highlightsList[activeHighlightIndex].mediaUrls?.length || 1}`}>
+                  {(highlightsList[activeHighlightIndex].mediaUrls || [highlightsList[activeHighlightIndex].image]).map((_, index) => <span key={index} className={`h-1 flex-1 rounded-full ${index <= activeHighlightMediaIndex ? 'bg-white' : 'bg-white/25'}`} />)}
                 </div>
 
                 <div className="flex items-center justify-between">
@@ -1045,6 +982,12 @@ export default function ProfilePage() {
                   </span>
 
                   <div className="flex items-center gap-2">
+                    {!highlightsList[activeHighlightIndex].id.startsWith('hl-') && <button
+                      type="button"
+                      onClick={() => navigate(`/highlights/${encodeURIComponent(highlightsList[activeHighlightIndex].id)}/edit`)}
+                      className="rounded-lg border border-white/10 bg-black/40 p-1.5 text-white/70 hover:text-white"
+                      title="Editar destaque" aria-label="Editar destaque"
+                    ><Pencil className="h-4 w-4" /></button>}
                     <button
                       disabled={deletingHighlight}
                       onClick={async () => {
@@ -1096,6 +1039,7 @@ export default function ProfilePage() {
                       }}
                       className="rounded-lg p-1.5 border border-white/10 bg-black/40 text-white/60 hover:bg-red-500/80 hover:text-white transition-colors"
                       title="Remover destaque"
+                      aria-label="Remover destaque"
                     >
                       <Trash2 className="w-4 h-4" />
                     </button>
@@ -1104,6 +1048,7 @@ export default function ProfilePage() {
                       onClick={() =>
                         setActiveHighlightIndex(null)
                       }
+                      aria-label="Fechar destaque"
                       className="rounded-lg p-1.5 border border-white/10 bg-black/40 text-white hover:bg-black/60 transition-colors"
                     >
                       <X className="w-4 h-4" />
@@ -1112,31 +1057,31 @@ export default function ProfilePage() {
                 </div>
               </div>
 
-              {highlightsList[activeHighlightIndex].type ===
-              'video' ? (
+              {/[.](mp4|webm|mov)(?:[?#]|$)/i.test(highlightsList[activeHighlightIndex].mediaUrls?.[activeHighlightMediaIndex] || highlightsList[activeHighlightIndex].image) ? (
                 <SecureVideo
                   src={`${
-                    highlightsList[activeHighlightIndex].image
+                    highlightsList[activeHighlightIndex].mediaUrls?.[activeHighlightMediaIndex] || highlightsList[activeHighlightIndex].image
                   }#t=0.001`}
                   controls
                   autoPlay
-                  className="absolute inset-0 w-full h-full object-cover z-0"
+                  className="absolute inset-0 w-full h-full object-contain sm:object-cover z-0"
                 />
               ) : (
                 <SecureImage
                   src={
-                    highlightsList[activeHighlightIndex].image
+                    highlightsList[activeHighlightIndex].mediaUrls?.[activeHighlightMediaIndex] || highlightsList[activeHighlightIndex].image
                   }
                   alt={
                     highlightsList[activeHighlightIndex].name
                   }
-                  className="absolute inset-0 w-full h-full object-cover z-0"
+                  className="absolute inset-0 w-full h-full object-contain sm:object-cover z-0"
                 />
               )}
 
               <button
                 onClick={handlePrevHighlight}
-                disabled={activeHighlightIndex === 0}
+                aria-label="Destaque anterior"
+                disabled={activeHighlightIndex === 0 && activeHighlightMediaIndex === 0}
                 className="rounded-lg absolute left-2 top-1/2 -translate-y-1/2 p-2 border border-white/10 bg-black/40 text-white hover:bg-black/60 disabled:opacity-0 z-10 transition-opacity"
               >
                 <ChevronLeft className="w-5 h-5" />
@@ -1144,9 +1089,10 @@ export default function ProfilePage() {
 
               <button
                 onClick={handleNextHighlight}
+                aria-label="Próximo destaque"
                 disabled={
-                  activeHighlightIndex ===
-                  highlightsList.length - 1
+                  activeHighlightIndex === highlightsList.length - 1 &&
+                  activeHighlightMediaIndex === (highlightsList[activeHighlightIndex].mediaUrls?.length || 1) - 1
                 }
                 className="rounded-lg absolute right-2 top-1/2 -translate-y-1/2 p-2 border border-white/10 bg-black/40 text-white hover:bg-black/60 disabled:opacity-0 z-10 transition-opacity"
               >
@@ -1173,7 +1119,7 @@ export default function ProfilePage() {
             </button>
           </div>
 
-          <div className="flex-1 overflow-y-auto no-scrollbar py-6">
+          <div className="flex-1 overflow-y-auto py-6">
             <div className="max-w-lg mx-auto space-y-6">
               {feedModal.list
                 .slice(feedModal.startIndex)
@@ -1215,8 +1161,8 @@ export default function ProfilePage() {
               className="rounded-lg w-full max-w-[320px] md:max-w-[400px] aspect-square object-cover shadow-2xl animate-scale-up"
             />
           ) : (
-            <div className="rounded-lg w-full max-w-[320px] md:max-w-[400px] aspect-square bg-neutral-900 flex items-center justify-center">
-              <Camera className="w-12 h-12 text-textSecondary" />
+            <div className="rounded-lg w-full max-w-[320px] md:max-w-[400px] aspect-square bg-neutral-900 flex items-center justify-center overflow-hidden">
+              <AvatarContent name={profileData.fullName || profileData.username} fallbackClassName="text-7xl" />
             </div>
           )}
         </div>
@@ -1228,13 +1174,23 @@ export default function ProfilePage() {
           users={connectionsList}
           loading={connectionsLoading}
           onClose={() => setConnectionsModal(null)}
+          onRelationshipChange={() => { void userService.getByUsername(profileData.username).then(profile => {
+            if (!profile) return;
+            setFollowersCount(profile.followerCount);
+            setFollowingCount(profile.followingCount);
+            setRealFriendsCount(profile.friendsCount);
+          }); }}
         />
       )}
 
-      {showRealFriendsModal && (
+      {realFriendsModalView && (
         <RealFriendsModal
           username={profileData.username}
-          onClose={() => setShowRealFriendsModal(false)}
+          initialView={realFriendsModalView}
+          onClose={() => setRealFriendsModalView(null)}
+          onFriendsChanged={() => { void userService.getByUsername(profileData.username).then(profile => {
+            if (profile) setRealFriendsCount(profile.friendsCount);
+          }); }}
         />
       )}
 
@@ -1246,79 +1202,17 @@ export default function ProfilePage() {
         onChange={handleAvatarFileChange}
       />
 
-      {showAvatarPickerModal && (
-        <div
-          className="fixed inset-0 z-[200] bg-black/90 backdrop-blur-md flex items-center justify-center p-4 animate-fade-in"
-          onClick={() =>
-            setShowAvatarPickerModal(false)
-          }
-        >
-          <div
-            className="w-full max-w-sm flex flex-col gap-8 animate-scale-up"
-            onClick={(e) => e.stopPropagation()}
-          >
-            <div className="relative text-center space-y-3">
-              <h3 className="text-xl font-bold text-white">
-                Foto de perfil
-              </h3>
-
-              <button
-                onClick={() =>
-                  setShowAvatarPickerModal(false)
-                }
-                className="soul-glass rounded-lg absolute -top-1 -right-2 p-1.5 text-zinc-500 hover:text-white transition-colors"
-              >
-                <X className="w-5 h-5" />
-              </button>
-            </div>
-
-            <div className="flex flex-col items-center gap-4">
-              {avatarFilePreview ? (
-                <SecureImage
-                  src={avatarFilePreview}
-                  alt="Preview"
-                  className="rounded-lg w-28 h-28 object-cover"
-                />
-              ) : (
-                <div className="rounded-lg w-28 h-28 bg-neutral-800 flex items-center justify-center">
-                  <Camera className="w-8 h-8 text-zinc-500" />
-                </div>
-              )}
-
-              <p className="text-xs text-zinc-400 text-center">
-                Esta foto será usada como sua foto de
-                perfil.
-              </p>
-            </div>
-
-            <div className="flex flex-col gap-3">
-              <button
-                onClick={() => {
-                  if (avatarFilePreview) {
-                    setEditForm((prev) => ({
-                      ...prev,
-                      avatarUrl: avatarFilePreview,
-                    }));
-                  }
-
-                  setShowAvatarPickerModal(false);
-                }}
-                className="rounded-lg w-full py-3.5 bg-white border border-white/10 text-black font-bold transition-all hover:bg-zinc-100 active:scale-[0.98]"
-              >
-                Confirmar
-              </button>
-
-              <button
-                onClick={() =>
-                  setShowAvatarPickerModal(false)
-                }
-                className="rounded-lg w-full py-3.5 bg-transparent border border-white/10 text-zinc-400 font-semibold hover:border-white/20 hover:text-white transition-all"
-              >
-                Cancelar
-              </button>
-            </div>
-          </div>
-        </div>
+      {showAvatarPickerModal && avatarFilePreview && (
+        <AvatarCropper
+          src={avatarFilePreview}
+          onCancel={() => setShowAvatarPickerModal(false)}
+          onConfirm={(file, preview) => {
+            setAvatarFile(file);
+            setAvatarFilePreview(preview);
+            setEditForm((previous) => ({ ...previous, avatarUrl: preview }));
+            setShowAvatarPickerModal(false);
+          }}
+        />
       )}
 
       <BottomNav />

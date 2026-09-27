@@ -1,4 +1,5 @@
 import { api } from './api';
+import type { ProfileBadgeKind } from '../components/profile/ProfileBadge';
 
 export interface SoultItem {
   id: string;
@@ -16,6 +17,7 @@ export interface SoultItem {
   username: string;
   name: string;
   profilePicture: string | null;
+  profileBadge?: ProfileBadgeKind;
 }
 
 export interface SoultAuthor {
@@ -23,6 +25,7 @@ export interface SoultAuthor {
   name: string;
   avatarUrl?: string;
   verified?: boolean;
+  profileBadge?: ProfileBadgeKind;
 }
 
 export interface SoultComment {
@@ -37,6 +40,7 @@ export interface Soult {
   title: string;
   description: string;
   category?: string;
+  audience?: 'PUBLIC' | 'REAL_FRIENDS' | 'PRIVATE';
   videoUrl?: string;
   thumbnailUrl: string;
   duration: number;
@@ -57,6 +61,7 @@ function mapRawToSoult(s: any): Soult {
     title: s.caption || 'Sem legenda',
     description: '',
     category: s.category || undefined,
+    audience: s.audience || 'PUBLIC',
     videoUrl: s.videoUrl,
     thumbnailUrl: s.thumbnailUrl || '',
     duration: s.duration || 0,
@@ -71,6 +76,7 @@ function mapRawToSoult(s: any): Soult {
       name: s.name || s.username || '',
       avatarUrl: s.profilePicture,
       verified: false,
+      profileBadge: s.profileBadge || 'NONE',
     },
     createdAt: s.createdAt,
   };
@@ -82,9 +88,12 @@ export const soultService = {
     const res = await api.get(`/soults/${encodeURIComponent(id)}`);
     return mapRawToSoult(res.data);
   },
+  async getSoultsPage(page = 0, size = 10, category?: string | null): Promise<{ items: Soult[]; last: boolean }> {
+    const res = await api.get<{ content: any[]; last: boolean }>('/soults', { params: { page, size, ...(category ? { category } : {}) } });
+    return { items: (res.data.content ?? []).map(mapRawToSoult), last: res.data.last ?? true };
+  },
   async getSoults(page = 0, size = 10): Promise<Soult[]> {
-    const res = await api.get<{ content: any[] }>('/soults', { params: { page, size } });
-    return (res.data.content ?? []).map(mapRawToSoult);
+    return (await this.getSoultsPage(page, size)).items;
   },
 
   async getSoultsByUsername(username: string, page = 0, size = 20): Promise<Soult[]> {
@@ -100,6 +109,7 @@ export const soultService = {
     caption?: string;
     category?: string;
     duration?: number;
+    audience?: 'PUBLIC' | 'REAL_FRIENDS' | 'PRIVATE';
   }): Promise<Soult> {
     const res = await api.post<any>('/soults', data);
     return mapRawToSoult(res.data);
@@ -107,6 +117,11 @@ export const soultService = {
 
   async deleteSoult(id: string): Promise<void> {
     await api.delete(`/soults/${id}`);
+  },
+
+  async updateSoult(id: string, data: { caption: string; audience: 'PUBLIC' | 'REAL_FRIENDS' | 'PRIVATE' }): Promise<Soult> {
+    const response = await api.patch(`/soults/${encodeURIComponent(id)}`, data);
+    return mapRawToSoult(response.data);
   },
 
   async likeSoult(id: string): Promise<void> {

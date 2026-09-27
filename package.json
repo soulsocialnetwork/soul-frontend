@@ -6,13 +6,18 @@
   "scripts": {
     "dev": "vite",
     "build": "tsc && vite build",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "build:external": "tsc && vite build --mode external --config vite.external.config.ts",
+    "preview:external": "vite preview --mode external --config vite.external.config.ts"
   },
   "dependencies": {
+    "@emoji-mart/data": "^1.2.1",
+    "@emoji-mart/react": "^1.1.1",
     "@zxing/browser": "0.1.5",
     "@zxing/library": "0.21.3",
     "axios": "^1.6.0",
     "clsx": "^2.1.0",
+    "emoji-mart": "^5.6.0",
     "i18next": "^26.3.6",
     "i18next-browser-languagedetector": "^8.2.1",
     "lucide-react": "^0.320.0",

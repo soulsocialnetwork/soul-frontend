@@ -69,6 +69,9 @@ export const authService = {
   async updateScreentime(dailyTimeLimit: number | null) {
     await api.put('/user/me/screentime', { dailyTimeLimit });
   },
+  async requestEmailChange(newEmail: string, currentPassword: string): Promise<void> {
+    await api.put('/user/me/email', { newEmail, currentPassword });
+  },
   async updatePrivacy(privateProfile: boolean) {
     await api.put('/user/me/privacy', { privateProfile });
   },

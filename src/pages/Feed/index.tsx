@@ -1,17 +1,20 @@
 import { SecureImage } from '../../components/ui/SecureMedia';
 import { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import { Header } from '../../components/layout/Header';
 import { BottomNav } from '../../components/layout/BottomNav';
 import { Sidebar } from '../../components/layout/Sidebar';
 import FeedTabs, { type FeedTab, type CategoryId } from '../../components/feed/FeedTabs';
 import { PostList } from '../../components/feed/PostList';
+import { OrganizationList } from '../../components/feed/OrganizationList';
 import { postService, type Post } from '../../services/postService';
 import { userService } from '../../services/userService';
 import type { ProfileSummary } from '../../services/api/types';
+import { ProfileBadge, profileNameColor } from '../../components/profile/ProfileBadge';
 import { getHttpErrorMessage } from '../../services/api';
 import { Search, MessageCircle, BookOpen, Compass, Newspaper, Loader2 } from 'lucide-react';
 import { useTranslation } from '../../i18n';
+import { SOUL_CATEGORIES } from '../../constants/categories';
 
 const SESSION_KEY = '@soul:intention_shown';
 
@@ -58,10 +61,9 @@ const LEGACY_CATEGORY_KEYWORDS: Partial<Record<CategoryId, string[]>> = {
   technology: ['tech', 'código', 'app', 'programar', 'software', 'digital', 'computador'],
 };
 
-const BEM_KEYWORDS = ['bem', 'ajud', 'doa', 'voluntári', 'solidari', 'caridade'];
-
 export default function FeedPage() {
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
 
   const [activeTab, setActiveTab] = useState<FeedTab>('house');
   const [posts, setPosts] = useState<Post[]>([]);
@@ -77,6 +79,16 @@ export default function FeedPage() {
   
   const [intentionState, setIntentionState] = useState<'check' | 'show' | 'done'>('check');
   const [activeCategories, setActiveCategories] = useState<CategoryId[]>([]);
+  const [organizationFilter, setOrganizationFilter] = useState(0);
+  useEffect(() => {
+    const category = searchParams.get('category');
+    if (category && SOUL_CATEGORIES.some(item => item.id === category)) {
+      setActiveCategories([category as CategoryId]);
+      setActiveTab('house');
+      sessionStorage.setItem(SESSION_KEY, '1');
+      setIntentionState('done');
+    }
+  }, [searchParams]);
   const [realFriendIds, setRealFriendIds] = useState<Set<string>>(new Set());
 
   useEffect(() => { void userService.getRealFriendIds().then(ids => setRealFriendIds(new Set(ids))).catch(() => setRealFriendIds(new Set())); }, []);
@@ -147,21 +159,23 @@ export default function FeedPage() {
   }, []);
 
   useEffect(() => {
+    if (page < 1) return;
+    let active = true;
     const interval = setInterval(async () => {
       try {
-        const response = await postService.getPostsPaged(0, 20);
-        setPosts((prev) => {
-          const existing = prev ?? [];
-          const existingIds = new Set(existing.map(p => p.id));
-          const newPosts = response.posts.filter(p => !existingIds.has(p.id));
-          if (newPosts.length === 0) return prev;
-          return [...newPosts, ...existing];
-        });
+        const responses = await Promise.all(
+          Array.from({ length: page }, (_, index) => postService.getPostsPaged(index, 20))
+        );
+        if (!active) return;
+        const unique = new Map<string, Post>();
+        responses.forEach(response => response.posts.forEach(post => unique.set(post.id, post)));
+        setPosts([...unique.values()]);
+        setHasMore(!responses[responses.length - 1].isLast);
       } catch {
       }
     }, 30000);
-    return () => clearInterval(interval);
-  }, []);
+    return () => { active = false; clearInterval(interval); };
+  }, [page]);
 
   const handleLoadMore = async () => {
     if (loadingMore || !hasMore) return;
@@ -222,14 +236,6 @@ export default function FeedPage() {
 
     if (activeTab === 'education' && !post.author.verified) {
       return false;
-    }
-
-    if (activeTab === 'bem') {
-      const isBem = BEM_KEYWORDS.some((keyword) => text.includes(keyword));
-
-      if (!isBem) {
-        return false;
-      }
     }
 
     if (activeCategories.length === 0) {
@@ -315,7 +321,7 @@ export default function FeedPage() {
       <div className="flex-1 flex flex-col min-w-0">
         <Header />
 
-        <main className="flex-1 overflow-y-auto no-scrollbar pb-24 lg:pb-12 pt-2 lg:pt-8 px-4 sm:px-6">
+        <main className="flex-1 overflow-y-auto pb-24 lg:pb-12 pt-2 lg:pt-8 px-4 sm:px-6">
           <div className="w-full max-w-xl lg:max-w-2xl mx-auto space-y-4 lg:space-y-5">
 
             <div className="relative z-20">
@@ -347,7 +353,7 @@ export default function FeedPage() {
                             {user.profilePicture ? <SecureImage src={user.profilePicture} className="w-full h-full object-cover" /> : <span className="flex items-center justify-center w-full h-full text-xs font-bold text-white">{user.name.charAt(0)}</span>}
                           </div>
                           <div className="flex-1 min-w-0">
-                            <p className="text-sm font-semibold text-white leading-none truncate">{user.username}</p>
+                            <p className="flex min-w-0 items-center gap-1.5 text-sm font-semibold leading-none"><span className={`truncate ${profileNameColor(user.profileBadge)}`}>{user.username}</span><ProfileBadge badge={user.profileBadge} className="h-3.5 w-3.5" /></p>
                             <p className="text-xs text-textSecondary mt-1 truncate">{user.name}</p>
                           </div>
                        </div>
@@ -365,6 +371,8 @@ export default function FeedPage() {
               activeCategories={activeCategories}
               onToggleCategory={toggleCategory}
               onClearCategories={() => setActiveCategories([])}
+              organizationFilter={organizationFilter}
+              onOrganizationFilterChange={setOrganizationFilter}
             />
 
             {feedError && !loading && (
@@ -387,12 +395,13 @@ export default function FeedPage() {
               </div>
             )}
 
-            <PostList
-              posts={filteredPosts}
-              loading={loading}
-            />
+            {activeTab === 'bem' ? (
+              <OrganizationList query={searchQuery} filter={organizationFilter} />
+            ) : (
+              <PostList posts={filteredPosts} loading={loading} onDelete={id => setPosts(previous => previous.filter(post => post.id !== id))} />
+            )}
 
-            {!loading && hasMore && filteredPosts.length > 0 && (
+            {activeTab !== 'bem' && !loading && hasMore && filteredPosts.length > 0 && (
               <div className="flex justify-center pb-4">
                 <button
                   onClick={handleLoadMore}

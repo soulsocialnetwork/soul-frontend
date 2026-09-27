@@ -1,4 +1,5 @@
-import { SecureImage, SecureVideo } from '../ui/SecureMedia';
+import { SecureVideo } from '../ui/SecureMedia';
+import { AvatarContent } from '../ui/AvatarContent';
 import { useState, useRef, useEffect, useId } from 'react';
 import {
   Play,
@@ -12,7 +13,7 @@ import {
   Check,
   UserPlus,
   UserCheck,
-  CheckCircle2
+  Pencil,
 } from 'lucide-react';
 import type { Soult } from '../../services/soultService';
 import { soultService } from '../../services/soultService';
@@ -20,6 +21,11 @@ import { userService } from '../../services/userService';
 import { useNavigate } from 'react-router-dom';
 import { cn } from '../../utils/cn';
 import { useAuth } from '../../context/AuthContext';
+import { recordSoultPlayed } from '../../hooks/useScreenUsage';
+import { getHttpErrorMessage } from '../../services/api';
+import { ProfileBadge, profileNameColor } from '../profile/ProfileBadge';
+import { modalBackdropClass, modalPanelClass, modalCloseClass } from '../ui/modalStyles';
+import { ConfirmUnfollowModal } from '../profile/ConfirmUnfollowModal';
 
 function timeAgo(isoDate: string): string {
   const diff = Math.floor((Date.now() - new Date(isoDate).getTime()) / 1000);
@@ -67,7 +73,15 @@ export function SoultCard({ soult, isActive = true }: SoultCardProps) {
   const [playing, setPlaying] = useState(false);
   const [liked, setLiked] = useState(soult.hasLiked || false);
   const [saved, setSaved] = useState(soult.saved || false);
+  const [displayCaption, setDisplayCaption] = useState(soult.title === 'Sem legenda' ? '' : soult.title);
+  const [displayAudience, setDisplayAudience] = useState<'PUBLIC' | 'REAL_FRIENDS' | 'PRIVATE'>(soult.audience || 'PUBLIC');
+  const [editing, setEditing] = useState(false);
+  const [editCaption, setEditCaption] = useState(displayCaption);
+  const [editAudience, setEditAudience] = useState(displayAudience);
+  const [editError, setEditError] = useState('');
+  const [savingEdit, setSavingEdit] = useState(false);
   const [isFollowing, setIsFollowing] = useState(false);
+  const [confirmUnfollow, setConfirmUnfollow] = useState(false);
   const [showHeartAnim, setShowHeartAnim] = useState(false);
   const lastTapRef = useRef<number>(0);
 
@@ -84,6 +98,7 @@ export function SoultCard({ soult, isActive = true }: SoultCardProps) {
   const [progress, setProgress] = useState(0);
   const [currentTime, setCurrentTime] = useState(0);
   const [duration, setDuration] = useState(0);
+  const [showPauseSuggestion, setShowPauseSuggestion] = useState(false);
 
   useEffect(() => {
     if (!isActive) {
@@ -100,7 +115,7 @@ export function SoultCard({ soult, isActive = true }: SoultCardProps) {
     const observer = new ResizeObserver(measure);
     elements.forEach(element => observer.observe(element));
     return () => observer.disconnect();
-  }, [captionExpanded, soult.title, soult.description]);
+  }, [captionExpanded, displayCaption, soult.description]);
 
   useEffect(() => {
     const video = videoRef.current;
@@ -191,13 +206,16 @@ export function SoultCard({ soult, isActive = true }: SoultCardProps) {
     if (!isFollowing) {
       setShowConnectModal(true);
     } else {
-      setIsFollowing(false);
-      try {
-        await userService.unfollow(soult.username);
-      } catch {
-        setIsFollowing(true);
-      }
+      setConfirmUnfollow(true);
     }
+  };
+
+  const confirmFollowRemoval = async () => {
+    if (!soult.username) return;
+    setConfirmUnfollow(false);
+    setIsFollowing(false);
+    try { await userService.unfollow(soult.username); }
+    catch { setIsFollowing(true); }
   };
 
   const handleProgressClick = (e: React.MouseEvent<HTMLDivElement>) => {
@@ -276,6 +294,13 @@ export function SoultCard({ soult, isActive = true }: SoultCardProps) {
           onPlay={() => {
             if (!activeRef.current || document.hidden) { videoRef.current?.pause(); return; }
             setPlaying(true);
+            if (currentUser?.id) {
+              const count = recordSoultPlayed(currentUser.id, soult.id);
+              try {
+                const limit = Number(localStorage.getItem(`soul:soult-limit:${currentUser.id}`));
+                if (limit > 0 && count === limit) setShowPauseSuggestion(true);
+              } catch { }
+            }
           }}
           onPause={() => setPlaying(false)}
           onTimeUpdate={handleTimeUpdate}
@@ -287,6 +312,9 @@ export function SoultCard({ soult, isActive = true }: SoultCardProps) {
             <Heart className="w-20 h-20 text-white/90 fill-white/90 animate-ping" />
           </div>
         )}
+        {showPauseSuggestion && <div role="status" className="absolute left-4 right-4 top-6 z-40 rounded-xl border border-white/20 bg-black/75 p-3 text-xs text-white/90 backdrop-blur-sm" onClick={event => event.stopPropagation()}>
+          <div className="flex items-start justify-between gap-2"><p>Você chegou à quantidade de Soults que escolheu para hoje. Que tal uma pausa?</p><button type="button" onClick={() => setShowPauseSuggestion(false)} aria-label="Dispensar sugestão"><X size={16} /></button></div>
+        </div>}
 
         <div
           className={cn(
@@ -311,26 +339,18 @@ export function SoultCard({ soult, isActive = true }: SoultCardProps) {
           </div>
         </div>
 
-        <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/75 via-black/25 to-transparent px-4 pb-20 lg:pb-6 pt-24 flex flex-col gap-2 z-10 pointer-events-none">
+        <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/75 via-black/25 to-transparent pl-4 pr-20 lg:px-4 pb-20 lg:pb-6 pt-24 flex flex-col gap-2 z-10 pointer-events-none">
           <div
             className="flex items-center gap-2.5 pointer-events-auto cursor-pointer"
             onClick={(e) => { e.stopPropagation(); navigate(`/profile/${soult.username || soult.author.id}`); }}
           >
             <div className="rounded-lg w-8 h-8 overflow-hidden bg-neutral-800 shrink-0">
-              {soult.author.avatarUrl ? (
-                <SecureImage src={soult.author.avatarUrl} alt={soult.author.name} className="w-full h-full object-cover object-top" />
-              ) : (
-                <div className="w-full h-full bg-white/15 flex items-center justify-center">
-                  <span className="text-white text-xs font-bold">{soult.author.name.charAt(0)}</span>
-                </div>
-              )}
+              <AvatarContent src={soult.author.avatarUrl} name={soult.author.name || soult.username} imageClassName="object-top" fallbackClassName="text-xs" />
             </div>
 
             <div className="flex items-center gap-2">
-              <span className="text-white font-semibold text-sm">{soult.author.name}</span>
-              {soult.author.verified && (
-                <CheckCircle2 className="w-3.5 h-3.5 text-white/70 shrink-0" strokeWidth={2.5} />
-              )}
+              <span className={cn('font-semibold text-sm', profileNameColor(soult.author.profileBadge))}>{soult.author.name}</span>
+              <ProfileBadge badge={soult.author.profileBadge} className="h-3.5 w-3.5" />
             </div>
 
             {!isOwn && (
@@ -358,14 +378,14 @@ export function SoultCard({ soult, isActive = true }: SoultCardProps) {
             onClick={event => event.stopPropagation()}
           >
             <p ref={titleRef} className={cn('text-white font-semibold text-sm break-words whitespace-pre-wrap', !captionExpanded && 'line-clamp-1')}>
-              {soult.title}
+              {displayCaption || 'Sem legenda'}
             </p>
             {soult.description && (
               <p ref={descriptionRef} className={cn('text-white/60 text-xs leading-relaxed break-words whitespace-pre-wrap', !captionExpanded && 'line-clamp-2')}>
                 {soult.description}
               </p>
             )}
-            {soult.category && <span className="block text-xs font-medium text-white/50">#{soult.category}</span>}
+            {soult.category && <button type="button" onClick={() => navigate(`/soults?category=${encodeURIComponent(soult.category!)}`)} className="block text-xs font-medium text-white/50 hover:text-white/80">#{soult.category}</button>}
           </div>
           {(captionOverflows || captionExpanded) && (
             <button
@@ -389,7 +409,8 @@ export function SoultCard({ soult, isActive = true }: SoultCardProps) {
 
       </div>
 
-        <div className="absolute bottom-32 right-3 flex flex-col gap-4 items-center z-20 lg:static lg:w-16 lg:shrink-0 lg:self-end lg:pb-6">
+        <div className="absolute bottom-40 right-3 flex flex-col gap-2.5 items-center z-20 lg:static lg:w-16 lg:shrink-0 lg:self-end lg:pb-6 lg:gap-4">
+          {isOwn && <button type="button" onClick={event => { event.stopPropagation(); setEditCaption(displayCaption); setEditAudience(displayAudience); setEditError(''); setEditing(true); }} className="flex flex-col items-center gap-1" aria-label="Editar Soult"><span className="flex h-10 w-10 items-center justify-center rounded-xl border border-white/10 bg-black/40"><Pencil size={18} /></span><span className="text-[10px] text-white/70">Editar</span></button>}
           <button
             onClick={(e) => { e.stopPropagation(); handleLike(); }}
             className="flex flex-col items-center gap-1"
@@ -437,6 +458,20 @@ export function SoultCard({ soult, isActive = true }: SoultCardProps) {
             <span className="text-white/70 text-[10px] font-medium">Enviar</span>
           </button>
         </div>
+      {editing && <div className={modalBackdropClass} onMouseDown={event => { if (event.target === event.currentTarget) setEditing(false); }}>
+        <form className={modalPanelClass} role="dialog" aria-modal="true" aria-labelledby="edit-soult-title" onSubmit={async event => {
+          event.preventDefault(); if (savingEdit) return; setSavingEdit(true); setEditError('');
+          try { const updated = await soultService.updateSoult(soult.id, { caption: editCaption.trim(), audience: editAudience }); setDisplayCaption(updated.title === 'Sem legenda' ? '' : updated.title); setDisplayAudience(updated.audience || 'PUBLIC'); setEditing(false); }
+          catch (error) { setEditError(getHttpErrorMessage(error)); }
+          finally { setSavingEdit(false); }
+        }}>
+          <div className="relative text-center"><h2 id="edit-soult-title" className="text-xl font-bold">Editar Soult</h2><button type="button" onClick={() => setEditing(false)} aria-label="Fechar" className={modalCloseClass}><X size={20} /></button></div>
+          <div className="space-y-2"><label htmlFor="edit-soult-caption" className="block text-xs text-zinc-400">Legenda</label><textarea id="edit-soult-caption" value={editCaption} onChange={event => setEditCaption(event.target.value)} maxLength={150} className="min-h-28 w-full resize-y rounded-lg border border-white/15 bg-white/[0.04] p-3 text-sm text-white focus-visible:outline focus-visible:outline-1 focus-visible:outline-white/40" /><p className="text-xs text-zinc-500">O vídeo permanece como foi publicado.</p></div>
+          <label className="block space-y-2 text-xs text-zinc-400">Quem pode ver<select value={editAudience} onChange={event => setEditAudience(event.target.value as typeof editAudience)} className="block h-11 w-full rounded-lg border border-white/15 bg-[#1c1c1c] px-3 text-sm text-white focus-visible:outline focus-visible:outline-1 focus-visible:outline-white/40"><option value="PUBLIC">Público</option><option value="REAL_FRIENDS">Amigos Reais</option><option value="PRIVATE">Só eu</option></select></label>
+          {editError && <p role="alert" className="text-sm text-red-300">{editError}</p>}
+          <div className="flex gap-3"><button type="button" onClick={() => setEditing(false)} className="soul-glass h-11 flex-1 rounded-lg text-sm font-semibold">Cancelar</button><button type="submit" disabled={savingEdit} className="h-11 flex-1 rounded-lg bg-white text-sm font-semibold text-black disabled:opacity-50">{savingEdit ? 'Salvando...' : 'Salvar'}</button></div>
+        </form>
+      </div>}
       {commentsOpen && (
         <div
           className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-end lg:items-center justify-center lg:justify-center p-0 lg:p-4 animate-fade-in"
@@ -501,21 +536,22 @@ export function SoultCard({ soult, isActive = true }: SoultCardProps) {
 
       {shareOpen && (
         <div
-          className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4 animate-fade-in"
+          className={modalBackdropClass}
           onClick={() => setShareOpen(false)}
         >
           <div
-            className="w-full max-w-sm bg-background border border-white/10 rounded-3xl p-6 space-y-5 shadow-2xl"
+            className={modalPanelClass}
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="share-soult-title"
             onClick={(e) => e.stopPropagation()}
           >
-            <div className="flex items-center justify-between pb-3 border-b border-white/[0.08]">
-              <div className="flex items-center gap-2">
-                <Share2 className="w-5 h-5 text-white" />
-                <h3 className="text-base font-bold text-white">Compartilhar Soult</h3>
-              </div>
+            <div className="relative text-center">
+              <h3 id="share-soult-title" className="text-xl font-bold text-white">Compartilhar Soult</h3>
               <button
                 onClick={() => setShareOpen(false)}
-                className="p-1.5 rounded-full text-textSecondary hover:text-white hover:bg-white/10 transition-colors"
+                aria-label="Fechar"
+                className={modalCloseClass}
               >
                 <X className="w-5 h-5" />
               </button>
@@ -524,21 +560,17 @@ export function SoultCard({ soult, isActive = true }: SoultCardProps) {
             <div className="grid grid-cols-2 gap-3">
               <button
                 onClick={handleCopyLink}
-                className="flex flex-col items-center gap-3 p-5 rounded-2xl soul-glass active:scale-95 transition-all group"
+                className="soul-glass flex flex-col items-center gap-3 rounded-lg px-3 py-5 transition-colors hover:bg-white/[0.07]"
               >
-                <div className="w-12 h-12 rounded-full bg-white/10 text-white flex items-center justify-center border border-white/10 group-hover:border-white/30 transition-colors">
-                  {copied ? <Check className="w-5 h-5 text-emerald-400" /> : <Copy className="w-5 h-5" />}
-                </div>
+                {copied ? <Check className="h-5 w-5 text-emerald-400" /> : <Copy className="h-5 w-5" />}
                 <span className="text-xs font-semibold text-white/90">{copied ? 'Copiado!' : 'Copiar link'}</span>
               </button>
 
               <button
                 onClick={handleNativeShare}
-                className="flex flex-col items-center gap-3 p-5 rounded-2xl soul-glass active:scale-95 transition-all group"
+                className="soul-glass flex flex-col items-center gap-3 rounded-lg px-3 py-5 transition-colors hover:bg-white/[0.07]"
               >
-                <div className="w-12 h-12 rounded-full bg-white/10 text-white flex items-center justify-center border border-white/10 group-hover:border-white/30 transition-colors">
-                  <Share2 className="w-5 h-5" />
-                </div>
+                <Share2 className="h-5 w-5" />
                 <span className="text-xs font-semibold text-white/90">Outros apps</span>
               </button>
             </div>
@@ -596,6 +628,7 @@ export function SoultCard({ soult, isActive = true }: SoultCardProps) {
           </div>
         </div>
       )}
+      {confirmUnfollow && soult.username && <ConfirmUnfollowModal username={soult.username} onCancel={() => setConfirmUnfollow(false)} onConfirm={() => void confirmFollowRemoval()} />}
     </article>
   );
 }

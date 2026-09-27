@@ -5,6 +5,39 @@ export const dayKey = (date = new Date()) =>
   [date.getFullYear(), String(date.getMonth() + 1).padStart(2, '0'), String(date.getDate()).padStart(2, '0')].join('-');
 const storageKey = (id: string) => 'soul:usage:' + id;
 const eventName = 'soul:usage-updated';
+const soultEventName = 'soul:soult-usage-updated';
+const soultStorageKey = (id: string) => 'soul:soults-watched:' + id;
+
+export function recordSoultPlayed(userId: string, soultId: string) {
+  try {
+    const today = dayKey();
+    const stored = JSON.parse(localStorage.getItem(soultStorageKey(userId)) || '{}') as Record<string, string[]>;
+    const watched = Array.isArray(stored[today]) ? stored[today] : [];
+    if (watched.includes(soultId)) return watched.length;
+    const next = Object.fromEntries(Object.entries(stored).filter(([day]) => day >= dayKey(new Date(Date.now() - 30 * 86400000))));
+    next[today] = [...watched, soultId];
+    localStorage.setItem(soultStorageKey(userId), JSON.stringify(next));
+    window.dispatchEvent(new Event(soultEventName));
+    return next[today].length;
+  } catch { return null; }
+}
+
+export function useSoultUsage(id?: string) {
+  const [watched, setWatched] = useState(0);
+  useEffect(() => {
+    const update = () => {
+      try {
+        const data = id ? JSON.parse(localStorage.getItem(soultStorageKey(id)) || '{}') : {};
+        setWatched(Array.isArray(data[dayKey()]) ? data[dayKey()].length : 0);
+      } catch { setWatched(0); }
+    };
+    update();
+    window.addEventListener(soultEventName, update);
+    window.addEventListener('storage', update);
+    return () => { window.removeEventListener(soultEventName, update); window.removeEventListener('storage', update); };
+  }, [id]);
+  return watched;
+}
 
 function readUsage(id: string): Record<string, number> {
   try {

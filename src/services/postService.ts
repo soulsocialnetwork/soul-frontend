@@ -1,4 +1,5 @@
 import { api, endpoints } from './api';
+import { resolveProfileBadge, type ProfileBadgeKind } from '../components/profile/ProfileBadge';
 import { isLastPage, totalPageCount } from './api/page';
 import type {
   PostResponse,
@@ -23,10 +24,13 @@ export interface Post {
     username: string;
     avatarUrl?: string;
     verified?: boolean;
+    profileBadge?: ProfileBadgeKind;
   };
   content: string;
   imageUrl?: string;
+  imageUrls?: string[];
   category?: string;
+  audience?: 'PUBLIC' | 'REAL_FRIENDS' | 'PRIVATE';
   likesCount: number;
   commentsCount: number;
   hasLiked?: boolean;
@@ -45,10 +49,13 @@ function convertPostResponseToPost(
       username: postResponse.username,
       avatarUrl: postResponse.profilePicture || undefined,
       verified: postResponse.verified || false,
+      profileBadge: resolveProfileBadge(postResponse.profileBadge, postResponse.verified && postResponse.username.toLowerCase() === 'soul'),
     },
     content: postResponse.content,
     imageUrl: postResponse.imageUrl || undefined,
+    imageUrls: postResponse.imageUrls?.length ? postResponse.imageUrls : postResponse.imageUrl ? [postResponse.imageUrl] : [],
     category: postResponse.category || undefined,
+    audience: postResponse.audience || 'PUBLIC',
     likesCount: postResponse.likesCount || 0,
     commentsCount: postResponse.commentsCount || 0,
     hasLiked: postResponse.hasLiked || false,
@@ -207,6 +214,14 @@ export const postService = {
 
   async deleteComment(postId: string, commentId: string): Promise<void> {
     await api.delete(`/posts/${encodeURIComponent(postId)}/comments/${encodeURIComponent(commentId)}`);
+  },
+
+  async updateComment(postId: string, commentId: string, content: string): Promise<import('./api/types').CommentResponse> {
+    const response = await api.put<import('./api/types').CommentResponse>(
+      `/posts/${encodeURIComponent(postId)}/comments/${encodeURIComponent(commentId)}`,
+      { content }
+    );
+    return response.data;
   },
 
   async hasLiked(postId: string): Promise<boolean> {

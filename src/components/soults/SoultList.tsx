@@ -8,6 +8,8 @@ interface SoultListProps {
   soults: Soult[];
   loading?: boolean;
   initialId?: string | null;
+  onNearEnd?: () => void;
+  emptyLabel?: string;
 }
 
 function SoultSkeleton() {
@@ -33,12 +35,13 @@ function SoultSkeleton() {
   );
 }
 
-export function SoultList({ soults, loading = false, initialId }: SoultListProps) {
+export function SoultList({ soults, loading = false, initialId, onNearEnd, emptyLabel }: SoultListProps) {
   const { t } = useTranslation('soults');
   const scrollRef = useRef<HTMLDivElement>(null);
+  const initialScrollIdRef = useRef<string | null>(null);
   const [activeIndex, setActiveIndex] = useState(0);
   useEffect(() => {
-    if (loading || !initialId) return;
+    if (loading || !initialId || initialScrollIdRef.current === initialId) return;
     const index = soults.findIndex(soult => soult.id === initialId);
     if (index < 0) return;
     const frame = requestAnimationFrame(() => {
@@ -46,6 +49,7 @@ export function SoultList({ soults, loading = false, initialId }: SoultListProps
       if (!container) return;
       container.scrollTop = index * container.clientHeight;
       setActiveIndex(index);
+      initialScrollIdRef.current = initialId;
     });
     return () => cancelAnimationFrame(frame);
   }, [loading, initialId, soults]);
@@ -78,7 +82,7 @@ export function SoultList({ soults, loading = false, initialId }: SoultListProps
           </div>
 
           <p className="text-sm font-medium text-white/90">
-            {t('empty')}
+            {emptyLabel || t('empty')}
           </p>
 
           <p className="text-xs mt-1.5 text-white/35 max-w-[260px] leading-relaxed">
@@ -93,7 +97,11 @@ export function SoultList({ soults, loading = false, initialId }: SoultListProps
     <div className="relative w-full h-full">
     <div ref={scrollRef} onScroll={event => {
       const container = event.currentTarget;
-      if (container.clientHeight) setActiveIndex(Math.round(container.scrollTop / container.clientHeight));
+      if (container.clientHeight) {
+        const index = Math.round(container.scrollTop / container.clientHeight);
+        setActiveIndex(index);
+        if (index >= soults.length - 3) onNearEnd?.();
+      }
     }} className="w-full h-full overflow-y-scroll snap-y snap-mandatory no-scrollbar">
       {soults.map((soult, index) => (
         <div
