@@ -7,9 +7,7 @@ name: string;
 username: string;
 profilePicture: string | null;
 bio: string | null;
-accountStatus: boolean;
 privacyStatus: boolean;
-metricsStatus: boolean;
 role?: string;
 }
 
@@ -25,19 +23,14 @@ id: string;
 name: string;
 username: string;
 email: string;
-dateOfBirth: string;
-profilePicture: string | null;
-bio: string | null;
-createdAt: string;
-accountStatus: boolean;
-privacyStatus: boolean;
-metricsStatus: boolean;
-role?: string;
+  profilePicture: string | null;
+  bio: string | null;
+  privacyStatus: boolean;
+  role?: string;
 }
 
 export interface LoginResponse {
 token: string;
-user: UserResponse;
 }
 
 export interface LoginRequest {

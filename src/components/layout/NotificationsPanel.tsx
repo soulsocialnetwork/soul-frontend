@@ -2,7 +2,7 @@ import { SecureImage } from '../ui/SecureMedia';
 import { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { cn } from '../../utils/cn';
-import { ArrowLeft, Bell, Check, X, Loader2, Heart, MessageCircle, UserPlus, CheckCircle2, MessageSquare, Ghost } from 'lucide-react';
+import { ArrowLeft, Bell, Check, X, Loader2, Heart, MessageCircle, UserPlus, CheckCircle2, MessageSquare, Ghost, ChevronDown, ChevronUp, Trash2 } from 'lucide-react';
 import { userService } from '../../services/userService';
 import { notificationService, notifyNotificationsUpdated, type NotificationResponse } from '../../services/notificationService';
 import { getHttpErrorMessage } from '../../services/api';
@@ -14,6 +14,7 @@ interface NotificationsPanelProps {
 }
 
 type TabType = 'all' | 'requests';
+const COLLAPSED_NOTIFICATION_COUNT = 8;
 
 // agrega notificações e solicitações pendentes com atualização da contagem de leitura
 export function NotificationsPanel({
@@ -32,15 +33,19 @@ export function NotificationsPanel({
   const [error, setError] = useState('');
   const [refreshKey, setRefreshKey] = useState(0);
   const [markingAll, setMarkingAll] = useState(false);
+  const [clearingAll, setClearingAll] = useState(false);
+  const [showClearConfirmation, setShowClearConfirmation] = useState(false);
   const [hasMoreNotifications, setHasMoreNotifications] = useState(false);
   const [hasMoreRequests, setHasMoreRequests] = useState(false);
   const [loadingMore, setLoadingMore] = useState(false);
+  const [showAllNotifications, setShowAllNotifications] = useState(false);
   const notificationPages = useRef(1);
   const requestPages = useRef(1);
   const loaded = useRef(false);
 
   useEffect(() => {
     if (!isOpen) return;
+    setShowAllNotifications(false);
     let cancelled = false;
     const loadData = async () => {
       if (!loaded.current) setIsLoading(true);
@@ -83,6 +88,10 @@ export function NotificationsPanel({
     };
   }, [isOpen, refreshKey]);
 
+  const displayedNotifications = showAllNotifications
+    ? notifications
+    : notifications.slice(0, COLLAPSED_NOTIFICATION_COUNT);
+
   const loadMore = async () => {
     if (loadingMore) return;
     setLoadingMore(true);
@@ -113,6 +122,25 @@ export function NotificationsPanel({
       notifyNotificationsUpdated();
     } catch (cause) { setError(getHttpErrorMessage(cause)); }
     finally { setMarkingAll(false); }
+  };
+
+  const deleteNotification = async (id: string) => {
+    try {
+      await notificationService.deleteNotification(id);
+      setNotifications(previous => previous.filter(notification => notification.id !== id));
+      notifyNotificationsUpdated();
+    } catch (cause) { setError(getHttpErrorMessage(cause)); }
+  };
+
+  const deleteAllNotifications = async () => {
+    setClearingAll(true);
+    try {
+      await notificationService.deleteAllNotifications();
+      setNotifications([]);
+      notifyNotificationsUpdated();
+      setShowClearConfirmation(false);
+    } catch (cause) { setError(getHttpErrorMessage(cause)); }
+    finally { setClearingAll(false); }
   };
 
   const openNotification = async (notification: NotificationResponse) => {
@@ -261,11 +289,18 @@ export function NotificationsPanel({
             <h2 className="text-lg sm:text-xl font-bold text-textPrimary">
               Notificações
             </h2>
-            {notifications.some(notification => !notification.read && notification.type !== 'FOLLOW_REQUEST') && (
-              <button onClick={markAllRead} disabled={markingAll} className="ml-auto text-xs font-semibold text-textSecondary hover:text-white disabled:opacity-50">
-                {markingAll ? 'Marcando...' : 'Marcar lidas'}
-              </button>
-            )}
+            <div className="ml-auto flex items-center gap-3">
+              {notifications.some(notification => !notification.read && notification.type !== 'FOLLOW_REQUEST') && (
+                <button onClick={markAllRead} disabled={markingAll} className="text-xs font-semibold text-textSecondary hover:text-white disabled:opacity-50">
+                  {markingAll ? 'Marcando...' : 'Marcar lidas'}
+                </button>
+              )}
+              {notifications.length > 0 && (
+                <button onClick={() => setShowClearConfirmation(true)} disabled={clearingAll} className="text-xs font-semibold text-textSecondary hover:text-red-300 disabled:opacity-50">
+                  {clearingAll ? 'Limpando...' : 'Limpar'}
+                </button>
+              )}
+            </div>
           </div>
           
           <div className="flex gap-2">
@@ -394,7 +429,7 @@ export function NotificationsPanel({
               </div>
             ) : (
               <div className="space-y-2">
-                {notifications.map((notif) => (
+                {displayedNotifications.map((notif) => (
                   <div role="button" tabIndex={0}
                     key={notif.id}
                     className={cn(
@@ -440,14 +475,47 @@ export function NotificationsPanel({
                     {!notif.read && (
                       <div className="w-2 h-2 rounded-full bg-blue-500 shrink-0" />
                     )}
+                    <button
+                      type="button"
+                      aria-label="Apagar notificação"
+                      onClick={event => { event.stopPropagation(); void deleteNotification(notif.id); }}
+                      className="shrink-0 p-1.5 text-textSecondary opacity-100 sm:opacity-0 transition-opacity hover:text-red-300 sm:group-hover:opacity-100"
+                    >
+                      <Trash2 className="h-4 w-4" />
+                    </button>
                   </div>
                 ))}
+                {notifications.length > COLLAPSED_NOTIFICATION_COUNT && (
+                  <button
+                    type="button"
+                    onClick={() => setShowAllNotifications(value => !value)}
+                    className="flex w-full items-center justify-center gap-2 rounded-xl py-3 text-sm font-semibold text-textSecondary transition-colors hover:bg-white/[0.04] hover:text-white"
+                    aria-expanded={showAllNotifications}
+                  >
+                    {showAllNotifications ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
+                    {showAllNotifications ? 'Mostrar menos' : `Ver mais ${notifications.length - COLLAPSED_NOTIFICATION_COUNT} notificações`}
+                  </button>
+                )}
                 {hasMoreNotifications && <button onClick={loadMore} disabled={loadingMore} className="w-full rounded-xl border border-white/10 py-3 text-sm text-textSecondary hover:text-white disabled:opacity-50">{loadingMore ? 'Carregando...' : 'Ver notificações anteriores'}</button>}
               </div>
             )
           )}
         </div>
       </div>
+
+      {showClearConfirmation && (
+        <div className="fixed inset-0 z-[70] flex items-center justify-center bg-black/80 p-4 backdrop-blur-sm animate-fade-in" onMouseDown={event => { if (event.target === event.currentTarget && !clearingAll) setShowClearConfirmation(false); }}>
+          <div className="w-full max-w-sm rounded-2xl border border-white/10 bg-[#1c1c1c] p-5 shadow-2xl" role="dialog" aria-modal="true" aria-labelledby="clear-notifications-title">
+            <div className="mb-4 flex h-10 w-10 items-center justify-center rounded-xl bg-red-500/10 text-red-300"><Trash2 className="h-5 w-5" /></div>
+            <h3 id="clear-notifications-title" className="text-lg font-bold text-white">Limpar notificações?</h3>
+            <p className="mt-2 text-sm leading-relaxed text-textSecondary">Todas as suas notificações serão apagadas. Esta ação não pode ser desfeita.</p>
+            <div className="mt-6 grid grid-cols-2 gap-3">
+              <button type="button" disabled={clearingAll} onClick={() => setShowClearConfirmation(false)} className="rounded-xl border border-white/10 px-4 py-3 text-sm font-semibold text-white transition-colors hover:bg-white/[0.05] disabled:opacity-50">Cancelar</button>
+              <button type="button" disabled={clearingAll} onClick={() => void deleteAllNotifications()} className="rounded-xl bg-red-500 px-4 py-3 text-sm font-semibold text-white transition-colors hover:bg-red-400 disabled:opacity-50">{clearingAll ? 'Limpando...' : 'Limpar tudo'}</button>
+            </div>
+          </div>
+        </div>
+      )}
     </>
   );
 }

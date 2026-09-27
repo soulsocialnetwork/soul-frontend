@@ -67,6 +67,10 @@ export default function FeedPage() {
 
   const [activeTab, setActiveTab] = useState<FeedTab>('house');
   const [posts, setPosts] = useState<Post[]>([]);
+  const [educationPosts, setEducationPosts] = useState<Post[]>([]);
+  const [educationLoaded, setEducationLoaded] = useState(false);
+  const [educationLoading, setEducationLoading] = useState(false);
+  const [educationError, setEducationError] = useState('');
   const [loading, setLoading] = useState(true);
   const [loadingMore, setLoadingMore] = useState(false);
   const [feedError, setFeedError] = useState('');
@@ -121,6 +125,29 @@ export default function FeedPage() {
     const alreadyShown = sessionStorage.getItem(SESSION_KEY);
     setIntentionState(alreadyShown ? 'done' : 'show');
   }, []);
+
+  useEffect(() => {
+    if (activeTab !== 'education' || educationLoaded) return;
+
+    let cancelled = false;
+    setEducationLoading(true);
+    setEducationError('');
+
+    postService.getPostsByUsername('soul', 0, 100)
+      .then(response => {
+        if (cancelled) return;
+        setEducationPosts(response.posts.filter(post => post.author.username.toLowerCase() === 'soul'));
+        setEducationLoaded(true);
+      })
+      .catch(error => {
+        if (!cancelled) setEducationError(getHttpErrorMessage(error));
+      })
+      .finally(() => {
+        if (!cancelled) setEducationLoading(false);
+      });
+
+    return () => { cancelled = true; };
+  }, [activeTab, educationLoaded]);
 
   useEffect(() => {
     let cancelled = false;
@@ -234,10 +261,6 @@ export default function FeedPage() {
       return false;
     }
 
-    if (activeTab === 'education' && !post.author.verified) {
-      return false;
-    }
-
     if (activeCategories.length === 0) {
       return true;
     }
@@ -312,7 +335,10 @@ export default function FeedPage() {
     );
   }
 
-  const filteredPosts = posts.filter(filterPosts);
+  const visiblePosts = activeTab === 'education' ? educationPosts : posts;
+  const filteredPosts = visiblePosts.filter(filterPosts);
+  const visibleLoading = activeTab === 'education' ? educationLoading : loading;
+  const visibleError = activeTab === 'education' ? educationError : feedError;
 
   return (
     <div className="min-h-screen bg-background flex flex-col lg:flex-row">
@@ -375,14 +401,14 @@ export default function FeedPage() {
               onOrganizationFilterChange={setOrganizationFilter}
             />
 
-            {feedError && !loading && (
+            {visibleError && !visibleLoading && (
               <div className="mx-0 rounded-2xl border border-red-400/10 bg-red-400/[0.05] px-4 py-3">
                 <p className="text-sm text-red-300">
                   Não foi possível carregar o feed.
                 </p>
 
                 <p className="text-xs text-red-300/60 mt-1">
-                  {feedError}
+                  {visibleError}
                 </p>
 
                 <button
@@ -398,10 +424,17 @@ export default function FeedPage() {
             {activeTab === 'bem' ? (
               <OrganizationList query={searchQuery} filter={organizationFilter} />
             ) : (
-              <PostList posts={filteredPosts} loading={loading} onDelete={id => setPosts(previous => previous.filter(post => post.id !== id))} />
+              <PostList
+                key={activeTab}
+                posts={filteredPosts}
+                loading={visibleLoading}
+                onDelete={id => activeTab === 'education'
+                  ? setEducationPosts(previous => previous.filter(post => post.id !== id))
+                  : setPosts(previous => previous.filter(post => post.id !== id))}
+              />
             )}
 
-            {activeTab !== 'bem' && !loading && hasMore && filteredPosts.length > 0 && (
+            {activeTab !== 'bem' && activeTab !== 'education' && !loading && hasMore && filteredPosts.length > 0 && (
               <div className="flex justify-center pb-4">
                 <button
                   onClick={handleLoadMore}

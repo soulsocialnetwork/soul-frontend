@@ -6,6 +6,7 @@ export const SESSION_CLEARED_EVENT = 'soul:session-cleared';
 let accessToken: string | null = null;
 let sessionRevision = 0;
 let lastSessionEventId: string | null = null;
+let refreshAllowed = true;
 
 function clearLegacyTokens(): void {
   if (typeof window === 'undefined') return;
@@ -16,9 +17,10 @@ function clearLegacyTokens(): void {
 
 clearLegacyTokens();
 
-function clearLocalSession(): void {
+function clearLocalSession(blockRefresh = true): void {
   sessionRevision += 1;
   accessToken = null;
+  if (blockRefresh) refreshAllowed = false;
   clearLegacyTokens();
 }
 
@@ -54,9 +56,25 @@ export const tokenStore = {
     return sessionRevision;
   },
 
+  canRefresh(): boolean {
+    return refreshAllowed;
+  },
+
   setAccessToken(token: string, expectedRevision = sessionRevision): boolean {
     if (expectedRevision !== sessionRevision) return false;
     accessToken = token;
+    return true;
+  },
+
+  beginLogin(): number {
+    clearLocalSession(true);
+    return sessionRevision;
+  },
+
+  activateSession(token: string, expectedRevision: number): boolean {
+    if (expectedRevision !== sessionRevision) return false;
+    accessToken = token;
+    refreshAllowed = true;
     return true;
   },
 
@@ -64,7 +82,8 @@ export const tokenStore = {
     clearLocalSession();
   },
 
-  clearEverywhere(): void {
+  clearEverywhere(): boolean {
+    const wasActive = refreshAllowed || accessToken !== null;
     const eventId = typeof globalThis.crypto?.randomUUID === 'function'
       ? globalThis.crypto.randomUUID()
       : `${Date.now()}-${Math.random()}`;
@@ -76,5 +95,6 @@ export const tokenStore = {
     try {
       localStorage.setItem(SESSION_EVENT_KEY, eventId);
     } catch { }
+    return wasActive;
   },
 };

@@ -1,7 +1,8 @@
 import Picker from '@emoji-mart/react';
 import data from '@emoji-mart/data';
 import { useState } from 'react';
-import soulzinho from '../../assets/soulzinho-logo-oficial.png';
+
+const soulzinho = '/soulzinho-oficial.svg';
 
 export interface Sticker {
   id: string;

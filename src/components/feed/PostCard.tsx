@@ -423,7 +423,7 @@ export function PostCard({ post, index = 0, onDelete, allowMediaFullscreen = fal
 
         {images.length > 0 && <div
           onClick={() => navigate(`/post/${post.id}`)}
-          className="mx-3 mb-3 aspect-[4/5] rounded-2xl overflow-hidden cursor-pointer active:scale-[0.98] transition-transform relative bg-white/[0.04]"
+          className="mx-3 mb-3 aspect-[3/4] rounded-2xl overflow-hidden cursor-pointer active:scale-[0.98] transition-transform relative bg-white/[0.04]"
         >
             <SecureImage
               src={images[activeImage] || images[0]}

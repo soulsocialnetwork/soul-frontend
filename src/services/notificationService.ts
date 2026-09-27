@@ -36,6 +36,12 @@ export const notificationService = {
   async markAsRead(id: string): Promise<void> {
     await api.put(`/notifications/${encodeURIComponent(id)}/read`);
   },
+  async deleteNotification(id: string): Promise<void> {
+    await api.delete(`/notifications/${encodeURIComponent(id)}`);
+  },
+  async deleteAllNotifications(): Promise<void> {
+    await api.delete('/notifications');
+  },
   async getUnreadCount(): Promise<number> {
     const response = await api.get<{ unreadCount: number }>('/notifications/unread-count');
     return response.data.unreadCount;

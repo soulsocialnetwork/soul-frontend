@@ -141,6 +141,23 @@ export const postService = {
     };
   },
 
+  async getPostsByUsername(
+    username: string,
+    page: number = 0,
+    size: number = 100
+  ): Promise<{ posts: Post[]; isLast: boolean; totalPages: number }> {
+    const response = await api.get<PagePostResponse>(
+      endpoints.profiles.posts(encodeURIComponent(username)),
+      { params: { page, size } }
+    );
+
+    return {
+      posts: response.data.content.map(convertPostResponseToPost),
+      isLast: isLastPage(response.data),
+      totalPages: totalPageCount(response.data),
+    };
+  },
+
   async getPostById(postId: string): Promise<Post> {
     const response = await api.get<PostResponse>(
       endpoints.posts.byId(postId)

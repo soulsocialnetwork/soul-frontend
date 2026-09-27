@@ -25,8 +25,7 @@ export const authService = {
     await waitForPendingRefresh();
     let loginRevision = tokenStore.getRevision();
     const response = await withSessionLock(async () => {
-      tokenStore.clearSession();
-      loginRevision = tokenStore.getRevision();
+      loginRevision = tokenStore.beginLogin();
       return api.post<LoginResponse>(endpoints.user.login, data, { skipAuth: true });
     });
     const payload = response.data;
@@ -35,7 +34,7 @@ export const authService = {
       throw new Error('Resposta de login sem token.');
     }
 
-    if (!tokenStore.setAccessToken(payload.token, loginRevision)) {
+    if (!tokenStore.activateSession(payload.token, loginRevision)) {
       throw new Error('A sessão foi alterada durante o login. Tente novamente.');
     }
 

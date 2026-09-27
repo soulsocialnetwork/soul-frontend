@@ -55,6 +55,9 @@ export async function withSessionLock<T>(operation: () => Promise<T>): Promise<T
 }
 
 export function refreshAccessToken(): Promise<string> {
+  if (!tokenStore.canRefresh()) {
+    return Promise.reject(new Error('Sessão encerrada.'));
+  }
   if (!refreshRequest) {
     const revision = tokenStore.getRevision();
     refreshRequest = withSessionLock(() => (
@@ -66,8 +69,7 @@ export function refreshAccessToken(): Promise<string> {
         return data.token as string;
       })
       .catch(refreshError => {
-        if ([400, 401, 403].includes(refreshError.response?.status)) {
-          tokenStore.clearEverywhere();
+        if (tokenStore.clearEverywhere()) {
           window.dispatchEvent(new Event('soul:session-expired'));
         }
         throw refreshError;
@@ -85,9 +87,11 @@ export async function waitForPendingRefresh(): Promise<void> {
 api.interceptors.response.use(response => response, async error => {
   const config = error.config;
   if (error.response?.status !== 401 || !config || config.skipAuth || isPublicRequest(config.url)) throw error;
+  if (!tokenStore.canRefresh()) throw error;
   if (config.retried) {
-    tokenStore.clearEverywhere();
-    window.dispatchEvent(new Event('soul:session-expired'));
+    if (tokenStore.clearEverywhere()) {
+      window.dispatchEvent(new Event('soul:session-expired'));
+    }
     throw error;
   }
   config.retried = true;
