@@ -10,7 +10,7 @@ import {
 } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import axios from 'axios';
-import { tokenStorage } from '../services/api';
+import { SESSION_CLEARED_EVENT, tokenStore } from '../services/api';
 import { authService } from '../services/authService';
 import type { CurrentUserResponse, LoginRequest } from '../services/api/types';
 
@@ -25,28 +25,33 @@ interface AuthContextValue {
 
 const AuthContext = createContext<AuthContextValue | null>(null);
 
-const SESSION_PUBLIC_PATHS = new Set(['/', '/auth', '/reset-password']);
+const SESSION_PUBLIC_PATHS = new Set([
+  '/',
+  '/auth',
+  '/reset-password',
+  '/confirm-email-change',
+  '/diretrizes',
+  '/privacidade',
+  '/termos',
+  '/verify-email',
+  '/confirmar-email',
+]);
 
 // mantém a sessão global, restaura o usuário autenticado e coordena login e logout
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<CurrentUserResponse | null>(null);
-  const [isLoading, setIsLoading] = useState(() => Boolean(tokenStorage.getAccessToken()));
+  const [isLoading, setIsLoading] = useState(true);
   const navigate = useNavigate();
   const location = useLocation();
   const pathnameRef = useRef(location.pathname);
   pathnameRef.current = location.pathname;
 
   useEffect(() => {
-    const token = tokenStorage.getAccessToken();
-    if (!token) {
-      setIsLoading(false);
-      return;
-    }
-
     let cancelled = false;
 
     (async () => {
       try {
+        await authService.restoreSession();
         const currentUser = await authService.getMe();
         if (!cancelled) {
           setUser(currentUser);
@@ -54,7 +59,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       } catch (error) {
         if (cancelled) return;
         if (axios.isAxiosError(error) && error.response?.status === 401) {
-          tokenStorage.clearSession();
+          tokenStore.clearSession();
           setUser(null);
           if (!SESSION_PUBLIC_PATHS.has(pathnameRef.current)) {
             navigate('/auth', { replace: true });
@@ -73,9 +78,16 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, [navigate]);
 
   useEffect(() => {
-    const clear = () => { setUser(null); navigate('/auth', { replace: true }); };
+    const clear = () => {
+      setUser(null);
+      if (!SESSION_PUBLIC_PATHS.has(pathnameRef.current)) navigate('/auth', { replace: true });
+    };
     window.addEventListener('soul:session-expired', clear);
-    return () => window.removeEventListener('soul:session-expired', clear);
+    window.addEventListener(SESSION_CLEARED_EVENT, clear);
+    return () => {
+      window.removeEventListener('soul:session-expired', clear);
+      window.removeEventListener(SESSION_CLEARED_EVENT, clear);
+    };
   }, [navigate]);
 
   const refreshUser = useCallback(async () => { setUser(await authService.getMe()); }, []);
@@ -87,7 +99,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       setUser(currentUser);
     } catch (error) {
       if (axios.isAxiosError(error) && error.response?.status === 401) {
-        tokenStorage.clearSession();
+        tokenStore.clearSession();
         setUser(null);
       }
       throw error;

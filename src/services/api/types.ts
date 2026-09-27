@@ -37,7 +37,6 @@ role?: string;
 
 export interface LoginResponse {
 token: string;
-refreshToken: string;
 user: UserResponse;
 }
 
@@ -45,11 +44,6 @@ export interface LoginRequest {
 email: string;
 password: string;
 }
-
-export interface RefreshTokenRequest {
-refreshToken: string;
-}
-
 
 export interface PublicProfileResponse {
 profileBadge?: ProfileBadgeKind;

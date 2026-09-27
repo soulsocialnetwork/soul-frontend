@@ -1,25 +1,80 @@
-const ACCESS_TOKEN_KEY = '@soul:token';
-const REFRESH_TOKEN_KEY = '@soul:refresh-token';
+const LEGACY_TOKEN_KEYS = ['@soul:token', '@soul:refresh-token'];
+const SESSION_EVENT_KEY = '@soul:session-event';
+const SESSION_CHANNEL_NAME = 'soul:session';
+export const SESSION_CLEARED_EVENT = 'soul:session-cleared';
 
-export const tokenStorage = {
+let accessToken: string | null = null;
+let sessionRevision = 0;
+let lastSessionEventId: string | null = null;
+
+function clearLegacyTokens(): void {
+  if (typeof window === 'undefined') return;
+  try {
+    LEGACY_TOKEN_KEYS.forEach(key => localStorage.removeItem(key));
+  } catch { }
+}
+
+clearLegacyTokens();
+
+function clearLocalSession(): void {
+  sessionRevision += 1;
+  accessToken = null;
+  clearLegacyTokens();
+}
+
+function receiveSessionClear(eventId: string): void {
+  if (!eventId || eventId === lastSessionEventId) return;
+  lastSessionEventId = eventId;
+  clearLocalSession();
+  window.dispatchEvent(new Event(SESSION_CLEARED_EVENT));
+}
+
+const sessionChannel = typeof window !== 'undefined' && typeof BroadcastChannel !== 'undefined'
+  ? new BroadcastChannel(SESSION_CHANNEL_NAME)
+  : null;
+
+sessionChannel?.addEventListener('message', (event: MessageEvent<string>) => {
+  receiveSessionClear(event.data);
+});
+
+if (typeof window !== 'undefined') {
+  window.addEventListener('storage', (event) => {
+    if (event.key === SESSION_EVENT_KEY && event.newValue) {
+      receiveSessionClear(event.newValue);
+    }
+  });
+}
+
+export const tokenStore = {
   getAccessToken(): string | null {
-    return localStorage.getItem(ACCESS_TOKEN_KEY);
+    return accessToken;
   },
 
-  setAccessToken(token: string): void {
-    localStorage.setItem(ACCESS_TOKEN_KEY, token);
+  getRevision(): number {
+    return sessionRevision;
   },
 
-  getRefreshToken(): string | null {
-    return localStorage.getItem(REFRESH_TOKEN_KEY);
-  },
-
-  setRefreshToken(token: string): void {
-    localStorage.setItem(REFRESH_TOKEN_KEY, token);
+  setAccessToken(token: string, expectedRevision = sessionRevision): boolean {
+    if (expectedRevision !== sessionRevision) return false;
+    accessToken = token;
+    return true;
   },
 
   clearSession(): void {
-    localStorage.removeItem(ACCESS_TOKEN_KEY);
-    localStorage.removeItem(REFRESH_TOKEN_KEY);
+    clearLocalSession();
+  },
+
+  clearEverywhere(): void {
+    const eventId = typeof globalThis.crypto?.randomUUID === 'function'
+      ? globalThis.crypto.randomUUID()
+      : `${Date.now()}-${Math.random()}`;
+
+    lastSessionEventId = eventId;
+    clearLocalSession();
+    sessionChannel?.postMessage(eventId);
+
+    try {
+      localStorage.setItem(SESSION_EVENT_KEY, eventId);
+    } catch { }
   },
 };

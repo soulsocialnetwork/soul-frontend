@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
-import { api, tokenStorage } from '../../services/api';
+import { api, tokenStore } from '../../services/api';
 
 export default function ConfirmEmailChangePage() {
   const [params] = useSearchParams();
@@ -21,7 +21,7 @@ export default function ConfirmEmailChangePage() {
       <h1 className="text-xl font-semibold">{status === 'loading' ? 'Confirmando e-mail...' : status === 'success' ? 'E-mail alterado' : status === 'error' ? 'Link inválido ou expirado' : 'Confirme seu novo e-mail'}</h1>
       <p className="text-sm text-white/60">{status === 'success' ? 'Seu novo e-mail foi confirmado. Entre novamente com o novo endereço.' : status === 'error' ? 'Solicite outro link nas configurações da conta.' : status === 'loading' ? 'Aguarde um momento.' : 'Confirme que deseja alterar o endereço da sua conta Soul.'}</p>
       {token && status === 'ready' && <button type="button" onClick={() => void confirm()} className="w-full rounded-xl bg-white px-4 py-3 font-semibold text-black">Confirmar e-mail</button>}
-      {(status === 'success' || status === 'error') && <button type="button" onClick={() => { tokenStorage.clearSession(); window.location.assign('/auth'); }} className="w-full rounded-xl bg-white px-4 py-3 font-semibold text-black">Ir para o login</button>}
+      {(status === 'success' || status === 'error') && <button type="button" onClick={() => { tokenStore.clearEverywhere(); window.location.assign('/auth'); }} className="w-full rounded-xl bg-white px-4 py-3 font-semibold text-black">Ir para o login</button>}
     </div>
   </main>;
 }

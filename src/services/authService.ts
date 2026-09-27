@@ -1,9 +1,15 @@
-import { api, endpoints, tokenStorage } from './api';
+import {
+  api,
+  endpoints,
+  refreshAccessToken,
+  tokenStore,
+  waitForPendingRefresh,
+  withSessionLock,
+} from './api';
 import type {
   CurrentUserResponse,
   LoginRequest,
   LoginResponse,
-  RefreshTokenRequest,
 } from './api/types';
 
 export interface RegisterRequestDTO {
@@ -16,8 +22,12 @@ export interface RegisterRequestDTO {
 
 export const authService = {
   async login(data: LoginRequest): Promise<LoginResponse> {
-    const response = await api.post<LoginResponse>(endpoints.user.login, data, {
-      skipAuth: true,
+    await waitForPendingRefresh();
+    let loginRevision = tokenStore.getRevision();
+    const response = await withSessionLock(async () => {
+      tokenStore.clearSession();
+      loginRevision = tokenStore.getRevision();
+      return api.post<LoginResponse>(endpoints.user.login, data, { skipAuth: true });
     });
     const payload = response.data;
 
@@ -25,10 +35,8 @@ export const authService = {
       throw new Error('Resposta de login sem token.');
     }
 
-    tokenStorage.clearSession();
-    tokenStorage.setAccessToken(payload.token);
-    if (payload.refreshToken) {
-      tokenStorage.setRefreshToken(payload.refreshToken);
+    if (!tokenStore.setAccessToken(payload.token, loginRevision)) {
+      throw new Error('A sessão foi alterada durante o login. Tente novamente.');
     }
 
     return payload;
@@ -39,16 +47,19 @@ export const authService = {
     return response.data;
   },
 
+  async restoreSession(): Promise<void> {
+    await refreshAccessToken();
+  },
+
   async logout(): Promise<void> {
-    const refreshToken = tokenStorage.getRefreshToken();
     try {
-      if (refreshToken) {
-        const body: RefreshTokenRequest = { refreshToken };
-        await api.post(endpoints.user.logout, body);
-      }
+      await waitForPendingRefresh();
+      await withSessionLock(() => (
+        api.post(endpoints.user.logout, undefined, { skipAuth: true })
+      ));
     } catch {
     } finally {
-      tokenStorage.clearSession();
+      tokenStore.clearEverywhere();
     }
   },
 
@@ -56,8 +67,9 @@ export const authService = {
     await api.put(endpoints.user.password, { currentPassword, newPassword });
   },
   async deleteAccount() {
+    await waitForPendingRefresh();
     await api.delete(endpoints.user.me);
-    tokenStorage.clearSession();
+    tokenStore.clearEverywhere();
   },
   async updateProfile(data: { name: string; bio: string; profilePicture: string | null }) {
     const response = await api.put<CurrentUserResponse>(endpoints.user.me, data);
